@@ -17,7 +17,7 @@ SECRET_KEY = 'django-insecure-+3*nyiwqv02)j2w97l+h2^$x!)ztkqdhys4*r^v62dbo7#4uxt
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['dentist100.herokuapp.com',]
+ALLOWED_HOSTS = ['alex-1000.herokuapp.com','127.0.0.1']
 
 
 # Application definition
@@ -29,7 +29,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'website',
+    'app',
 ]
 
 MIDDLEWARE = [
@@ -43,7 +43,7 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware'
 ]
 
-ROOT_URLCONF = 'dental.urls'
+ROOT_URLCONF = 'main.urls'
 
 TEMPLATES = [
     {
@@ -61,7 +61,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'dental.wsgi.application'
+WSGI_APPLICATION = 'main.wsgi.application'
 
 
 # Database
