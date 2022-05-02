@@ -37,10 +37,11 @@
       <div class="container h-100">
         <div class="row h-100 align-items-center">
           <!-- Top Content -->
-          <div class="col-6 col-md-9 col-lg-8">
+          <div class="col-9 col-md-9 col-lg-8">
             <div class="top-header-content">
               <a href="#" data-toggle="tooltip" data-placement="bottom" title="21 Greenhills St, Greenhills Beach"><i class="fa fa-map-marker"></i> <span>21 Greenhills St, Greenhills Beach</span></a>
               <a href="#" data-toggle="tooltip" data-placement="bottom" title="superalexrobinson@gmail.com"><i class="fa fa-envelope"></i> <span>superalexrobinson@gmail.com</span></a>
+              <a href="#" data-toggle="tooltip" data-placement="bottom" title="0491 062 546"><i class="fa fa-phone"></i> <span>0491 062 546</span></a>
             </div>
           </div>
 
@@ -56,14 +57,6 @@
           </div>
 
 
-          <!-- Top Header Social Info -->
-<!--          <div class="col-6 col-md-3 col-lg-4">-->
-<!--            <div class="top-header-social-info text-right">-->
-<!--              <a href="#" data-toggle="tooltip" data-placement="bottom" title="Facebook"><i class="fa fa-facebook"></i></a>-->
-<!--              <a href="#" data-toggle="tooltip" data-placement="bottom" title="Twitter"><i class="fa fa-twitter"></i></a>-->
-<!--              <a href="#" data-toggle="tooltip" data-placement="bottom" title="Linkedin"><i class="fa fa-linkedin"></i></a>-->
-<!--            </div>-->
-<!--          </div>-->
         </div>
       </div>
     </div>
@@ -96,16 +89,16 @@
               <div class="classynav">
                 <ul id="nav">
                   <li><a href="{% url 'home' %}">Home</a></li>
-                  <li><a href="about.html">About</a></li>
-                  <li><a href="pricing.html">Pricing</a></li>
-                  <li><a href="./contact.html">Contact</a></li>
+                  <li><a href="{% url 'about' %}">About</a></li>
+                  <li><a href="{% url 'pricing' %}">Pricing</a></li>
+                  <li><a href="{% url 'contact' %}">Contact</a></li>
                 </ul>
               </div>
               <!-- Nav End -->
             </div>
 
             <!-- Booking Now Button -->
-            <a href="#" class="btn dento-btn booking-btn">Book Now</a>
+            <a href="{% url 'book' %}" class="btn dento-btn booking-btn">Book Now</a>
           </nav>
         </div>
       </div>
@@ -134,7 +127,7 @@
   <!-- ***** Dento Dentist Area End ***** -->
 
   <!-- ***** Testimonials Area Start ***** -->
-  <section class="testimonials-area section-padding-100 bg-img bg-gradient-overlay jarallax clearfix" style="background-image: url({% static 'website/img/bg-img/7.jpg' %});">
+  <section class="testimonials-area section-padding-100 jarallax clearfix">
     <div class="container">
       <div class="row">
         <div class="col-12">
@@ -193,18 +186,18 @@
 
 
   <!-- ***** Footer Area Start ***** -->
-  <footer class="footer-area bg-img bg-gradient-overlay" style="background-image: url(img/bg-img/3.jpg);">
+  <footer class="footer-area bg-img bg-gradient-overlay" >
     <div class="container">
       <div class="row">
         <!-- Single Footer Widget -->
         <div class="col-12 col-sm-6 col-lg-4">
           <div class="single-footer-widget">
-            <a href="./index.html" class="d-block mb-4"><img src="{% static 'website/img/core-img/logo.png' %}" alt=""></a>
-            <p>Etiam sutor risus, dapibus act elefend katen, lacinia sitamet denim. Mauris sagittis kansa interdum dignissim.</p>
+            <!-- Widget Title -->
+            <h5 class="widget-title">Contact us</h5>
             <div class="footer-contact">
-              <p><i class="icon_pin"></i> 28 Jackson Street, Chicago, 7788569 USA</p>
-              <p><i class="icon_phone"></i> +84. 2252. 2250. 122</p>
-              <p><i class="icon_mail"></i> info.dento@gmail.com</p>
+              <p><i class="icon_pin"></i> 21 Greenhills St, Greenhills Beach</p>
+              <p><i class="icon_phone"></i> 0491 062 546</p>
+              <p><i class="icon_mail"></i> superalexrobinson@gmail.com</p>
             </div>
           </div>
         </div>
@@ -213,15 +206,15 @@
         <div class="col-12 col-sm-6 col-lg">
           <div class="single-footer-widget">
             <!-- Widget Title -->
-            <h5 class="widget-title">Opening Hours</h5>
+            <h5 class="widget-title">Session Times</h5>
 
             <!-- Opening Hours -->
             <ul class="opening-hours">
-              <li><span>Mon-Wed</span> <span>8.00-18.00</span></li>
-              <li><span>Thu-Fri</span> <span>8.00-17.00</span></li>
-              <li><span>Sat</span> <span>9.00-17.00</span></li>
-              <li><span>Sun</span> <span>10.00-17.00</span></li>
-              <li><span>Holiday</span> <span>Closed</span></li>
+              <li><span>Mon-Wed</span> <span>3:30 pm to 6:30 pm</span></li>
+              <li><span>Thu-Fri</span> <span>3:30 pm to 6:30 pm</span></li>
+              <li><span>Sat</span> <span>9.00 am to 12.00 am</span></li>
+              <li><span>Sun</span> <span>9.00 am to 12.00 am</span></li>
+              <li><span>Holidays</span> <span>Closed</span></li>
             </ul>
           </div>
         </div>
@@ -230,22 +223,10 @@
         <div class="col-12 col-sm-6 col-lg">
           <div class="single-footer-widget">
             <!-- Widget Title -->
-            <h5 class="widget-title">Quick Link</h5>
+            <h5 class="widget-title"></h5>
 
             <!-- Quick Links Nav -->
             <nav>
-              <ul class="quick-links">
-                <li><a href="#">About</a></li>
-                <li><a href="#">FAQs</a></li>
-                <li><a href="#">Contact</a></li>
-                <li><a href="#">Policy</a></li>
-                <li><a href="#">News</a></li>
-                <li><a href="#">Advisors</a></li>
-                <li><a href="#">Careers</a></li>
-                <li><a href="#">Dentist</a></li>
-                <li><a href="#">Services</a></li>
-                <li><a href="#">Legals</a></li>
-              </ul>
             </nav>
           </div>
         </div>
@@ -254,44 +235,14 @@
         <div class="col-12 col-sm-6 col-lg">
           <div class="single-footer-widget">
             <!-- Widget Title -->
-            <h5 class="widget-title">Newsletter</h5>
+            <h5 class="widget-title"></h5>
 
-            <p>We will send out weekly newest article and some great offers</p>
-            <!-- Newsletter Form -->
-            <div class="footer-newsletter-form">
-              <form action="#" method="post">
-                <input type="email" name="nl-email" value="" placeholder="Email Address">
-                <button type="submit"><i class="fa fa-paper-plane" aria-hidden="true"></i></button>
-              </form>
-            </div>
+            <p></p>
 
-            <!-- Social Info -->
-            <div class="footer-social-info">
-              <a href="#" data-toggle="tooltip" data-placement="top" title="Facebook"><i class="fa fa-facebook"></i></a>
-              <a href="#" data-toggle="tooltip" data-placement="top" title="Twitter"><i class="fa fa-twitter"></i></a>
-              <a href="#" data-toggle="tooltip" data-placement="top" title="Google Plus"><i class="fa fa-google-plus"></i></a>
-              <a href="#" data-toggle="tooltip" data-placement="top" title="Linkedin"><i class="fa fa-linkedin"></i></a>
-              <a href="#" data-toggle="tooltip" data-placement="top" title="Pinterest"><i class="fa fa-pinterest"></i></a>
-            </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Copywrite Area -->
-    <div class="container">
-      <div class="row">
-        <div class="col-12">
-          <div class="copywrite-content">
-            <p><!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. -->
-Copyright &copy;<script>document.write(new Date().getFullYear());</script> All rights reserved | This template is made with <i class="fa fa-heart-o" aria-hidden="true"></i> by <a href="https://colorlib.com" target="_blank">Colorlib</a>
-<!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. --></p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </footer>
-  <!-- ***** Footer Area End ***** -->
 
   <!-- ******* All JS ******* -->
   <!-- jQuery js -->

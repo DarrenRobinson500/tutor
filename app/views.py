@@ -8,6 +8,15 @@ from django.contrib import messages
 def home(request):
     return render(request, 'home.html', {})
 
+def about(request):
+    return render(request, 'about.html', {})
+
+def pricing(request):
+    return render(request, 'pricing.html', {})
+
+def book(request):
+    return render(request, 'book.html', {})
+
 def contact_old(request):
     if request.method == "POST":
         message_name = request.POST['message-name']
