@@ -30,9 +30,17 @@ def contact(request):
     if request.method == 'POST':
         form = MessageForm(request.POST or None)
         if form.is_valid():
-            form.save()
-            messages.success(request, ("Your message has been sent."))
-            return redirect("contact")
+            new_message = form.save()
+            send_mail(
+                "Enquiry",  # subject
+                new_message.message,  # message
+                new_message.email,  # from email
+                ['darrenandamanda.robinson@gmail.com', ],  # to
+                fail_silently=False
+            )
+            form = MessageForm
+            message_name = new_message.name
+            return render(request, 'contact.html', {'form':form, 'message_name':message_name,})
         else:
             messages.success(request,('Seems like an error has occurred.'))
             return render(request, 'contact.html', {'form':form})
