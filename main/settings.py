@@ -113,7 +113,8 @@ STATIC_URL = 'static/'
 
 STATICFILES_DIRS = [ os.path.join(BASE_DIR, 'static'),]
 STATIC_ROOT = os.path.join(BASE_DIR, 'static_pro')
-
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+django_on_heroku.settings(locals())
 
 '''
 # EMAIL_HOST = 'smtp.google.com'

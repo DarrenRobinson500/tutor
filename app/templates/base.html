@@ -21,6 +21,7 @@
 
 </head>
 
+
 <body>
   <!-- Preloader -->
   <div id="preloader">
@@ -42,6 +43,19 @@
               <a href="#" data-toggle="tooltip" data-placement="bottom" title="superalexrobinson@gmail.com"><i class="fa fa-envelope"></i> <span>superalexrobinson@gmail.com</span></a>
             </div>
           </div>
+
+          <div class = "container">
+           {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                  {{message|safe}}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+           {% endif %}
+          </div>
+
+
           <!-- Top Header Social Info -->
 <!--          <div class="col-6 col-md-3 col-lg-4">-->
 <!--            <div class="top-header-social-info text-right">-->
