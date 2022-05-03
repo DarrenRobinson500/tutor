@@ -3,83 +3,78 @@
 
 {% load static %}
 
-  <!-- Book An Appointment Area Start -->
-  <section class="book-an-oppointment-area section-padding-100 bg-img bg-gradient-overlay jarallax clearfix">
+  <section class="dento-pricing-table-area section-padding-50">
     <div class="container">
       <div class="row">
         <!-- Section Heading -->
         <div class="col-12">
-          <div class="section-heading text-center white">
-            <h2>Book A Session</h2>
+          <div class="section-heading text-center">
+            <h2>Request a Booking</h2>
             <div class="line"></div>
           </div>
         </div>
       </div>
 
+
+  {% if name %}
+    <center><h3>Thanks {{ name }}! We received your booking request and will contact you shortly.</h3></center>
+  {% endif %}
+  {% if error %}
+    <center><h3>An error has occurred.</h3></center>
+      {% for x in form.errors %}
+        <li>{{ x }}</li>
+      {% endfor %}
+
+  {% endif %}
+
+
+
+  <!-- ***** Contact Area Start ***** -->
+  <section class="dento-contact-area mt-50 mb-100">
+    <div class="container">
+
       <div class="row">
-        <div class="col-12">
-          <!-- Appointment Form -->
-          <div class="appointment-form">
-            <form action="#" method="post">
+        <!-- Contact Information -->
+        <div class="col-12 col-md-4">
+          <div class="contact-information">
+            <h5>Address</h5>
+            <p>21 Greenhills St Greenhills Beach</p>
+
+            <h5>Phone</h5>
+            <p>0491 062 546</p>
+
+            <h5>Email</h5>
+            <p class="mb-0">superalexrobinson@gmail.com</p>
+            <p></p>
+            <p></p>
+          </div>
+        </div>
+
+        <!-- Contact Form -->
+        <div class="col-12 col-md-8">
+          <div class="contact-form">
+            <!-- Form -->
+            <form method="post">
+              {% csrf_token %}
+              {{ form.name }} <br>
+              {{ form.mobile }} <br>
+              Your preferred day:
+              {{ form.day }} <br>
+              Your preferred time:
+              {{ form.time }} <br>
               <div class="row">
-                <div class="col-md-6">
-                  <div class="form-group mb-30">
-                    <input type="text" name="your-name" class="form-control" placeholder="Your Name" required>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-group mb-30">
-                    <input type="text" name="your-phone" class="form-control" placeholder="Your Phone" required>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-group mb-30">
-                    <input type="email" name="your-email" class="form-control" placeholder="Your Email" required>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-group mb-30">
-                    <input type="text" name="your-address" class="form-control" placeholder="Your Address">
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-group mb-30">
-                    <select name="your-scheldule" class="form-control">
-                      <option value="Choose Your Scheldule">Choose Your Scheldule</option>
-                      <option value="9 AM to 10 AM">9 AM to 10 AM</option>
-                      <option value="11 AM to 12 PM">11 AM to 12 PM</option>
-                      <option value="2 PM to 4 PM">2 PM to 4 PM</option>
-                      <option value="8 PM to 10 PM">8 PM to 10 PM</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-group mb-30">
-                    <select name="your-time" class="form-control">
-                      <option value="Choose Your Time">Choose Your Scheldule</option>
-                      <option value="9 AM to 10 AM">9 AM to 10 AM</option>
-                      <option value="11 AM to 12 PM">11 AM to 12 PM</option>
-                      <option value="2 PM to 4 PM">2 PM to 4 PM</option>
-                      <option value="8 PM to 10 PM">8 PM to 10 PM</option>
-                    </select>
-                  </div>
-                </div>
                 <div class="col-12">
-                  <div class="form-group mb-30">
-                    <textarea name="your-message" class="form-control" placeholder="Your Message"></textarea>
-                  </div>
-                </div>
-                <div class="col-12 text-center">
-                  <button type="submit" class="btn dento-btn">Book Now</button>
+                  <button type="submit" class="btn dento-btn">Request Booking</button>
                 </div>
               </div>
             </form>
+
           </div>
         </div>
       </div>
     </div>
   </section>
-  <!-- Book An Oppointment Area End -->
+  <!-- ***** Contact Area End ***** -->
 
 
 {% endblock %}

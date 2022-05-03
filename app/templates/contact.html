@@ -3,49 +3,26 @@
 
 {% load static %}
 
-
-  <!-- ***** Breadcrumb Area Start ***** -->
-  <div class="breadcumb-area bg-img bg-gradient-overlay" style="background-image: url({% static 'website/img/bg-img/12.jpg' %});">
-    <div class="container h-100">
-      <div class="row h-100 align-items-center">
-        <div class="col-12">
-          <h2 class="title">Contact</h2>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="breadcumb--con">
+  <section class="dento-pricing-table-area section-padding-50">
     <div class="container">
       <div class="row">
+        <!-- Section Heading -->
         <div class="col-12">
-          <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-              <li class="breadcrumb-item"><a href="{% url 'home' %}"><i class="fa fa-home"></i> Home</a></li>
-              <li class="breadcrumb-item active" aria-current="page">Contact</li>
-            </ol>
-          </nav>
+          <div class="section-heading text-center">
+            <h2>Get In Touch</h2>
+            <div class="line"></div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-  <!-- ***** Breadcrumb Area End ***** -->
+
+
   {% if message_name %}
-<center><h3>Thanks {{ message_name }}! We received your email and will contact you shortly.</h3></center>
+    <center><h3>Thanks {{ message_name }}! We received your email and will contact you shortly.</h3></center>
   {% endif %}
-
-
 
   <!-- ***** Contact Area Start ***** -->
   <section class="dento-contact-area mt-50 mb-100">
     <div class="container">
-      <div class="row">
-        <div class="col-12">
-          <div class="google-maps mb-100">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3306.287399296461!2d151.16182261449077!3d-34.036498135211886!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6b12b7de040f10e1%3A0x7ce9fa4af2c6c36c!2s21%20Greenhills%20St%2C%20Greenhills%20Beach%20NSW%202230!5e0!3m2!1sen!2sau!4v1650771593169!5m2!1sen!2sau"
-              allowfullscreen></iframe>
-          </div>
-        </div>
-      </div>
 
       <div class="row">
         <!-- Contact Information -->
@@ -67,15 +44,11 @@
         <!-- Contact Form -->
         <div class="col-12 col-md-8">
           <div class="contact-form">
-            <!-- Section Heading -->
-            <div class="section-heading">
-              <h2>Get In Touch</h2>
-              <div class="line"></div>
-            </div>
             <!-- Form -->
             <form action="{% url 'contact' %}" method="post">
               {% csrf_token %}
               {{ form.name }} <br>
+              {{ form.mobile }} <br>
               {{ form.email }} <br>
               {{ form.message }} <br>
               <div class="row">
@@ -88,6 +61,16 @@
           </div>
         </div>
       </div>
+      <br><br>
+      <div class="row">
+        <div class="col-12">
+          <div class="google-maps mb-100">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3306.287399296461!2d151.16182261449077!3d-34.036498135211886!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6b12b7de040f10e1%3A0x7ce9fa4af2c6c36c!2s21%20Greenhills%20St%2C%20Greenhills%20Beach%20NSW%202230!5e0!3m2!1sen!2sau!4v1650771593169!5m2!1sen!2sau"
+              allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
   <!-- ***** Contact Area End ***** -->

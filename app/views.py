@@ -15,40 +15,40 @@ def pricing(request):
     return render(request, 'pricing.html', {})
 
 def book(request):
-    return render(request, 'book.html', {})
-
-def contact_old(request):
-    if request.method == "POST":
-        message_name = request.POST['message-name']
-        message_email = request.POST['message-email']
-        message = request.POST['message']
-
-        send_mail(
-            message_name, # subject
-            message, # message
-            message_email, # from email
-            ['darrenandamanda.robinson@gmail.com', ], # to
-            fail_silently=False
-        )
-
-        return render(request, 'contact.html', {'message_name': message_name})
+    if request.method == 'POST':
+        form = BookingForm(request.POST or None)
+        if form.is_valid():
+            new = form.save()
+            send_mail(
+                "Booking",  # subject
+                "You have a new booking request",  # message
+                'darrenjamesspare@gmail.com',  # from email
+                ['darrenandamanda.robinson@gmail.com', ],  # to
+                fail_silently=False
+            )
+            form = BookingForm
+            return render(request, 'book.html', {'form':form, 'name':new.name,})
+        else:
+            print(form.errors)
+            return render(request, 'book.html', {'form':form, 'error': True})
     else:
-        return render(request, 'contact.html', {})
+        form = BookingForm
+        return render(request, 'book.html', {'form':form})
 
 def contact(request):
     if request.method == 'POST':
         form = MessageForm(request.POST or None)
         if form.is_valid():
-            new_message = form.save()
+            new = form.save()
             send_mail(
                 "Enquiry",  # subject
-                new_message.message,  # message
-                new_message.email,  # from email
+                new.message,  # message
+                new.email,  # from email
                 ['darrenandamanda.robinson@gmail.com', ],  # to
                 fail_silently=False
             )
             form = MessageForm
-            message_name = new_message.name
+            message_name = new.name
             return render(request, 'contact.html', {'form':form, 'message_name':message_name,})
         else:
             messages.success(request,('Seems like an error has occurred.'))
