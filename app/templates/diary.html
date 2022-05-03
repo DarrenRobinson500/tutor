@@ -1,0 +1,51 @@
+{% extends 'base.html'%}
+{% block content %}
+
+{% load static %}
+
+  <!-- Pricing Table Area Start -->
+  <section class="dento-pricing-table-area section-padding-50">
+    <div class="container">
+      <div class="row">
+        <!-- Section Heading -->
+        <div class="col-12">
+          <div class="section-heading text-center">
+            <h2>Diary</h2>
+            <div class="line"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-12">
+          <div class="dento-price-table table-responsive">
+            <table class="table table-borderless mb-0">
+              <thead>
+                <tr>
+                  {% for day in days %}
+                  <th scope="col">{{ day }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {% for day in days %}
+                  <td>
+                  {% for y in day.times_available %}
+                    {{ y }}
+                  {% endfor %}
+                  </td>
+                  {% endfor %}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+  <!-- Dento Pricing Table Area End -->
+<br><br>
+
+{% endblock %}

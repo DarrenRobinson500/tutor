@@ -35,6 +35,29 @@ def book(request):
         form = BookingForm
         return render(request, 'book.html', {'form':form})
 
+def diary(request, date_adj):
+    date = datetime.date.today() + datetime.timedelta(days=int(date_adj))
+    days = []
+    for x in range(7):
+        day = Day.objects.filter(date=date).first()
+        date += datetime.timedelta(days=1)
+        days.append(day)
+    # days.sort()
+    print(days)
+    for x in days:
+        print(x.times_tutoring())
+        print(x.times_available())
+    return render(request, 'diary.html', {'days': days})
+
+def create_dates(request):
+    date_counter = datetime.date.today()
+    for x in range(90):
+        existing = Day.objects.filter(date=date_counter).first()
+        if not existing:
+            Day(date=date_counter).save()
+        date_counter += datetime.timedelta(days=1)
+    return redirect("home")
+
 def contact(request):
     if request.method == 'POST':
         form = MessageForm(request.POST or None)
