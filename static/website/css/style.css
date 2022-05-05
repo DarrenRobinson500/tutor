@@ -437,6 +437,33 @@ ul {
       font-weight: 600;
       background-color: #ffffff;
       color: #00aeef !important; }
+  .dento-btn.appointment-btn {
+    color: #ffffff !important;
+    font-weight: 600;
+    padding: 0 10px;
+    min-width: 40px;
+    height: 40px;
+    line-height: 36px;
+    font-size: 10px; }
+    .dento-btn.appointment-btn:focus, .dento-btn.appointment-btn:hover {
+      font-size: 10px;
+      font-weight: 600;
+      background-color: #ffffff;
+      color: #555555 !important; }
+  .dento-btn.appointment-off-btn {
+    color: #00aeef !important;
+    background-color: #ffffff;
+    font-weight: 600;
+    padding: 0 10px;
+    min-width: 80px;
+    height: 40px;
+    line-height: 36px;
+    font-size: 10px; }
+    .dento-btn.appointment-off-btn:focus, .dento-btn.appointment-off-btn:hover {
+      font-size: 10px;
+      font-weight: 600;
+      background-color: #00aeef;
+      color: #ffffff !important; }
 
 .header-area {
   position: relative;

@@ -3,78 +3,121 @@
 
 {% load static %}
 
-  <section class="dento-pricing-table-area section-padding-50">
-    <div class="container">
-      <div class="row">
-        <!-- Section Heading -->
-        <div class="col-12">
-          <div class="section-heading text-center">
-            <h2>Request a Booking</h2>
-            <div class="line"></div>
-          </div>
-        </div>
-      </div>
-
-
-  {% if name %}
-    <center><h3>Thanks {{ name }}! We received your booking request and will contact you shortly.</h3></center>
-  {% endif %}
-  {% if error %}
-    <center><h3>An error has occurred.</h3></center>
-      {% for x in form.errors %}
-        <li>{{ x }}</li>
-      {% endfor %}
-
-  {% endif %}
-
-
-
-  <!-- ***** Contact Area Start ***** -->
-  <section class="dento-contact-area mt-50 mb-100">
-    <div class="container">
-
-      <div class="row">
-        <!-- Contact Information -->
-        <div class="col-12 col-md-4">
-          <div class="contact-information">
-            <h5>Address</h5>
-            <p>21 Greenhills St Greenhills Beach</p>
-
-            <h5>Phone</h5>
-            <p>0491 062 546</p>
-
-            <h5>Email</h5>
-            <p class="mb-0">superalexrobinson@gmail.com</p>
-            <p></p>
-            <p></p>
-          </div>
-        </div>
-
-        <!-- Contact Form -->
-        <div class="col-12 col-md-8">
-          <div class="contact-form">
-            <!-- Form -->
-            <form method="post">
-              {% csrf_token %}
-              {{ form.name }} <br>
-              {{ form.mobile }} <br>
-              Your preferred day:
-              {{ form.day }} <br>
-              Your preferred time:
-              {{ form.time }} <br>
-              <div class="row">
-                <div class="col-12">
-                  <button type="submit" class="btn dento-btn">Request Booking</button>
-                </div>
-              </div>
-            </form>
-
-          </div>
+<section class="dento-pricing-table-area section-padding-50">
+  <div class="container">
+    <div class="row">
+      <!-- Section Heading -->
+      <div class="col-12">
+        <div class="section-heading text-center">
+          <h2>Create a booking</h2>
+          <div class="line"></div>
+          <br>
+            {% if message %}
+              <center><h3>{{ message }}</h3></center>
+            {% else %}
+              <h3>To create a booking, please enter your name, mobile, select a time and press the 'Book Me In' button below.</h3>
+            {% endif %}
         </div>
       </div>
     </div>
-  </section>
-  <!-- ***** Contact Area End ***** -->
 
+  <!-- Form -->
+    <form method="post">
+      {% csrf_token %}
+      <div class="container">
+        <div class="row">
+          <!-- Contact Form -->
+          <div class="col-4 col-md-4">
+            <div class="contact-form">
+                {{ form.name }} <br>
+            </div>
+          </div>
+          <div class="col-4 col-md-4">
+            <div class="contact-form">
+                {{ form.mobile }} <br>
+            </div>
+          </div>
+          <div class="col-4 col-md-4">
+            <div class="contact-form">
+                {{ form.message }} <br>
+            </div>
+          </div>
+          <input type="hidden" name="day_selected" class="form-control" id="day_selected" value="not clicked"> <br>
+          <input type="hidden" name="time_selected" class="form-control" id="time_selected" value="not clicked"> <br>
+
+
+        </div>
+      </div>
+    <!-- ***** Contact Area End ***** -->
+      <div class="col-12">
+        <div class="section-heading text-center"><br>
+          <h3>Select a time</h3>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-12">
+          <div class="dento-price-table table-responsive">
+            <table class="table table-borderless mb-0">
+              <thead>
+                <tr>
+                  {% for day in days %}
+                  {% if day %}
+                    <th scope="col" width="20%">{{ day.day_of_week }}<br>{{ day }}</th>
+                  {% else %}
+                    <th scope="col" width="20%"></th>
+                  {% endif %}
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {% for day in days %}
+                    <td>
+                    {% for time in day.times_available %}
+                      <div class="btn-group-vertical" role="group">
+                        <button type="button" class="btn dento-btn appointment-off-btn appointment" data-day="{{day.format}}" data-time="{{time}}" name="{{day}}{{y}}">{{ time }}</button>
+                      </div>
+                    {% empty %}
+                      {% if day %} No availability {% endif %}
+                    {% endfor %}
+                    </td>
+                  {% endfor %}
+                </tr>
+              </tbody>
+              <thead>
+                <tr>
+                  {% for day in days2 %}
+                  <th scope="col">{{ day.day_of_week }}<br>{{ day }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {% for day in days2 %}
+                    <td>
+                    {% for time in day.times_available %}
+                      <div class="btn-group-vertical" role="group">
+                        <button type="button" class="btn dento-btn appointment-off-btn appointment" data-day="{{day.format}}" data-time="{{time}}" name="{{day}}{{y}}">{{ time }}</button>
+                      </div>
+                    {% empty %}
+                      {% if day %} No availability {% endif %}
+                    {% endfor %}
+                    </td>
+                  {% endfor %}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="row">
+            <div class="col-12"><br>
+              <button type="submit" class="btn dento-btn">Book Me In</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+<br><br>
 
 {% endblock %}

@@ -9,7 +9,7 @@
       <!-- Section Heading -->
       <div class="col-12">
         <div class="section-heading text-center">
-          <h2>Diary</h2>
+          <h2>Messages</h2>
         </div>
       </div>
     </div>
@@ -20,19 +20,16 @@
           <table class="table table-borderless mb-0">
             <thead>
               <tr>
-                <th>Day</th><th>Time</th><th>Who</th><th>Message</th>
+                <th>Sent</th><th>Who</th><th>Message</th>
               </tr>
             </thead>
             <tbody>
-              {% for day in days %}
-              {% for booking in day.bookings %}
+              {% for x in messages %}
               <tr>
-                <td> {{ day }} </td>
-                <td> {{ booking.time }} </td>
-                <td> {{ booking.name }} {% if booking.mobile %}({{ booking.mobile }}) {% endif %}</td>
-                <td> {% if booking.message %} {{ booking.message }} {% endif %}</td>
+                <td> {{ x.time_stamp }} </td>
+                <td> {{ x.name }} ({{ x.email }} {{ x.mobile }})</td>
+                <td> {% if x.message %} {{ x.message }} {% endif %}</td>
               </tr>
-              {% endfor %}
               {% endfor %}
             </tbody>
           </table>

@@ -1,11 +1,14 @@
 from django.db import models
 import datetime
 
+today = datetime.date.today()
+
 class Message(models.Model):
     name = models.CharField(max_length=200, null=True, blank=True)
     mobile = models.CharField(max_length=200, null=True, blank=True)
     email = models.EmailField(max_length=200, null=True, blank=True)
     message = models.TextField(max_length=200, null=True, blank=True)
+    time_stamp = models.DateField(auto_now_add=True, null=True)
 
     def __str__(self):
         return self.name
@@ -17,25 +20,36 @@ TIMES = [("3:30pm","3:30pm"),("4:30pm","4:30pm"),("5:30pm","5:30pm"),("Other", "
 class Booking(models.Model):
     name = models.CharField(max_length=200, null=True, blank=True)
     mobile = models.CharField(max_length=200, null=True, blank=True)
-    day = models.CharField(max_length=200, null=True, blank=True, choices=DAYS)
-    time = models.CharField(max_length=200, null=True, blank=True, choices=TIMES)
+    time = models.CharField(max_length=200, null=True, blank=True)
     date = models.ForeignKey("Day", null=True, blank=True, on_delete=models.SET_NULL)
-    confirmed = models.TextField(max_length=200, null=True, blank=True)
+    message = models.TextField(max_length=200, null=True, blank=True)
+    confirmed = models.BooleanField(default=False)
+    time_stamp = models.DateField(auto_now_add=True, null=True)
+
 
     def __str__(self):
         return self.name
 
 class Day(models.Model):
     date = models.DateField(null=True, blank=True)
+    time_stamp = models.DateField(auto_now_add=True, null=True)
 
     def __str__(self):
-        return str(self.date)
+        result = self.date.strftime("%d %b")
+        return result
+
+    def format(self):
+        result = self.date.strftime("%d %b %Y")
+        return result
+
+    def day_of_week(self):
+        result = self.date.strftime("%A")
+        return result
 
     def weekday(self):
         self.date.weekday().strftime('%A')
 
     def times_tutoring(self):
-        print(self.date.strftime('%A'))
         if self.date.weekday() in [0,1,2,3,4]:
                 # ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday",]:
             return ["3:30pm", "4:30pm", "5:30pm", ]
@@ -47,9 +61,12 @@ class Day(models.Model):
         sessions_on_day = Booking.objects.filter(date=self)
         for x in sessions_on_day:
             try:
-                times_available.remove(x)
+                times_available.remove(x.time)
             except:
                 pass
         return times_available
+
+    def bookings(self):
+        return Booking.objects.filter(date=self).order_by('time')
 
 

@@ -47,19 +47,6 @@
               <a href="#" data-toggle="tooltip" data-placement="bottom" title="0491 062 546"><i class="fa fa-phone"></i> <span>0491 062 546</span></a>
             </div>
           </div>
-
-          <div class = "container">
-           {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                  {{message|safe}}
-                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-           {% endif %}
-          </div>
-
-
         </div>
       </div>
     </div>
@@ -95,14 +82,17 @@
                   <li><a href="{% url 'about' %}">About</a></li>
                   <li><a href="{% url 'pricing' %}">Pricing</a></li>
                   <li><a href="{% url 'contact' %}">Contact</a></li>
+                  {% if request.user.is_authenticated %}
                   <li><a href="{% url 'diary' 0 %}">Diary</a></li>
+                  <li><a href="{% url 'messages' %}">Messages</a></li>
+                  {% endif %}
                 </ul>
               </div>
               <!-- Nav End -->
             </div>
 
             <!-- Booking Now Button -->
-            <a href="{% url 'book' %}" class="btn dento-btn booking-btn">Book Now</a>
+            <a href="{% url 'book' 1 %}" class="btn dento-btn booking-btn">Book Now</a>
           </nav>
         </div>
       </div>
@@ -186,6 +176,8 @@
   <script src="{% static 'website/js/dento.bundle.js' %}"></script>
   <!-- Active js -->
   <script src="{% static 'website/js/default-assets/active.js' %}"></script>
+  <!-- Extra js -->
+  <script src="{% static 'website/js/default-assets/extra.js' %}"></script>
 
 </body>
 

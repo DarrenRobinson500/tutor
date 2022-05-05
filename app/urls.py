@@ -6,7 +6,8 @@ urlpatterns = [
     path('about', about, name='about'),
     path('pricing', pricing, name='pricing'),
     path('contact.html', contact, name='contact'),
-    path('book', book, name='book'),
+    path('messages.html', messages, name='messages'),
+    path('book/<date_adj>', book, name='book'),
     path('diary/<date_adj>', diary, name='diary'),
     path('create_dates', create_dates, name='create_dates'),
 ]
