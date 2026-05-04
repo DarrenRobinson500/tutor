@@ -1,0 +1,22 @@
+<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="og" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8C42"/>
+      <stop offset="100%" stop-color="#FFCA3A"/>
+    </linearGradient>
+    <filter id="s">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#FF8C42" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+<g transform="translate(0, 20)">
+  <!-- Bubble -->
+  <rect x="6" y="6" width="88" height="68" rx="16" fill="url(#og)" filter="url(#s)"/>
+  <!-- Tail -->
+  <polygon points="24,70 8,96 46,70" fill="url(#og)"/>
+  <!-- Lines -->
+<!--  <line x1="22" y1="30" x2="78" y2="30" stroke="white" stroke-width="5" stroke-linecap="round" opacity="0.95"/>-->
+<!--  <line x1="22" y1="47" x2="72" y2="47" stroke="white" stroke-width="5" stroke-linecap="round" opacity="0.95"/>-->
+<!--  <line x1="22" y1="64" x2="75" y2="64" stroke="white" stroke-width="5" stroke-linecap="round" opacity="0.95"/>-->
+</g>
+</svg>

@@ -1,0 +1,1549 @@
+- code: NSW.MATH.NUMBER
+  description: Number
+  years_practised:
+  - '7'
+  - '8'
+  detail: []
+  children:
+  - code: NSW.MATH.S4.1.1
+    description: Operating with integers
+    years_practised:
+    - '7'
+    detail:
+    - Multiply and divide positive and negative integers, applying the rules for signs
+    - Compare and order positive and negative integers on a number line
+    - Add and subtract positive and negative integers
+    - Solve problems set in contexts involving negative numbers
+  - code: NSW.MATH.S4.1.2
+    description: Order of operations with integers
+    years_practised:
+    - '7'
+    detail:
+    - Apply the order of operations (BODMAS/BIDMAS) to expressions involving integers
+    - Evaluate expressions involving brackets, multiplication, division, addition
+      and subtraction
+    - Solve multi-step integer problems using correct order of operations
+  - code: NSW.MATH.S4.2.1
+    description: Comparing fractions using equivalence
+    years_practised:
+    - '7'
+    detail:
+    - Find equivalent fractions by multiplying or dividing numerator and denominator
+    - Simplify fractions to lowest terms
+    - Compare and order fractions with different denominators using equivalence
+    - Convert between improper fractions and mixed numbers
+  - code: NSW.MATH.S4.2.2
+    description: Rounding and decimal types
+    years_practised:
+    - '7'
+    detail:
+    - Round decimals to a specified number of decimal places or significant figures
+    - Convert fractions to decimals and classify as terminating or recurring
+  - code: NSW.MATH.S4.2.3
+    description: Converting between fractions, decimals and percentages
+    years_practised:
+    - '7'
+    detail:
+    - Convert fractions to percentages
+    - Convert fractions to decimals
+    - Convert percentages to fractions
+    - Convert percentages to decimals
+    - Convert decimals to fractions
+    - Convert decimals to percentages
+    - Order and compare a mixed set of fractions, decimals and percentages
+    - Identify and describe irrational numbers such as π and √2
+  - code: NSW.MATH.S4.2.4
+    description: Operations with fractions and decimals
+    years_practised:
+    - '7'
+    detail:
+    - Add and subtract fractions with unlike denominators
+    - Multiply and divide fractions and mixed numbers
+    - Add, subtract, multiply and divide decimals
+    - Solve problems involving operations with fractions and decimals
+  - code: NSW.MATH.S4.2.5
+    description: Solving percentage problems
+    years_practised:
+    - '8'
+    detail:
+    - Calculate a percentage of a quantity
+    - Find the original amount given a percentage and the part
+    - Apply percentage increase and decrease in context
+    - Solve multi-step problems involving percentages
+- code: NSW.MATH.FINMATH
+  description: Financial mathematics
+  years_practised:
+  - '9'
+  - '10'
+  detail: []
+  children:
+  - code: NSW.MATH.S5.1.1
+    description: Earning and spending money
+    years_practised:
+    - '9'
+    detail:
+    - Calculate earnings including wages, salary, commission and overtime
+    - Interpret and calculate deductions from gross pay to find net pay
+    - Calculate best-value purchases using unit pricing
+    - Solve multi-step problems involving earning and spending money
+  - code: NSW.MATH.S5.1.2
+    description: Simple interest
+    years_practised:
+    - '9'
+    detail:
+    - Calculate simple interest using I = Prn
+    - Determine the total amount owing or earned with simple interest
+    - Find the principal, rate or time given the other quantities in the simple interest
+      formula
+    - Solve problems involving simple interest in financial contexts
+  - code: NSW.MATH.S5.1.3
+    description: Compound interest and depreciation
+    years_practised:
+    - '10'
+    detail:
+    - Calculate compound interest using A = P(1 + r)^n
+    - Compare simple and compound interest over the same period
+    - Calculate straight-line depreciation and declining-balance depreciation
+    - Apply exponential models to depreciation and appreciation
+    - Solve problems involving compound interest and depreciation in context
+- code: NSW.MATH.RATIO
+  description: Ratios, rates and variation
+  years_practised:
+  - '7'
+  - '8'
+  - '9'
+  - '10'
+  detail: []
+  children:
+  - code: NSW.MATH.S4.3.1
+    description: Recognising and simplifying ratios
+    years_practised:
+    - '7'
+    detail:
+    - Write and interpret ratios using the colon notation
+    - Simplify ratios by dividing by the highest common factor
+    - Identify whether two ratios are equivalent
+    - Express a ratio in the form 1:n or n:1
+  - code: NSW.MATH.S4.3.2
+    description: Solving problems involving ratios
+    years_practised:
+    - '7'
+    detail:
+    - Divide a quantity in a given ratio
+    - Find a quantity given a ratio and one part
+    - Apply ratios to solve practical problems - maps
+    - Apply ratios to solve practical problems - scale drawings
+    - Distinguish between ratio and rate
+  - code: NSW.MATH.S4.3.3
+    description: Rates
+    years_practised:
+    - '8'
+    detail:
+    - Define a rate as a comparison of two quantities with different units
+    - Interpret and calculate common rates such as speed, cost per item and pay per
+      hour
+    - Solve problems involving constant rates
+  - code: NSW.MATH.S4.3.4
+    description: Distance–time graphs
+    years_practised:
+    - '8'
+    detail:
+    - Interpret distance–time graphs including gradient as speed
+    - Identify sections of a distance–time graph representing rest, constant speed
+      and changing speed
+    - Construct a distance–time graph from authentic data
+    - Read and compare journeys using distance–time graphs
+  - code: NSW.MATH.S5E.19.1
+    description: Direct and inverse variation
+    years_practised:
+    - '10'
+    detail:
+    - Identify and describe problems involving direct variation (y = kx)
+    - Identify and describe problems involving inverse variation (y = k/x)
+    - Determine the constant of proportionality k from given values
+    - Solve problems involving direct and inverse variation
+  - code: NSW.MATH.S5E.19.2
+    description: Graphs and rates of change
+    years_practised: []
+    detail:
+    - Analyse graphs that are increasing or decreasing at a constant rate
+    - Analyse the relationship between graphs and variable rates of change
+    - Construct graphical representations of rates of change
+    - Interpret the connection between graphs and corresponding equations for proportionality
+- code: NSW.MATH.ALG
+  description: Algebra
+  years_practised:
+  - '7'
+  - '8'
+  - '9'
+  - '10'
+  detail: []
+  children:
+  - code: NSW.MATH.S4.4.1
+    description: Pronumerals and algebraic expressions
+    years_practised:
+    - '7'
+    detail:
+    - Use pronumerals to represent unknown or varying quantities
+    - Write algebraic expressions from word descriptions
+    - Evaluate algebraic expressions by substitution
+    - Distinguish between expressions, equations and formulas
+    - Identify equivalent algebraic expressions
+  - code: NSW.MATH.S4.4.2
+    description: Simplifying algebraic expressions
+    years_practised:
+    - '7'
+    detail:
+    - Collect like terms to simplify an algebraic expression
+    - Apply the laws and properties of arithmetic to algebraic terms
+    - Multiply and divide algebraic terms
+    - Apply index notation to algebraic terms
+  - code: NSW.MATH.S4.4.3
+    description: Expanding and factorising
+    years_practised:
+    - '8'
+    detail:
+    - Expand brackets using the distributive law
+    - Factorise algebraic expressions
+  - code: NSW.MATH.S5.3.1
+    description: Algebraic fractions with numerical denominators
+    years_practised:
+    - '10'
+    detail:
+    - Add and subtract algebraic fractions with numerical denominators
+    - Multiply and divide algebraic fractions with numerical denominators
+    - Simplify algebraic fractions by cancelling common factors
+    - Apply the four operations to simplify combinations of algebraic fractions
+  - code: NSW.MATH.S5.3.2
+    description: Expanding and collecting like terms
+    years_practised:
+    - '10'
+    detail:
+    - Apply the distributive law to expand algebraic expressions including those with
+      negative factors
+    - Expand binomial products using FOIL or the distributive law
+    - Collect like terms after expanding to simplify expressions
+    - Expand and simplify expressions involving multiple brackets
+  - code: NSW.MATH.S5E.21.1
+    description: Algebraic fractions with pronumerals in the denominator
+    years_practised:
+    - '10'
+    detail:
+    - Apply the four operations to algebraic fractions with pronumerals in the denominator
+    - Find the lowest common denominator for algebraic fractions
+    - Simplify complex algebraic fractions
+    - Operate with algebraic fractions involving binomial numerators and numerical
+      denominators
+  - code: NSW.MATH.S5E.21.2
+    description: Factorising including quadratic expressions
+    years_practised:
+    - '10'
+    detail:
+    - Factorise algebraic expressions by taking out a common algebraic factor
+    - Expand binomial products and factorise monic quadratic expressions
+    - Factorise difference-of-squares expressions
+    - Expand, factorise and simplify algebraic expressions including special products
+- code: NSW.MATH.IDX
+  description: Indices
+  years_practised:
+  - '7'
+  - '8'
+  - '9'
+  - '10'
+  detail: []
+  children:
+  - code: NSW.MATH.S4.5.1
+    description: Index notation and prime factorisation
+    years_practised:
+    - '7'
+    detail:
+    - Use index notation to represent repeated multiplication
+    - Express whole numbers as products of powers of prime numbers
+    - Identify and list prime and composite numbers
+  - code: NSW.MATH.S4.5.2
+    description: Square roots and cube roots
+    years_practised:
+    - '7'
+    detail:
+    - Identify perfect squares and calculate square roots
+    - Identify perfect cubes and calculate cube roots
+    - Estimate square roots and cube roots of non-perfect values
+    - Evaluate expressions involving square and cube roots
+  - code: NSW.MATH.S4.5.3
+    description: Index laws with positive-integer and zero indices
+    years_practised:
+    - '8'
+    detail:
+    - 'Apply the multiplication index law: a^m × a^n = a^(m+n)'
+    - 'Apply the division index law: a^m ÷ a^n = a^(m−n)'
+    - 'Apply the zero index: a^0 = 1'
+  - code: NSW.MATH.S5.4.1
+    description: Index laws with variables and positive indices
+    years_practised:
+    - '9'
+    detail:
+    - Extend and apply the index laws to variables using positive-integer indices
+    - Simplify algebraic products and quotients using index laws
+    - Apply the zero index to algebraic expressions
+    - Simplify expressions involving combinations of index laws with variables
+  - code: NSW.MATH.S5.4.2
+    description: Negative-integer indices and scientific notation
+    years_practised:
+    - '9'
+    detail:
+    - Apply index laws to numerical expressions with negative-integer indices
+    - Express very small and very large numbers in scientific notation
+    - Perform calculations with numbers in scientific notation
+    - Convert between scientific notation and standard form
+    - Find absolute and percentage error in measurements
+  - code: NSW.MATH.S5E.23.1
+    description: Index laws with negative indices in algebra
+    years_practised:
+    - '9'
+    detail:
+    - Apply index laws to algebraic expressions involving negative-integer indices
+    - Simplify algebraic expressions using all index laws including negative indices
+    - Express algebraic terms with negative indices as fractions
+    - Solve problems involving index laws with algebraic expressions
+  - code: NSW.MATH.S5E.23.2
+    description: Surds
+    years_practised:
+    - '9'
+    detail:
+    - Describe surds and distinguish between rational and irrational numbers
+    - Simplify surds by removing perfect-square factors
+    - Add, subtract and multiply simple surd expressions
+    - Rationalise the denominator of a fraction involving a surd
+  - code: NSW.MATH.S5E.23.3
+    description: Fractional indices
+    years_practised:
+    - '9'
+    detail:
+    - 'Define fractional indices: a^(1/n) = ⁿ√a'
+    - Evaluate expressions involving fractional indices
+    - Apply index laws to expressions involving fractional indices
+    - Convert between surd and index notation
+- code: NSW.MATH.EQ
+  description: Equations
+  years_practised:
+  - '7'
+  - '8'
+  - '9'
+  - '10'
+  detail: []
+  children:
+  - code: NSW.MATH.S4.6.1
+    description: Solving linear equations up to 2 steps
+    years_practised:
+    - '8'
+    detail:
+    - Solve one-step linear equations using inverse operations
+    - Solve two-step linear equations using inverse operations
+  - code: NSW.MATH.S4.6.2
+    description: Verifying solutions by substitution
+    years_practised:
+    - '8'
+    detail:
+    - Check solutions to equations by substituting back into the original equation
+  - code: NSW.MATH.S5.5.1
+    description: Linear equations involving up to 3 steps
+    years_practised:
+    - '9'
+    detail:
+    - Solve linear equations with the unknown on one side requiring up to 3 steps
+    - Solve linear equations with the unknown on both sides
+    - Solve equations involving brackets
+    - Check solutions by substituting back into the original equation
+  - code: NSW.MATH.S5.5.2
+    description: Equations with algebraic fractions
+    years_practised:
+    - '9'
+    detail:
+    - Solve linear equations involving one algebraic fraction with a numerical denominator
+  - code: NSW.MATH.S5.5.3
+    description: Word problems and substitution into formulas
+    years_practised:
+    - '9'
+    detail:
+    - Form and solve linear equations from word problems
+    - Substitute into a formula and solve for the unknown variable
+  - code: NSW.MATH.S5E.25.1
+    description: Quadratic equations
+    years_practised:
+    - '9'
+    detail:
+    - Solve monic quadratic equations by factorising
+    - Solve quadratic equations using the quadratic formula
+    - Solve quadratic equations by completing the square
+    - Determine the number of solutions using the discriminant
+  - code: NSW.MATH.S5E.25.2
+    description: Cubic equations and inequalities
+    years_practised:
+    - '9'
+    detail:
+    - Solve simple cubic equations of the form ax³ = c
+    - Solve linear inequalities and graph their solutions on a number line
+    - Reverse the inequality sign when multiplying or dividing by a negative
+    - Interpret and write inequalities from real-world contexts
+  - code: NSW.MATH.S5E.25.3
+    description: Complex linear equations and simultaneous equations
+    years_practised:
+    - '9'
+    detail:
+    - Solve linear equations involving algebraic fractions
+    - Solve linear equations of more than 3 steps
+    - Rearrange literal equations to change the subject
+    - Solve linear simultaneous equations algebraically (substitution and elimination)
+      and graphically
+  - code: NSW.MATH.S4.6.3
+    description: Quadratic equations
+    years_practised:
+    - '8'
+    detail:
+    - Solve quadratic equations of the form ax² = c
+- code: NSW.MATH.LINREL
+  description: Linear relationships
+  years_practised:
+  - '7'
+  - '8'
+  - '9'
+  - '10'
+  detail: []
+  children:
+  - code: NSW.MATH.S4.7.1
+    description: Plotting and identifying points on the Cartesian plane
+    years_practised:
+    - '7'
+    detail:
+    - Plot and identify points on the Cartesian plane
+    - Plot linear relationships on the Cartesian plane
+    - Solve linear equations using graphical techniques
+  - code: NSW.MATH.S4.7.2
+    description: Plotting linear relationships
+    years_practised:
+    - '8'
+    detail:
+    - Construct a table of values for a linear rule
+    - Plot and draw a straight-line graph from a table of values
+    - Identify the equation of a line in the form y = mx + b
+    - Graph horizontal and vertical lines
+    - Determine whether a point lies on a given line
+  - code: NSW.MATH.S4.7.3
+    description: Solving linear equations using graphical techniques
+    years_practised:
+    - '8'
+    detail:
+    - Find the point of intersection of two linear graphs
+    - Solve a linear equation graphically by finding where y = value
+    - Interpret the solution to a pair of simultaneous equations from a graph
+    - Identify when two lines have no intersection or infinitely many intersections
+  - code: NSW.MATH.S5.6.1
+    description: Midpoint and gradient of an interval
+    years_practised:
+    - '9'
+    detail:
+    - Find the midpoint of an interval using the midpoint formula
+    - Calculate the gradient of a line segment using rise/run or the gradient formula
+    - Interpret gradient as a rate of change in context
+    - Identify positive, negative, zero and undefined gradients
+  - code: NSW.MATH.S5.6.2
+    description: Distance between two points
+    years_practised:
+    - '9'
+    detail:
+    - Apply the distance formula to find the length of an interval on the Cartesian
+      plane
+    - Verify that a point is the midpoint of a segment using the distance formula
+    - Relate the distance formula to Pythagoras' theorem
+    - Solve geometric problems using the distance formula
+  - code: NSW.MATH.S5.6.3
+    description: Recognising and graphing linear equations
+    years_practised:
+    - '9'
+    detail:
+    - Recognise and graph equations of the form y = mx + b
+    - Identify the gradient and y-intercept from the equation of a line
+    - Graph horizontal, vertical and oblique lines
+    - Determine the equation of a line given the gradient and y-intercept
+  - code: NSW.MATH.S5.6.4
+    description: Parallel, horizontal and vertical lines
+    years_practised:
+    - '9'
+    detail:
+    - Identify parallel lines from their equations or graphs
+    - State that parallel lines have equal gradients
+    - Identify horizontal lines as y = c and vertical lines as x = a
+    - Find the equation of a line parallel to a given line through a given point
+  - code: NSW.MATH.S5.6.5
+    description: Equations of parallel and perpendicular lines
+    years_practised:
+    - '9'
+    detail:
+    - Use gradient-intercept form y = mx + b to find the equation of a line
+    - Find the equation of a line through two given points
+    - Apply the condition m₁ × m₂ = −1 for perpendicular lines
+    - Find the equation of a line perpendicular to a given line through a given point
+  - code: NSW.MATH.S5E.27.1
+    description: Coordinate geometry formulas
+    years_practised:
+    - '10'
+    detail:
+    - Apply the midpoint, gradient and distance formulas to solve problems
+    - Use various forms of the equation of a straight line
+    - Find the equation of a line given different information
+    - Solve problems using coordinate geometry formulas
+  - code: NSW.MATH.S5E.27.2
+    description: Symmetry and transformations on the Cartesian plane
+    years_practised:
+    - '10'
+    detail:
+    - Identify line symmetry and rotational symmetry in geometric figures
+    - Describe translations, reflections in an axis and rotations through multiples
+      of 90°
+    - Apply transformations to points and shapes using coordinates
+    - Identify combined transformations and their effects on the Cartesian plane
+- code: NSW.MATH.NONLIN
+  description: Non-linear relationships
+  years_practised:
+  - '9'
+  - '10'
+  detail: []
+  children:
+  - code: NSW.MATH.S5.8.1
+    description: Connection between algebraic and graphical representations
+    years_practised:
+    - '9'
+    detail:
+    - Recognise a quadratic relationship from its equation or table of values
+    - Recognise an exponential relationship from its equation or table of values
+    - Distinguish between linear, quadratic and exponential relationships
+    - Match equations to their graphical representations
+  - code: NSW.MATH.S5.8.2
+    description: Graphing quadratic relationships
+    years_practised:
+    - '9'
+    detail:
+    - Construct a table of values and plot a parabola
+    - Identify the axis of symmetry, vertex, x-intercepts and y-intercept of a parabola
+    - Describe the effect of changing coefficients on the shape of a parabola
+    - Solve problems modelled by quadratic functions
+  - code: NSW.MATH.S5.8.3
+    description: Graphing exponential relationships
+    years_practised:
+    - '9'
+    detail:
+    - Construct a table of values and plot an exponential graph y = a^x
+    - Identify the y-intercept and asymptote of an exponential graph
+    - Describe exponential growth and decay in context
+    - Compare exponential and linear models for the same data
+  - code: NSW.MATH.S5E.28.1
+    description: Parabolas
+    years_practised:
+    - '9'
+    detail:
+    - 'Graph parabolas and identify key features: vertex, axis of symmetry, intercepts'
+    - Describe the effect of transformations on the parabola y = x²
+    - Determine the equation of a parabola from its graph
+    - Solve problems involving parabolas
+  - code: NSW.MATH.S5E.28.2
+    description: Exponential, hyperbolic and circular graphs
+    years_practised:
+    - '9'
+    detail:
+    - Graph exponentials and describe their features and transformations
+    - Graph hyperbolas y = k/x and describe their features and transformations
+    - Graph circles x² + y² = r² and describe their features and transformations
+    - Distinguish between different types of graphs by examining their algebraic and
+      graphical representations
+  - code: NSW.MATH.S5E.28.3
+    description: Polynomial curves
+    years_practised:
+    - '10'
+    detail:
+    - Graph and compare polynomial curves of varying degree
+    - Describe features and transformations of polynomial curves
+    - Distinguish polynomial curves from other graph types
+    - Solve problems involving polynomial graphs
+  - code: NSW.MATH.S5E.29.1
+    description: Polynomial operations
+    years_practised:
+    - '10'
+    detail:
+    - Define a polynomial and identify its degree, leading coefficient and constant
+      term
+    - Add, subtract and multiply polynomials
+    - Divide a polynomial by a linear expression using long division
+    - Apply the remainder theorem to find remainders
+  - code: NSW.MATH.S5E.29.2
+    description: Factor and remainder theorems
+    years_practised:
+    - '10'
+    detail:
+    - State and apply the factor theorem to determine if a linear expression is a
+      factor
+    - Factorise polynomial expressions using the factor theorem
+    - Apply the remainder theorem to evaluate polynomials
+    - Sketch graphs of factorised polynomials
+  - code: NSW.MATH.S5E.30.1
+    description: Logarithm basics and graphs
+    years_practised:
+    - '10'
+    detail:
+    - Define the logarithm as the inverse of exponentiation
+    - Convert between exponential and logarithmic forms
+    - Evaluate simple logarithms including log₁₀ and log₂
+    - Graph and interpret logarithmic functions
+  - code: NSW.MATH.S5E.30.2
+    description: Laws of logarithms
+    years_practised:
+    - '10'
+    detail:
+    - 'Apply the product law: log(ab) = log a + log b'
+    - 'Apply the quotient law: log(a/b) = log a − log b'
+    - 'Apply the power law: log(aⁿ) = n log a'
+    - Solve equations involving logarithms using the laws
+  - code: NSW.MATH.S5E.31.1
+    description: Relations, functions and function notation
+    years_practised:
+    - '10'
+    detail:
+    - Define a relation and a function and distinguish between them
+    - Use function notation f(x) and evaluate functions for given inputs
+    - Find the domain and range of a function from its graph or equation
+    - Graph functions and identify key features
+  - code: NSW.MATH.S5E.31.2
+    description: Graphing linear inequalities
+    years_practised:
+    - '10'
+    detail:
+    - Graph the solution to a linear inequality in one variable on a number line
+    - Graph the solution to a linear inequality in two variables on the Cartesian
+      plane
+    - Identify and shade the region corresponding to a linear inequality
+    - Graph the region corresponding to a system of two linear inequalities
+- code: NSW.MATH.MEAS
+  description: Measurement
+  years_practised:
+  - '7'
+  - '8'
+  detail: []
+  children:
+  - code: NSW.MATH.S4.8.1
+    description: Perimeter of quadrilaterals and composite figures
+    years_practised:
+    - '7'
+    detail:
+    - Calculate the perimeter of simple shapes
+  - code: NSW.MATH.S4.8.2
+    description: Features of circles and circumference
+    years_practised:
+    - '8'
+    detail:
+    - Identify and describe the radius, diameter, chord, arc, sector and circumference
+    - Use the arc length formula
+    - Calculate the circumference of a circle given the radius or diameter
+  - code: NSW.MATH.S4.9.1
+    description: Identifying and defining Pythagoras' theorem
+    years_practised:
+    - '8'
+    detail:
+    - Identify the hypotenuse as the longest side opposite the right angle
+    - Identify Pythagorean triads such as 3-4-5 and 5-12-13
+    - Determine the length of a side of a right angle triangle
+- code: NSW.MATH.ASV
+  description: Area, surface area and volume
+  years_practised:
+  - '7'
+  - '8'
+  - '9'
+  - '10'
+  detail: []
+  children:
+  - code: NSW.MATH.S4.10.1
+    description: Area of circles, rectangles, triangles and parallelograms
+    years_practised:
+    - '7'
+    detail:
+    - Calculate the area of a rectangle
+    - Calculate the area of a triangle
+    - Calculate the area of a  parallelogram
+    - Calculate the area of a circle
+    - Choose appropriate units of area and convert between mm², cm², m² and km²
+    - Calculate the areas of a trapeziums
+    - Calculate the areas of a rhombuses
+    - Calculate the areas of a kites
+  - code: NSW.MATH.S4.10.3
+    description: Volume of prisms and cylinders
+    years_practised:
+    - '7'
+    detail:
+    - Apply V = Ah to find the volume of any prism
+    - Apply V = πr²h to find the volume of a cylinder
+    - Convert between units of volume and capacity
+  - code: NSW.MATH.S5.13.1
+    description: Surface area of cylinders and composite solids
+    years_practised:
+    - '9'
+    detail:
+    - Develop and apply the formula for the surface area of a cylinder
+    - Calculate the surface area of composite solids involving prisms and cylinders
+    - Solve problems involving surface areas in practical contexts
+    - Select appropriate formulas for given solid shapes
+  - code: NSW.MATH.S5.13.2
+    description: Volume of composite solids
+    years_practised:
+    - '9'
+    detail:
+    - Calculate the volume of composite solids consisting of right prisms and cylinders
+    - Apply volume formulas to solve practical problems
+    - Convert between units of volume and capacity
+    - Interpret and apply volume in real-world contexts
+  - code: NSW.MATH.S5E.34.1
+    description: Surface area of pyramids, cones and spheres
+    years_practised:
+    - '10'
+    detail:
+    - Calculate the surface area of a pyramid
+    - Calculate the surface area of a cone using SA = πrl + πr²
+    - Calculate the surface area of a sphere using SA = 4πr²
+    - Solve problems involving the surface area of composite solids
+  - code: NSW.MATH.S5E.34.2
+    description: Volume of pyramids, cones and spheres
+    years_practised:
+    - '10'
+    detail:
+    - Calculate the volume of a pyramid using V = ⅓Ah
+    - Calculate the volume of a cone using V = ⅓πr²h
+    - Calculate the volume of a sphere using V = (4/3)πr³
+    - Solve problems involving volumes of composite solids
+- code: NSW.MATH.GEOM
+  description: Geometry
+  years_practised:
+  - '7'
+  - '8'
+  - '9'
+  - '10'
+  detail: []
+  children:
+  - code: NSW.MATH.S4.12.1
+    description: Language, notation and conventions of geometry
+    years_practised:
+    - '7'
+    detail:
+    - Apply the language and notation of points, lines, intervals and angles
+    - Classify angles as acute, right, obtuse, straight, reflex or revolution
+    - Identify vertically opposite, supplementary and complementary angles
+  - code: NSW.MATH.S4.12.2
+    description: Angle properties at a point and on a line
+    years_practised:
+    - '8'
+    detail:
+    - Apply the property that angles at a point sum to 360°
+    - Apply the property that angles on a straight line sum to 180°
+    - Identify and use vertically opposite angles
+    - Solve numerical problems involving angles at a point using reasoning
+  - code: NSW.MATH.S4.12.3
+    description: Parallel lines and transversals
+    years_practised:
+    - '8'
+    detail:
+    - Identify corresponding, alternate and co-interior angles when a transversal
+      crosses two lines
+    - Apply the properties of parallel lines to find unknown angles
+    - Determine whether two lines are parallel using angle relationships
+  - code: NSW.MATH.S4.13.1
+    description: Properties of triangles
+    years_practised:
+    - '7'
+    detail:
+    - Classify triangles as equilateral, isosceles, scalene, right-angled, acute or
+      obtuse
+    - Apply the angle sum of a triangle (180°) to find unknown angles
+  - code: NSW.MATH.S4.13.2
+    description: Properties of quadrilaterals
+    years_practised:
+    - '7'
+    detail:
+    - Classify quadrilaterals as parallelogram, rectangle, rhombus, square, trapezium
+      or kite
+    - Apply the angle sum of a quadrilateral (360°) to find unknown angles
+  - code: NSW.MATH.S5.15.1
+    description: Properties of similar figures
+    years_practised:
+    - '9'
+    detail:
+    - Identify and describe properties of similar figures
+    - State the tests for similar triangles (AA, SAS, SSS)
+    - Calculate the scale factor between two similar figures
+    - Find unknown side lengths in similar figures using the scale factor
+  - code: NSW.MATH.S5.15.2
+    description: Scale factors in similar figures
+    years_practised:
+    - '9'
+    detail:
+    - Apply similarity to solve problems involving maps and scale drawings
+    - Use the ratio of areas and volumes of similar figures
+    - Prove triangles are similar and use similarity to find unknown lengths
+    - Apply scale factors to solve practical and geometric problems
+  - code: NSW.MATH.S5E.36.1
+    description: Congruence and similarity proofs
+    years_practised:
+    - '9'
+    detail:
+    - State and apply the four tests for congruent triangles (SSS, SAS, AAS, RHS)
+    - Develop and apply the minimum conditions for similar triangles
+    - Construct formal proofs involving congruent and similar triangles
+    - Apply logical reasoning to numerical problems involving plane shapes
+  - code: NSW.MATH.S5E.36.2
+    description: Proofs involving plane shapes
+    years_practised:
+    - '9'
+    detail:
+    - Apply logical reasoning to prove properties of triangles and quadrilaterals
+    - Present proofs using correct mathematical language and notation
+    - Establish and apply properties of similar shapes and solids
+    - Prove results about angles and sides using geometric reasoning
+  - code: NSW.MATH.S5E.36.3
+    description: Circle geometry
+    years_practised:
+    - '10'
+    detail:
+    - Prove and apply angle properties of circles (angle at centre, angles in same
+      segment)
+    - Prove and apply chord properties of circles
+    - Prove and apply tangent and secant properties of circles
+    - Solve problems using circle geometry theorems
+- code: NSW.MATH.TRIG
+  description: Trigonometry
+  years_practised:
+  - '9'
+  - '10'
+  detail: []
+  children:
+  - code: NSW.MATH.S5.11.1
+    description: Trigonometric ratios in right-angled triangles
+    years_practised:
+    - '9'
+    detail:
+    - Identify the hypotenuse, opposite and adjacent sides relative to a given angle
+    - Define sine, cosine and tangent as ratios of sides in a right-angled triangle
+    - Demonstrate the constancy of trigonometric ratios for a given angle
+    - Use a calculator to find trigonometric ratios and inverse ratios
+  - code: NSW.MATH.S5.11.2
+    description: Applying trigonometry to right-angled triangles
+    years_practised:
+    - '9'
+    detail:
+    - Find an unknown side length in a right-angled triangle using a trigonometric
+      ratio
+    - Find an unknown angle in a right-angled triangle using an inverse trigonometric
+      ratio
+    - Select the appropriate trigonometric ratio for a given problem
+    - Solve multi-step problems involving right-angled triangles
+  - code: NSW.MATH.S5.11.3
+    description: Angles of elevation, depression and bearings
+    years_practised:
+    - '10'
+    detail:
+    - Define and identify angles of elevation and depression
+    - Solve problems involving angles of elevation and depression
+    - Interpret and apply compass bearings and true bearings
+    - Solve right-angled triangle problems involving bearings
+  - code: NSW.MATH.S5E.32.1
+    description: 3D problems involving right-angled triangles
+    years_practised:
+    - '10'
+    detail:
+    - Apply Pythagoras' theorem in three-dimensional contexts
+    - Apply trigonometric ratios to solve problems in three dimensions
+    - Find the angle between a line and a plane
+    - Solve multi-step 3D trigonometry problems
+  - code: NSW.MATH.S5E.32.2
+    description: Sine rule, cosine rule and area rule
+    years_practised:
+    - '10'
+    detail:
+    - Apply the sine rule to find unknown sides and angles in non-right-angled triangles
+    - Identify the ambiguous case of the sine rule
+    - Apply the cosine rule to find unknown sides and angles
+    - Calculate the area of a triangle using A = ½ab sin C
+  - code: NSW.MATH.S5E.32.3
+    description: Unit circle and trigonometric equations
+    years_practised:
+    - '10'
+    detail:
+    - Use the unit circle to define sine, cosine and tangent for all angles
+    - Identify exact values for 30°, 45° and 60°
+    - Solve trigonometric equations using exact values
+    - Use relationships between supplementary and complementary angles to solve equations
+- code: NSW.MATH.DATA
+  description: Data
+  years_practised:
+  - '7'
+  - '8'
+  - '9'
+  - '10'
+  detail: []
+  children:
+  - code: NSW.MATH.S4.14.1
+    description: Classifying data
+    years_practised:
+    - '7'
+    detail:
+    - Classify data as numerical (discrete or continuous) or categorical (nominal
+      or ordinal)
+    - Distinguish between a census and a sample
+  - code: NSW.MATH.S4.14.2
+    description: Displaying data using graphical representations
+    years_practised:
+    - '7'
+    detail:
+    - Select appropriate graphs for a given data set and purpose
+    - Interpret data in graphical representations
+    - Identify misleading features of graphs
+  - code: NSW.MATH.S4.15.1
+    description: Mean, median, mode and range
+    years_practised:
+    - '8'
+    detail:
+    - Calculate the mean, median, mode and range of a data set
+    - Choose the most appropriate measure of centre for a given data set
+  - code: NSW.MATH.S4.15.2
+    description: Interpreting and analysing datasets
+    years_practised:
+    - '8'
+    detail:
+    - Interpret the effect individual data points have on the mean and range
+    - Compare data sets using measures of centre and spread
+  - code: NSW.MATH.S5.16.1
+    description: Standard deviation and interquartile range
+    years_practised:
+    - '9'
+    detail:
+    - Calculate the interquartile range (IQR) from a data set
+    - Examine standard deviation as a measure of spread
+    - Calculate standard deviation using technology
+    - Compare data sets using mean and standard deviation
+  - code: NSW.MATH.S5.16.2
+    description: Quartiles and box plots
+    years_practised:
+    - '9'
+    detail:
+    - Determine quartiles Q1, Q2 and Q3 from a data set
+    - Construct and interpret a box-and-whisker plot
+    - Use box plots to compare two or more datasets
+    - Identify outliers and describe their effect on the display
+  - code: NSW.MATH.S5.16.3
+    description: Bivariate data and scatter plots
+    years_practised:
+    - '10'
+    detail:
+    - Identify and describe numerical data sets involving two variables
+    - Construct a scatter plot by plotting ordered pairs
+    - Describe the direction, form and strength of association in a scatter plot
+    - Draw a line of best fit by eye and use it to make predictions
+    - Interpret the gradient and intercept of the line of best fit in context
+  - code: NSW.MATH.S5E.40.1
+    description: Statistical inquiry
+    years_practised:
+    - '10'
+    detail:
+    - Plan and conduct a statistical inquiry into a question of interest
+    - Select an appropriate sampling method and justify the choice
+    - Examine reports of studies for information on planning and implementation
+    - Evaluate the validity and reliability of conclusions drawn from data
+- code: NSW.MATH.PROB
+  description: Probability
+  years_practised:
+  - '7'
+  - '8'
+  - '9'
+  - '10'
+  detail: []
+  children:
+  - code: NSW.MATH.S4.16.1
+    description: Probability of chance experiments
+    years_practised:
+    - '8'
+    detail:
+    - List the sample space for a chance experiment
+    - Calculate experimental and theoretical probability
+    - Express probability as a fraction, decimal or percentage
+  - code: NSW.MATH.S4.16.2
+    description: Complementary events
+    years_practised:
+    - '8'
+    detail:
+    - Identify complementary events and explain that P(E) + P(E') = 1
+    - Calculate the probability of a complementary event
+    - Apply complementary events to solve probability problems
+    - Compare experimental and theoretical probabilities
+  - code: NSW.MATH.S5.18.1
+    description: Multi-stage chance experiments
+    years_practised:
+    - '9'
+    detail:
+    - Describe multi-stage chance experiments involving independent and dependent
+      events
+    - Construct and use tree diagrams to represent multi-stage experiments
+    - Calculate the probability of combined outcomes by multiplying branch probabilities
+    - Solve problems for multi-stage chance experiments
+  - code: NSW.MATH.S5.18.2
+    description: Simulations
+    years_practised:
+    - '9'
+    detail:
+    - Design simulations to model situations involving probability
+    - Use simulations to estimate probability when theoretical probability is unknown
+    - Recognise that experimental probability approaches theoretical probability as
+      trials increase
+    - Evaluate the validity of probability estimates from simulations
+  - code: NSW.MATH.S5E.41.1
+    description: Venn diagrams and two-way tables
+    years_practised:
+    - '9'
+    detail:
+    - Construct and interpret a two-way table for two categorical variables
+    - Construct and interpret a Venn diagram for two events
+    - Calculate P(A ∩ B), P(A ∪ B) and P(A') from a Venn diagram or two-way table
+    - Determine whether two events are mutually exclusive
+  - code: NSW.MATH.S5E.41.2
+    description: Conditional probability
+    years_practised:
+    - '9'
+    detail:
+    - Use 'if…then', 'given', 'of' and 'knowing that' language to examine conditional
+      statements
+    - Calculate conditional probability from two-way tables and Venn diagrams
+    - Describe mutually exclusive and non-mutually exclusive events
+    - Identify common mistakes in interpreting conditional probability language
+- code: NSW.MATH.NET
+  description: Networks
+  years_practised:
+  - '9'
+  - '10'
+  detail: []
+  children:
+  - code: NSW.MATH.S5E.39.1
+    description: Graph theory and Euler's formula
+    years_practised:
+    - '10'
+    detail:
+    - Define a graph/network and describe its vertices, edges and degree
+    - Define a planar graph and apply Euler's formula V − E + F = 2
+    - Explain Eulerian trails and circuits in the context of the Königsberg bridges
+      problem
+    - Identify whether a graph has an Eulerian trail or circuit
+- code: NSW.MATH.S6.ALG
+  description: Algebra
+  years_practised:
+  - 11std
+  - 12std
+  - 11adv
+  - 12adv
+  - 11ex1
+  detail: []
+  children:
+  - code: NSW.MATH.S6.ALG.1
+    description: Formulae and equations
+    years_practised:
+    - 11std
+    detail:
+    - Substitute values into formulas and evaluate the result
+    - Rearrange formulas to change the subject
+    - Solve linear equations involving fractions and multiple steps
+    - Solve linear inequalities and represent solutions on a number line
+    - Form and solve equations from word problems in context
+  - code: NSW.MATH.S6.ALG.2
+    description: Linear relationships
+    years_practised:
+    - 11std
+    detail:
+    - Determine the gradient and y-intercept of a line from its equation or graph
+    - Write the equation of a line given the gradient and y-intercept
+    - Sketch a straight-line graph using the gradient-intercept method
+    - Construct a table of values and graph a linear relationship
+    - Solve simultaneous linear equations graphically and algebraically
+    - Interpret and model direct relationships in context
+  - code: NSW.MATH.S6.ALG.3
+    description: Algebra
+    years_practised:
+    - 12std
+    detail:
+    - Apply algebraic techniques including expansion and factorisation
+    - Substitute into and rearrange formulas arising in financial and physical contexts
+    - Solve linear equations and linear inequalities
+  - code: NSW.MATH.S6.ALG.4
+    description: Working with functions
+    years_practised:
+    - 11adv
+    detail:
+    - Define a function and use function notation f(x)
+    - Determine and describe the domain and range of a function
+    - Identify whether a relation is a function using the vertical line test
+    - Sketch and interpret graphs of linear, quadratic, cubic and absolute value functions
+    - Describe the relationship between a function and its inverse
+  - code: NSW.MATH.S6.ALG.5
+    description: Graph transformations
+    years_practised:
+    - 11adv
+    - 12adv
+    detail:
+    - Describe and apply vertical and horizontal translations of functions
+    - Describe and apply reflections of functions in the x-axis and y-axis
+    - Describe and apply dilations of functions parallel to each axis
+    - Combine transformations to sketch graphs of functions in transformed form
+    - Identify key features of transformed graphs including intercepts and asymptotes
+  - code: NSW.MATH.S6.ALG.6
+    description: Functions
+    years_practised:
+    - 11ex1
+    detail:
+    - Define and use function notation and evaluate composite functions
+    - Find the inverse of a function and verify using function composition
+    - Recognise even and odd functions from their graphs and equations
+    - Determine limits of functions intuitively and interpret their meaning
+    - Apply the parametric form of a function and convert to Cartesian form
+  - code: NSW.MATH.S6.ALG.7
+    description: Polynomials
+    years_practised:
+    - 11ex1
+    detail:
+    - Define a polynomial and identify its degree, leading coefficient and roots
+    - Divide polynomials using long division and apply the remainder theorem
+    - Apply the factor theorem to factorise polynomial expressions
+    - Solve polynomial equations and sketch polynomial graphs
+    - Solve problems using the sum and product of roots of quadratic and cubic equations
+- code: NSW.MATH.S6.FIN
+  description: Financial mathematics
+  years_practised:
+  - 11std
+  - 12std
+  - 12adv
+  detail: []
+  children:
+  - code: NSW.MATH.S6.FIN.1
+    description: Earning money
+    years_practised:
+    - 11std
+    detail:
+    - Calculate wages and salaries including overtime and penalty rates
+    - Calculate income from commission, piecework and allowances
+    - Distinguish between gross income, net income and deductions
+    - Calculate PAYG tax withheld using tax tables or formulas
+    - Interpret a payslip and calculate take-home pay
+  - code: NSW.MATH.S6.FIN.2
+    description: Managing money
+    years_practised:
+    - 11std
+    detail:
+    - Calculate simple interest using I = Prn
+    - Calculate compound interest and compare with simple interest
+    - Interpret credit card statements including interest charges and minimum payments
+    - Apply the declining-balance method to calculate depreciation
+    - Calculate the cost of loans including fees and total repayments
+    - Prepare and analyse a personal budget
+  - code: NSW.MATH.S6.FIN.3
+    description: Investment
+    years_practised:
+    - 12std
+    detail:
+    - Calculate compound interest using A = P(1 + r)^n
+    - Compare simple and compound interest for investments over the same period
+    - Calculate the future value and present value of an investment
+    - Solve problems involving appreciation using the compound growth formula
+  - code: NSW.MATH.S6.FIN.4
+    description: Depreciation and loans
+    years_practised:
+    - 12std
+    detail:
+    - Apply straight-line and declining-balance methods of depreciation
+    - Calculate flat-rate and reducing-balance loan repayments
+    - Interpret a loan schedule showing principal, interest and outstanding balance
+    - Compare the total cost of different loan arrangements
+  - code: NSW.MATH.S6.FIN.5
+    description: Investment and loans
+    years_practised:
+    - 12std
+    detail:
+    - Calculate the future value of compound interest investments
+    - Analyse reducing-balance loans using monthly repayment tables
+    - Determine the effect of changing interest rate or loan term on repayments
+    - Solve problems involving credit cards, personal loans and mortgages
+  - code: NSW.MATH.S6.FIN.6
+    description: Annuities
+    years_practised:
+    - 12std
+    detail:
+    - Define an annuity as a sequence of equal periodic payments
+    - Calculate the future value of an ordinary annuity using a table or formula
+    - Calculate the present value of an annuity
+    - Apply annuity concepts to retirement savings and loan repayments
+  - code: NSW.MATH.S6.FIN.7
+    description: Financial mathematics
+    years_practised:
+    - 12adv
+    detail:
+    - Apply arithmetic and geometric sequences to model financial situations
+    - Calculate the future and present value of investments using geometric series
+    - Solve problems involving superannuation and reducing-balance loans using series
+- code: NSW.MATH.S6.MEAS
+  description: Measurement
+  years_practised:
+  - 11std
+  detail: []
+  children:
+  - code: NSW.MATH.S6.MEAS.1
+    description: Applications of measurement
+    years_practised:
+    - 11std
+    detail:
+    - Convert between metric units of length, area, volume and capacity
+    - Calculate perimeter and area of composite shapes including sectors
+    - Calculate the arc length and area of a sector using the angle in degrees
+    - Calculate the volume and surface area of prisms and cylinders
+    - Solve practical problems involving measurement in context
+  - code: NSW.MATH.S6.MEAS.2
+    description: Time and location
+    years_practised:
+    - 11std
+    detail:
+    - Convert between 12-hour and 24-hour time
+    - Calculate time differences between Australian time zones
+    - Interpret and use world time zones to solve scheduling problems
+    - Use latitude and longitude to describe positions on Earth
+    - Solve problems involving time zones and international travel
+- code: NSW.MATH.S6.NET
+  description: Networks
+  years_practised:
+  - 11std
+  - 12std
+  detail: []
+  children:
+  - code: NSW.MATH.S6.NET.1
+    description: Networks, paths, trees
+    years_practised:
+    - 11std
+    detail:
+    - Define and use the language of networks including vertices, edges and degree
+    - Draw and interpret network diagrams
+    - Identify Eulerian trails and Hamiltonian paths and their conditions
+    - Find the shortest path between two vertices using inspection or an algorithm
+    - Construct a minimum spanning tree and calculate its total weight
+    - Apply network concepts to solve practical problems
+  - code: NSW.MATH.S6.NET.2
+    description: Network flow
+    years_practised:
+    - 12std
+    detail:
+    - Identify and model network flow problems using directed graphs
+    - Apply the max-flow min-cut theorem to find the maximum flow through a network
+    - Solve practical problems involving flow of resources in networks
+  - code: NSW.MATH.S6.NET.3
+    description: Critical path analysis
+    years_practised:
+    - 12std
+    detail:
+    - Construct a network diagram from a table of activities and precedences
+    - Calculate the earliest and latest start times for each activity
+    - Identify the critical path and explain its significance for project management
+    - Calculate float time and determine which activities can be delayed
+- code: NSW.MATH.S6.STAT
+  description: Statistical analysis
+  years_practised:
+  - 11std
+  - 12std
+  - 11adv
+  - 12adv
+  - 11ex1
+  - 12ex1
+  detail: []
+  children:
+  - code: NSW.MATH.S6.STAT.1
+    description: Data analysis
+    years_practised:
+    - 11std
+    detail:
+    - Classify data as categorical or numerical (discrete or continuous)
+    - Display data using dot plots, stem-and-leaf plots, histograms and box plots
+    - Calculate mean, median, mode, range, interquartile range and standard deviation
+    - Identify the shape of a distribution as symmetric, positively or negatively
+      skewed
+    - Identify outliers and describe their effect on summary statistics
+    - Compare two datasets using summary statistics and graphical displays
+  - code: NSW.MATH.S6.STAT.2
+    description: Relative frequency and probability
+    years_practised:
+    - 12std
+    detail:
+    - Calculate relative frequencies from observed data and use them to estimate probability
+    - Identify complementary, mutually exclusive and independent events
+    - Use probability trees and two-way tables to calculate probabilities
+    - Apply the addition rule P(A ∪ B) = P(A) + P(B) − P(A ∩ B)
+    - Calculate conditional probability from two-way tables and tree diagrams
+  - code: NSW.MATH.S6.STAT.3
+    description: Bivariate data analysis
+    years_practised:
+    - 12std
+    detail:
+    - Construct and interpret scatter plots for bivariate numerical data
+    - Describe the correlation between two variables in terms of direction, form and
+      strength
+    - Calculate and interpret Pearson's correlation coefficient using technology
+    - Determine the least squares regression line and use it for prediction
+    - Interpret the gradient and intercept of the regression line in context
+  - code: NSW.MATH.S6.STAT.4
+    description: Normal distribution
+    years_practised:
+    - 12std
+    detail:
+    - Identify normally distributed data from graphical and numerical evidence
+    - Calculate and interpret z-scores to compare scores from different distributions
+    - Use the empirical rule (68-95-99.7%) to estimate probabilities
+    - Solve problems involving the normal distribution using technology
+  - code: NSW.MATH.S6.STAT.5
+    description: Data
+    years_practised:
+    - 11adv
+    detail:
+    - Classify and display data using appropriate graphical representations
+    - Calculate and interpret measures of central tendency and spread
+    - Analyse and compare datasets using back-to-back stem plots and box plots
+    - Identify skewness and outliers in a dataset
+  - code: NSW.MATH.S6.STAT.6
+    description: Probability
+    years_practised:
+    - 11adv
+    detail:
+    - Define and calculate theoretical and experimental probability
+    - Use Venn diagrams and two-way tables to find probabilities of combined events
+    - Apply the addition theorem P(A ∪ B) = P(A) + P(B) − P(A ∩ B)
+    - Identify mutually exclusive and complementary events
+    - Calculate conditional probability using P(A|B) = P(A ∩ B) / P(B)
+  - code: NSW.MATH.S6.STAT.7
+    description: Random variables
+    years_practised:
+    - 12adv
+    detail:
+    - Define a discrete random variable and construct its probability distribution
+    - Calculate the expected value E(X) and variance Var(X) of a discrete distribution
+    - Define and use the binomial distribution with parameters n and p
+    - Calculate mean and variance of the binomial distribution
+    - Solve problems involving discrete random variables in context
+  - code: NSW.MATH.S6.STAT.8
+    description: Permutations and combinations
+    years_practised:
+    - 11ex1
+    - 12ex1
+    detail:
+    - Apply the multiplication principle to count ordered arrangements
+    - Calculate the number of permutations of n objects taken r at a time
+    - Calculate the number of combinations using C(n,r) = n! / (r!(n-r)!)
+    - Solve counting problems involving restrictions and repeated items
+    - Apply Pascal's triangle and the binomial theorem to expand (x + y)^n
+  - code: NSW.MATH.S6.STAT.9
+    description: Binomial distribution
+    years_practised:
+    - 11ex1
+    - 12ex1
+    detail:
+    - Identify a binomial situation and define its parameters n and p
+    - Calculate probabilities using the binomial probability formula
+    - Determine the mean and variance of a binomial distribution
+    - Solve problems applying the binomial distribution in context
+- code: NSW.MATH.S6.TRIG
+  description: Trigonometry
+  years_practised:
+  - 12std
+  - 11adv
+  - 12ex1
+  detail: []
+  children:
+  - code: NSW.MATH.S6.TRIG.1
+    description: Right-angled triangles
+    years_practised:
+    - 12std
+    detail:
+    - Apply the sine, cosine and tangent ratios to find unknown sides and angles
+    - Calculate angles of elevation and depression in practical contexts
+    - Solve multi-step problems involving right-angled triangles
+  - code: NSW.MATH.S6.TRIG.2
+    description: Non-right-angled trigonometry and rates
+    years_practised:
+    - 12std
+    detail:
+    - Apply the sine rule to find unknown sides and angles in non-right-angled triangles
+    - Apply the cosine rule to find unknown sides and angles
+    - Calculate the area of a triangle using A = ½ab sin C
+    - Solve problems involving bearings using trigonometry
+    - Interpret and solve problems involving rates and ratios in trigonometric contexts
+  - code: NSW.MATH.S6.TRIG.3
+    description: Trigonometric functions
+    years_practised:
+    - 11adv
+    detail:
+    - Define sine, cosine and tangent for all angles using the unit circle
+    - Identify exact values for 0°, 30°, 45°, 60° and 90°
+    - Solve trigonometric equations in a given domain
+    - Sketch and interpret the graphs of y = sin x, y = cos x and y = tan x
+    - Describe the period, amplitude and phase of trigonometric graphs
+  - code: NSW.MATH.S6.TRIG.4
+    description: Inverse trigonometric functions
+    years_practised:
+    - 12ex1
+    detail:
+    - Define the inverse trigonometric functions and state their restricted domains
+      and ranges
+    - Evaluate expressions involving arcsin, arccos and arctan
+    - Sketch the graphs of y = arcsin x, y = arccos x and y = arctan x
+    - Solve equations involving inverse trigonometric functions
+    - Apply inverse trigonometric functions in calculus contexts
+- code: NSW.MATH.S6.IDX
+  description: Indices and logarithms
+  years_practised:
+  - 11adv
+  detail: []
+  children:
+  - code: NSW.MATH.S6.IDX.1
+    description: Exponential functions
+    years_practised:
+    - 11adv
+    detail:
+    - Graph exponential functions y = a^x and identify key features
+    - Apply index laws to simplify expressions with fractional and negative indices
+    - Solve exponential equations using index laws and logarithms
+    - Model exponential growth and decay in practical contexts
+    - Understand the natural exponential function y = e^x and its properties
+  - code: NSW.MATH.S6.IDX.2
+    description: Logarithmic functions
+    years_practised:
+    - 11adv
+    detail:
+    - Define the logarithm as the inverse of an exponential function
+    - Convert between exponential and logarithmic forms
+    - Apply the product, quotient and power laws of logarithms
+    - Solve equations involving logarithms and exponentials
+    - Graph logarithmic functions and identify key features
+- code: NSW.MATH.S6.SEQ
+  description: Sequences and series
+  years_practised:
+  - 12adv
+  detail: []
+  children:
+  - code: NSW.MATH.S6.SEQ.1
+    description: Sequences and series
+    years_practised:
+    - 12adv
+    detail:
+    - Identify arithmetic sequences and calculate the nth term and sum of n terms
+    - Identify geometric sequences and calculate the nth term and sum of n terms
+    - Calculate the limiting sum of an infinite geometric series
+    - Apply arithmetic and geometric sequences to model real-world situations
+    - Solve problems involving compound interest and annuities using geometric series
+- code: NSW.MATH.S6.CALC
+  description: Calculus
+  years_practised:
+  - 11adv
+  - 12adv
+  - 12ex1
+  - 12ex2
+  detail: []
+  children:
+  - code: NSW.MATH.S6.CALC.1
+    description: Differentiation
+    years_practised:
+    - 11adv
+    - 12adv
+    - 12ex1
+    detail:
+    - Interpret the derivative as the instantaneous rate of change and gradient of
+      a tangent
+    - Differentiate polynomial functions using the power rule
+    - Differentiate exponential, logarithmic and trigonometric functions
+    - Apply the chain rule, product rule and quotient rule
+    - Find the equation of a tangent and normal to a curve at a given point
+    - Apply differentiation to sketch curves and solve optimisation problems
+  - code: NSW.MATH.S6.CALC.2
+    description: Integration
+    years_practised:
+    - 12adv
+    - 12ex1
+    - 12ex2
+    detail:
+    - Recognise integration as the reverse process of differentiation
+    - Evaluate definite integrals and calculate the area under a curve
+    - Apply the trapezoidal rule to estimate areas
+    - Integrate exponential, logarithmic and trigonometric functions
+    - Apply integration by substitution
+    - Calculate the area between two curves
+  - code: NSW.MATH.S6.CALC.3
+    description: Mechanics
+    years_practised:
+    - 12ex2
+    detail:
+    - Model the motion of a particle using position, velocity and acceleration functions
+    - Apply Newton's second law to problems involving variable forces
+    - Solve differential equations arising from resisted motion problems
+    - Analyse simple harmonic motion using differential equations
+- code: NSW.MATH.S6.PRF
+  description: Proof
+  years_practised:
+  - 12ex1
+  - 12ex2
+  detail: []
+  children:
+  - code: NSW.MATH.S6.PRF.1
+    description: Mathematical induction
+    years_practised:
+    - 12ex1
+    detail:
+    - State the principle of mathematical induction and its two-step structure
+    - Prove summation formulas by induction
+    - Prove divisibility results by induction
+    - Prove inequalities using mathematical induction
+  - code: NSW.MATH.S6.PRF.2
+    description: Proof
+    years_practised:
+    - 12ex2
+    detail:
+    - Construct formal proofs by contradiction and by contrapositive
+    - Prove results using algebraic, geometric and number-theoretic arguments
+    - Identify and critique incomplete or incorrect mathematical proofs
+    - Apply proof techniques to results in number theory and algebra
+- code: NSW.MATH.S6.VEC
+  description: Vectors
+  years_practised:
+  - 12ex1
+  - 12ex2
+  detail: []
+  children:
+  - code: NSW.MATH.S6.VEC.1
+    description: Vectors
+    years_practised:
+    - 12ex1
+    - 12ex2
+    detail:
+    - Define a vector and represent it geometrically and as a column matrix
+    - Add, subtract and scalar-multiply vectors
+    - Calculate the magnitude and direction of a vector
+    - Calculate the dot product and use it to find the angle between two vectors
+    - Resolve a vector into components parallel and perpendicular to a given direction
+    - Apply vectors to problems in geometry and two-dimensional motion
+- code: NSW.MATH.S6.CPX
+  description: Complex numbers
+  years_practised:
+  - 12ex2
+  detail: []
+  children:
+  - code: NSW.MATH.S6.CPX.1
+    description: Complex numbers
+    years_practised:
+    - 12ex2
+    detail:
+    - Define the imaginary unit i and write complex numbers in the form a + bi
+    - Perform addition, subtraction, multiplication and division of complex numbers
+    - Find the conjugate, modulus and argument of a complex number
+    - Represent complex numbers on the Argand diagram
+    - Convert between Cartesian and polar (modulus-argument) form
+    - Apply de Moivre's theorem to find powers and roots of complex numbers
+    - Solve polynomial equations over the complex number field

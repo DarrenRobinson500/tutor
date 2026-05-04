@@ -1,0 +1,25 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Display math ($$...$$) — left-aligned with one tab indent.
+   !important is required to beat KaTeX's own rules on both
+   .katex-display and .katex-display > .katex (both set text-align:center). */
+.katex-display-left .katex-display,
+.katex-display-left .katex-display > .katex {
+  text-align: left !important;
+}
+.katex-display-left .katex-display {
+  padding-left: 2em;
+  margin: 0.4em 0 !important;
+}

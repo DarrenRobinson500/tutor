@@ -1,0 +1,79 @@
+<svg viewBox="0 0 700 190" xmlns="http://www.w3.org/2000/svg" style="font-family: 'Trebuchet MS', sans-serif;">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF8EE"/>
+      <stop offset="100%" stop-color="#FFF3E0"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8C42"/>
+      <stop offset="100%" stop-color="#FFCA3A"/>
+    </linearGradient>
+    <linearGradient id="orangeH" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF8C42"/>
+      <stop offset="100%" stop-color="#FFCA3A"/>
+    </linearGradient>
+    <filter id="cardShadow">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#FF8C42" flood-opacity="0.13"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="700" height="180" fill="url(#bgGrad)" rx="12" style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Dot grid -->
+  <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+    <circle cx="2" cy="2" r="1.2" fill="#FF8C42" opacity="0.12"/>
+  </pattern>
+  <rect width="700" height="180" fill="url(#dots)" rx="12" style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- ══════════ Card 1: Diagnostic Report ══════════ -->
+  <rect x="108" y="22" width="130" height="136" rx="12" fill="white" filter="url(#cardShadow)" transform="rotate(-4, 173, 90)" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- Header -->
+  <rect x="108" y="22" width="130" height="28" rx="12" fill="url(#orange)" transform="rotate(-4, 173, 90)" style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <rect x="108" y="38" width="130" height="12" fill="url(#orange)" transform="rotate(-4, 173, 90)" style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <text x="173" y="41" text-anchor="middle" font-size="10" font-weight="700" fill="white" letter-spacing="0.5" transform="rotate(-4, 173, 41)" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:10px;font-weight:700;text-anchor:middle;dominant-baseline:auto">Diagnostic Report</text>
+  <!-- Lines -->
+  <line x1="122" y1="66" x2="228" y2="63" stroke="#F0EDE8" stroke-width="3" stroke-linecap="round" transform="rotate(-4, 173, 90)" style="fill:rgb(0, 0, 0);stroke:rgb(240, 237, 232);color:rgb(0, 0, 0);stroke-width:3px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <line x1="122" y1="78" x2="218" y2="75" stroke="#F0EDE8" stroke-width="3" stroke-linecap="round" transform="rotate(-4, 173, 90)" style="fill:rgb(0, 0, 0);stroke:rgb(240, 237, 232);color:rgb(0, 0, 0);stroke-width:3px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <line x1="122" y1="90" x2="222" y2="87" stroke="#F0EDE8" stroke-width="3" stroke-linecap="round" transform="rotate(-4, 173, 90)" style="fill:rgb(0, 0, 0);stroke:rgb(240, 237, 232);color:rgb(0, 0, 0);stroke-width:3px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- Mini bar chart -->
+  <rect x="128" y="108" width="16" height="22" rx="3" fill="#FFCA3A" opacity="0.7" transform="rotate(-4, 173, 90)" style="fill:rgb(255, 202, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.7;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <rect x="150" y="98" width="16" height="32" rx="3" fill="#FF8C42" opacity="0.9" transform="rotate(-4, 173, 90)" style="fill:rgb(255, 140, 66);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.9;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <rect x="172" y="104" width="16" height="26" rx="3" fill="#FFCA3A" opacity="0.7" transform="rotate(-4, 173, 90)" style="fill:rgb(255, 202, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.7;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <rect x="194" y="100" width="16" height="30" rx="3" fill="#FF8C42" opacity="0.6" transform="rotate(-4, 173, 90)" style="fill:rgb(255, 140, 66);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.6;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- ══════════ Card 2: Weekly Progress (centre, upright) ══════════ -->
+  <rect x="285" y="12" width="130" height="148" rx="12" fill="white" filter="url(#cardShadow)" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- Header -->
+  <rect x="285" y="12" width="130" height="28" rx="12" fill="url(#orange)" style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <rect x="285" y="28" width="130" height="12" fill="url(#orange)" style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <text x="350" y="31" text-anchor="middle" font-size="10" font-weight="700" fill="white" letter-spacing="0.5" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:10px;font-weight:700;text-anchor:middle;dominant-baseline:auto">Weekly Progress</text>
+  <!-- Lines -->
+  <line x1="300" y1="56" x2="400" y2="56" stroke="#F0EDE8" stroke-width="3" stroke-linecap="round" style="fill:rgb(0, 0, 0);stroke:rgb(240, 237, 232);color:rgb(0, 0, 0);stroke-width:3px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <line x1="300" y1="68" x2="393" y2="68" stroke="#F0EDE8" stroke-width="3" stroke-linecap="round" style="fill:rgb(0, 0, 0);stroke:rgb(240, 237, 232);color:rgb(0, 0, 0);stroke-width:3px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <line x1="300" y1="80" x2="396" y2="80" stroke="#F0EDE8" stroke-width="3" stroke-linecap="round" style="fill:rgb(0, 0, 0);stroke:rgb(240, 237, 232);color:rgb(0, 0, 0);stroke-width:3px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- Progress ring -->
+  <circle cx="350" cy="125" r="26" fill="none" stroke="#F0EDE8" stroke-width="5" style="fill:none;stroke:rgb(240, 237, 232);color:rgb(0, 0, 0);stroke-width:5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="350" cy="125" r="26" fill="none" stroke="url(#orangeH)" stroke-width="5" stroke-dasharray="114 49" stroke-dashoffset="33" stroke-linecap="round" style="fill:none;color:rgb(0, 0, 0);stroke-width:5px;stroke-dasharray:114px, 49px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <text x="350" y="129" text-anchor="middle" font-size="12" font-weight="700" fill="#FF8C42" style="fill:rgb(255, 140, 66);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:12px;font-weight:700;text-anchor:middle;dominant-baseline:auto">82%</text>
+
+  <!-- ══════════ Card 3: Tutor Matching ══════════ -->
+  <rect x="462" y="22" width="130" height="136" rx="12" fill="white" filter="url(#cardShadow)" transform="rotate(4, 527, 90)" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- Header -->
+  <rect x="462" y="22" width="130" height="28" rx="12" fill="url(#orange)" transform="rotate(4, 527, 90)" style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <rect x="462" y="38" width="130" height="12" fill="url(#orange)" transform="rotate(4, 527, 90)" style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <text x="527" y="41" text-anchor="middle" font-size="10" font-weight="700" fill="white" letter-spacing="0.5" transform="rotate(4, 527, 41)" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:10px;font-weight:700;text-anchor:middle;dominant-baseline:auto">Tutor Matching</text>
+  <!-- Avatar -->
+  <circle cx="527" cy="84" r="22" fill="#FFF3E0" transform="rotate(4, 527, 90)" style="fill:rgb(255, 243, 224);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="527" cy="78" r="11" fill="#FFCA3A" transform="rotate(4, 527, 90)" style="fill:rgb(255, 202, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <ellipse cx="527" cy="97" rx="17" ry="9" fill="#FFCA3A" transform="rotate(4, 527, 90)" style="fill:rgb(255, 202, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- Stars -->
+  <text x="511" y="118" font-size="13" fill="#FF8C42" transform="rotate(4, 527, 90)" style="fill:rgb(255, 140, 66);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:13px;font-weight:400;text-anchor:start;dominant-baseline:auto">★★★★★</text>
+  <!-- Line -->
+  <line x1="476" y1="130" x2="578" y2="133" stroke="#F0EDE8" stroke-width="3" stroke-linecap="round" transform="rotate(4, 527, 90)" style="fill:rgb(0, 0, 0);stroke:rgb(240, 237, 232);color:rgb(0, 0, 0);stroke-width:3px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- ══════════ Connecting dashed lines between cards ══════════ -->
+  <path d="M222,88 Q254,72 285,82" stroke="url(#orangeH)" stroke-width="1.5" fill="none" stroke-dasharray="4 4" opacity="0.5" style="fill:none;color:rgb(0, 0, 0);stroke-width:1.5px;stroke-dasharray:4px, 4px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.5;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M415,82 Q444,72 468,88" stroke="url(#orangeH)" stroke-width="1.5" fill="none" stroke-dasharray="4 4" opacity="0.5" style="fill:none;color:rgb(0, 0, 0);stroke-width:1.5px;stroke-dasharray:4px, 4px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.5;font-family:&quot;Trebuchet MS&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+</svg>

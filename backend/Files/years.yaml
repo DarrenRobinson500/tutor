@@ -1,0 +1,90 @@
+- code: K
+  label: Kindergarten
+  order: 0
+  active: true
+  stage: k10
+- code: '1'
+  label: Year 1
+  order: 1
+  active: true
+  stage: k10
+- code: '2'
+  label: Year 2
+  order: 2
+  active: true
+  stage: k10
+- code: '3'
+  label: Year 3
+  order: 3
+  active: true
+  stage: k10
+- code: '4'
+  label: Year 4
+  order: 4
+  active: true
+  stage: k10
+- code: '5'
+  label: Year 5
+  order: 5
+  active: true
+  stage: k10
+- code: '6'
+  label: Year 6
+  order: 6
+  active: true
+  stage: k10
+- code: '7'
+  label: Year 7
+  order: 7
+  active: true
+  stage: k10
+- code: '8'
+  label: Year 8
+  order: 8
+  active: true
+  stage: k10
+- code: '9'
+  label: Year 9
+  order: 9
+  active: true
+  stage: k10
+- code: '10'
+  label: Year 10
+  order: 10
+  active: true
+  stage: k10
+- code: 11std
+  label: Year 11 Standard
+  order: 101
+  active: true
+  stage: s6
+- code: 12std
+  label: Year 12 Standard
+  order: 102
+  active: true
+  stage: s6
+- code: 11adv
+  label: Year 11 Advanced
+  order: 103
+  active: true
+  stage: s6
+- code: 12adv
+  label: Year 12 Advanced
+  order: 104
+  active: true
+  stage: s6
+- code: 11ex1
+  label: Year 11 Extension 1
+  order: 105
+  active: true
+  stage: s6
+- code: 12ex1
+  label: Year 12 Extension 1
+  order: 106
+  active: true
+  stage: s6
+- code: 12ex2
+  label: Year 12 Extension 2
+  order: 107
+  active: true
+  stage: s6

@@ -1,0 +1,13 @@
+# After reboot:
+
+# Django
+python manage.py runserver
+
+# Celery worker
+celery -A main worker --loglevel=info --pool=solo
+
+# Celery beat
+celery -A main beat --loglevel=info
+
+# Claude
+claude

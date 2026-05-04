@@ -1,0 +1,234 @@
+/* ============================================================
+   SubjectMatter Design System
+   Warm amber/orange brand palette on cream backgrounds.
+   ============================================================ */
+
+:root {
+  /* --- Brand colours --- */
+  --sm-orange:       #FF8C42;
+  --sm-orange-dark:  #E07230;
+  --sm-orange-light: #FFB07A;
+  --sm-amber:        #FFCA3A;
+  --sm-amber-light:  #FFE08A;
+
+  /* --- Background & surface --- */
+  --sm-bg:           #FFFBF5;
+  --sm-bg-warm:      #FFF5E8;
+  --sm-surface:      #FFFFFF;
+  --sm-surface-warm: #FFFBF5;
+
+  /* --- Text --- */
+  --sm-text:         #2D2D2D;
+  --sm-text-secondary: #5C5249;
+  --sm-text-muted:   #8C8179;
+  --sm-text-light:   #B8B0A8;
+
+  /* --- Border --- */
+  --sm-border:       #E8E0D5;
+  --sm-border-light: #F0EAE0;
+
+  /* --- Semantic --- */
+  --sm-error:        #C0392B;
+  --sm-error-bg:     #FDECEA;
+  --sm-success:      #2E7D32;
+  --sm-success-bg:   #E8F5E9;
+
+  /* --- Typography --- */
+  --font-display:   'Lora', Georgia, 'Times New Roman', serif;
+  --font-body:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+  /* --- Type scale --- */
+  --text-xs:    0.75rem;    /* 12px */
+  --text-sm:    0.875rem;   /* 14px */
+  --text-base:  1rem;       /* 16px */
+  --text-lg:    1.125rem;   /* 18px */
+  --text-xl:    1.25rem;    /* 20px */
+  --text-2xl:   1.5rem;     /* 24px */
+  --text-3xl:   1.875rem;   /* 30px */
+  --text-4xl:   2.25rem;    /* 36px */
+  --text-5xl:   3rem;       /* 48px */
+
+  /* --- Spacing --- */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* --- Border radius --- */
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* --- Shadows --- */
+  --shadow-sm:   0 1px 3px rgba(45,45,45,0.08);
+  --shadow-md:   0 4px 12px rgba(45,45,45,0.10);
+  --shadow-lg:   0 8px 24px rgba(45,45,45,0.12);
+  --shadow-xl:   0 16px 48px rgba(45,45,45,0.14);
+  --shadow-card: 0 2px 8px rgba(45,45,45,0.08), 0 0 0 1px rgba(45,45,45,0.05);
+
+  /* --- Transitions --- */
+  --transition-fast:   150ms ease;
+  --transition-base:   250ms ease;
+  --transition-slow:   400ms ease;
+}
+
+/* ---- Utility: sm-btn-primary -------------------------------- */
+.sm-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: var(--sm-orange);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 600;
+  padding: 0.75rem 1.75rem;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: 0 2px 6px rgba(255,140,66,0.30);
+  white-space: nowrap;
+}
+.sm-btn-primary:hover {
+  background: var(--sm-orange-dark);
+  box-shadow: 0 4px 12px rgba(255,140,66,0.40);
+  transform: translateY(-1px);
+  color: #fff;
+  text-decoration: none;
+}
+.sm-btn-primary:active { transform: translateY(0); }
+.sm-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ---- Utility: sm-btn-secondary ------------------------------ */
+.sm-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: transparent;
+  color: var(--sm-text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 500;
+  padding: 0.75rem 1.75rem;
+  border: 1.5px solid var(--sm-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  white-space: nowrap;
+}
+.sm-btn-secondary:hover {
+  border-color: var(--sm-orange);
+  background: var(--sm-bg-warm);
+  color: var(--sm-text);
+  text-decoration: none;
+}
+
+/* ---- Utility: sm-btn-ghost ---------------------------------- */
+.sm-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: transparent;
+  color: var(--sm-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.sm-btn-ghost:hover {
+  color: var(--sm-text);
+  background: var(--sm-bg-warm);
+  text-decoration: none;
+}
+
+/* ---- Utility: sm-card --------------------------------------- */
+.sm-card {
+  background: var(--sm-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-8);
+}
+
+/* ---- Utility: sm-form-group --------------------------------- */
+.sm-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+.sm-form-group label {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--sm-text);
+  letter-spacing: 0.01em;
+}
+.sm-form-group .sm-input {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--sm-text);
+  background: var(--sm-surface);
+  border: 1.5px solid var(--sm-border);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.875rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  outline: none;
+  width: 100%;
+}
+.sm-form-group .sm-input:focus {
+  border-color: var(--sm-orange);
+  box-shadow: 0 0 0 3px rgba(255,140,66,0.15);
+}
+.sm-form-group .sm-input::placeholder {
+  color: var(--sm-text-light);
+}
+.sm-form-group .sm-input.error {
+  border-color: var(--sm-error);
+}
+.sm-form-group .sm-hint {
+  font-size: var(--text-xs);
+  color: var(--sm-text-muted);
+}
+
+/* ---- Utility: sm-alert -------------------------------------- */
+.sm-alert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-family: var(--font-body);
+}
+.sm-alert-error {
+  background: var(--sm-error-bg);
+  color: var(--sm-error);
+  border: 1px solid #f5c6cb;
+}
+.sm-alert-success {
+  background: var(--sm-success-bg);
+  color: var(--sm-success);
+  border: 1px solid #c3e6cb;
+}

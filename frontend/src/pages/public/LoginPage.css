@@ -1,0 +1,179 @@
+@import '../../design-system.css';
+
+.login-page {
+  min-height: 100vh;
+  background: var(--sm-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Navbar ──────────────────────────────── */
+.login-nav {
+  background: rgba(255,251,245,0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--sm-border-light);
+  padding: 0 var(--space-6);
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.login-nav a { text-decoration: none; }
+.login-nav-logo img { height: 40px; width: auto; }
+.login-nav-back {
+  font-size: var(--text-sm);
+  font-family: var(--font-body);
+  color: var(--sm-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  transition: color var(--transition-fast);
+}
+.login-nav-back:hover { color: var(--sm-orange); }
+
+/* ── Main ────────────────────────────────── */
+.login-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) var(--space-6);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--sm-surface);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--sm-border-light);
+  overflow: hidden;
+}
+
+.login-card-logo {
+  text-align: center;
+  padding: var(--space-8) var(--space-8) 0;
+}
+.login-card-logo img {
+  height: 80px;
+  width: auto;
+}
+
+.login-card-body {
+  padding: var(--space-6) var(--space-8) var(--space-8);
+}
+
+/* ── Tabs ────────────────────────────────── */
+.login-tabs {
+  display: flex;
+  background: var(--sm-bg);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: var(--space-6);
+}
+.login-tab {
+  flex: 1;
+  padding: 0.6rem;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--sm-text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.login-tab.active {
+  background: var(--sm-surface);
+  color: var(--sm-text);
+  box-shadow: var(--shadow-sm);
+}
+.login-tab:hover:not(.active) {
+  color: var(--sm-text);
+}
+
+/* ── Form ────────────────────────────────── */
+.login-heading {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--sm-text);
+  margin: 0 0 var(--space-2);
+}
+.login-subheading {
+  font-size: var(--text-sm);
+  color: var(--sm-text-muted);
+  margin: 0 0 var(--space-6);
+}
+
+.login-forgot {
+  display: block;
+  text-align: right;
+  font-size: var(--text-xs);
+  color: var(--sm-text-muted);
+  text-decoration: none;
+  margin-top: -12px;
+  margin-bottom: var(--space-5);
+  transition: color var(--transition-fast);
+}
+.login-forgot:hover { color: var(--sm-orange); }
+
+.login-submit {
+  width: 100%;
+  margin-bottom: var(--space-5);
+}
+
+.login-divider {
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--sm-text-light);
+  margin: var(--space-5) 0;
+  position: relative;
+}
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 42%;
+  height: 1px;
+  background: var(--sm-border-light);
+}
+.login-divider::before { left: 0; }
+.login-divider::after  { right: 0; }
+
+.login-register-link {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--sm-text-secondary);
+}
+.login-register-link a {
+  color: var(--sm-orange);
+  font-weight: 600;
+  text-decoration: none;
+}
+.login-register-link a:hover { text-decoration: underline; }
+
+/* ── Pending message ─────────────────────── */
+.login-pending {
+  text-align: center;
+  padding: var(--space-6) 0;
+}
+.login-pending-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-4);
+}
+.login-pending h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  color: var(--sm-text);
+  margin: 0 0 var(--space-3);
+}
+.login-pending p {
+  font-size: var(--text-sm);
+  color: var(--sm-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}

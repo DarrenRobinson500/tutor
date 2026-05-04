@@ -1,0 +1,25 @@
+This is a maths tutoring platform for K-10 students (NSW curriculum). Here's what it does:
+
+  For Tutors
+  - Create and manage question templates with randomised parameters, so students never see the same question twice
+  - Templates support LaTeX rendering, diagrams, multi-step questions, and various answer formats
+  - Organise questions by skill, difficulty (easy/medium/hard), and year level
+  - Track which parts of the syllabus have template coverage via a Skills Matrix
+  - Attach Knowledge items (reference notes, diagrams) to questions to show students when they answer incorrectly
+  - Book students for weekly or one-off sessions
+
+  For Students
+  - Work through questions and get immediate feedback
+  - See worked solutions and reference notes when they get something wrong
+  - Take skills assessments that track which topics they've mastered
+  - Enter answers in various formats — fractions, decimals, ratios, powers, prime factorisation
+
+  For Parents
+  - View how their child is progressing
+
+  Admin/Reporting
+  - PDF test reports
+  - Past test history with per-skill results
+  - Skills coverage dashboard showing validated templates across year levels and difficulties
+
+  The platform handles the NSW K-10 maths syllabus specifically, with question difficulty graded across easy, medium, and hard tiers.

@@ -1,0 +1,1871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Market Makers 2026 — University Marketing Competition</title>
+  <meta name="description" content="A 12-week university competition where student teams develop and execute real marketing campaigns for two early-stage businesses. Real briefs. Real budgets. Real results." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       MARKET MAKERS — Competition Site
+       Navy: #07112b · Teal: #1d9e75 · Gold: #c9a227
+    ============================================================ */
+
+    /* --- Reset --- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    img, svg { display: block; max-width: 100%; }
+    button { font-family: inherit; cursor: pointer; }
+
+    /* --- Tokens --- */
+    :root {
+      --navy:        #07112b;
+      --navy-2:      #0b1b40;
+      --navy-3:      #0f2355;
+      --navy-card:   #0d1e47;
+      --teal:        #1d9e75;
+      --teal-light:  #22c08a;
+      --teal-dim:    rgba(29, 158, 117, 0.14);
+      --gold:        #c9a227;
+      --gold-light:  #e8b92e;
+      --gold-dim:    rgba(201, 162, 39, 0.14);
+      --text:        #dce4f5;
+      --text-muted:  #7a8db5;
+      --text-dim:    #4a5a80;
+      --border:      rgba(255, 255, 255, 0.07);
+      --border-md:   rgba(255, 255, 255, 0.13);
+      --radius-sm:   6px;
+      --radius-md:   10px;
+      --radius-lg:   14px;
+    }
+
+    /* --- Base --- */
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--navy);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    ul { list-style: none; }
+
+    /* --- Utility: display font --- */
+    .display, h2, h3 {
+      font-family: 'Bebas Neue', cursive;
+      letter-spacing: 0.03em;
+      line-height: 1.05;
+    }
+
+    /* --- Layout --- */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+    section { padding: 100px 0; }
+
+    /* --- Section labels / headings --- */
+    .section-label {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 14px;
+    }
+    .section-heading {
+      font-size: clamp(2.2rem, 4.5vw, 3.8rem);
+      color: #fff;
+      margin-bottom: 20px;
+    }
+    .section-sub {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 580px;
+      line-height: 1.8;
+    }
+
+    /* --- Buttons --- */
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--gold);
+      color: var(--navy);
+      font-weight: 700;
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 14px 28px;
+      border-radius: var(--radius-sm);
+      border: none;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn-primary:hover { background: var(--gold-light); transform: translateY(-2px); }
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: var(--teal);
+      font-weight: 700;
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 13px 28px;
+      border: 2px solid var(--teal);
+      border-radius: var(--radius-sm);
+      transition: background 0.2s, color 0.2s, transform 0.15s;
+    }
+    .btn-outline:hover { background: var(--teal); color: #fff; transform: translateY(-2px); }
+
+    /* --- Fade-up animations --- */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+    .fade-up.in { opacity: 1; transform: translateY(0); }
+    .fade-up.d1 { transition-delay: 0.1s; }
+    .fade-up.d2 { transition-delay: 0.2s; }
+    .fade-up.d3 { transition-delay: 0.3s; }
+    .fade-up.d4 { transition-delay: 0.4s; }
+
+    /* ============================================================
+       1. STICKY NAV
+    ============================================================ */
+    #nav {
+      position: fixed;
+      inset: 0 0 auto;
+      z-index: 900;
+      padding: 18px 0;
+      transition: padding 0.3s, background 0.3s, box-shadow 0.3s;
+    }
+    #nav.scrolled {
+      background: rgba(7, 17, 43, 0.9);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 11px 0;
+      box-shadow: 0 1px 0 var(--border);
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .nav-wordmark {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.55rem;
+      letter-spacing: 0.12em;
+      color: #fff;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .nav-wordmark em { font-style: normal; color: var(--gold); }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .nav-links a {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      transition: color 0.2s, background 0.2s;
+    }
+    .nav-links a:hover { color: #fff; background: rgba(255,255,255,0.07); }
+    .nav-links a.active { color: var(--teal); }
+    .nav-register {
+      background: var(--gold) !important;
+      color: var(--navy) !important;
+      font-weight: 700 !important;
+    }
+    .nav-register:hover { background: var(--gold-light) !important; color: var(--navy) !important; }
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      background: none;
+      border: none;
+      padding: 6px 4px;
+      width: 36px;
+    }
+    .nav-hamburger span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: #fff;
+      border-radius: 2px;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+    .nav-hamburger[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-hamburger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+    .nav-hamburger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* ============================================================
+       2. HERO
+    ============================================================ */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 130px 0 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-glow {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 90% 70% at 55% 35%, rgba(29,158,117,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 55% 40% at 85% 75%, rgba(201,162,39,0.06) 0%, transparent 55%);
+      pointer-events: none;
+    }
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+      background-size: 72px 72px;
+      pointer-events: none;
+    }
+    .hero-content { position: relative; z-index: 1; }
+    .hero-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 20px;
+    }
+    .hero-eyebrow::before {
+      content: '';
+      display: block;
+      width: 28px;
+      height: 2px;
+      background: var(--teal);
+      flex-shrink: 0;
+    }
+    .hero-headline {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(76px, 12.5vw, 155px);
+      line-height: 0.93;
+      color: #fff;
+      margin-bottom: 30px;
+      letter-spacing: 0.01em;
+    }
+    .hero-headline .gold { color: var(--gold); }
+    .hero-subheadline {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(1.4rem, 3vw, 2.4rem);
+      color: var(--teal);
+      letter-spacing: 0.06em;
+      margin-bottom: 18px;
+    }
+    .hero-body {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 580px;
+      line-height: 1.8;
+      margin-bottom: 36px;
+    }
+    .hero-ctas {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 60px;
+    }
+
+    /* Stat bar */
+    .stat-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border: 1px solid var(--border-md);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      max-width: 660px;
+      background: rgba(255,255,255,0.025);
+    }
+    .stat-item {
+      padding: 18px 20px;
+      text-align: center;
+      border-right: 1px solid var(--border-md);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-value {
+      display: block;
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.55rem;
+      letter-spacing: 0.04em;
+      color: var(--gold);
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+    .stat-label {
+      font-size: 0.66rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .hero-hashtag {
+      margin-top: 22px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+    .hero-hashtag span { color: var(--teal); }
+
+    /* ============================================================
+       3. OVERVIEW
+    ============================================================ */
+    #overview { background: var(--navy-2); }
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+      margin-top: 54px;
+    }
+    .overview-card {
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px 30px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+    }
+    .overview-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--teal), transparent 70%);
+    }
+    .overview-card:hover {
+      border-color: rgba(29,158,117,0.25);
+      transform: translateY(-5px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.35);
+    }
+    .ov-num {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 4rem;
+      color: rgba(29,158,117,0.12);
+      line-height: 1;
+      margin-bottom: 6px;
+      letter-spacing: 0;
+    }
+    .overview-card h3 {
+      font-size: 1.55rem;
+      color: #fff;
+      margin-bottom: 14px;
+    }
+    .overview-card p {
+      font-size: 0.93rem;
+      color: var(--text-muted);
+      line-height: 1.75;
+    }
+
+    /* ============================================================
+       4. BUSINESSES
+    ============================================================ */
+    #businesses { background: var(--navy); }
+    .biz-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 26px;
+      margin-top: 54px;
+    }
+    .biz-card {
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .biz-card:hover { border-color: var(--border-md); }
+    .biz-top {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      padding: 26px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+    .biz-stripe {
+      width: 4px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-right: 20px;
+      align-self: stretch;
+    }
+    .biz-stripe-teal { background: var(--teal); }
+    .biz-stripe-gold { background: var(--gold); }
+    .biz-name {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 2rem;
+      color: #fff;
+      letter-spacing: 0.02em;
+      line-height: 1.1;
+      margin-bottom: 5px;
+    }
+    .biz-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .biz-tag-teal { color: var(--teal); }
+    .biz-tag-gold { color: var(--gold); }
+    .biz-body { padding: 26px 28px; }
+    .biz-about {
+      font-size: 0.93rem;
+      color: var(--text-muted);
+      line-height: 1.75;
+      margin-bottom: 22px;
+    }
+    .biz-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .biz-meta-full { grid-column: 1 / -1; }
+    .biz-meta-key {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+    .biz-meta-val {
+      font-size: 0.88rem;
+      color: var(--text);
+      font-weight: 500;
+    }
+    .biz-box {
+      background: rgba(255,255,255,0.04);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin-bottom: 12px;
+    }
+    .biz-box:last-of-type { margin-bottom: 0; }
+    .biz-box-key {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+    .biz-box-val {
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .biz-sensitivity {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: rgba(201,162,39,0.07);
+      border: 1px solid rgba(201,162,39,0.22);
+      border-radius: var(--radius-sm);
+      padding: 13px 16px;
+      margin-top: 14px;
+      font-size: 0.83rem;
+      color: rgba(201,162,39,0.88);
+      line-height: 1.55;
+    }
+    .biz-sensitivity-icon { flex-shrink: 0; font-size: 0.9rem; margin-top: 1px; }
+
+    /* ============================================================
+       5. HOW IT WORKS
+    ============================================================ */
+    #how-it-works { background: var(--navy-2); }
+    .phases-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 26px;
+      margin-top: 54px;
+      margin-bottom: 60px;
+    }
+    .phase-card {
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .phase-head {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 22px 26px;
+      border-bottom: 1px solid var(--border);
+    }
+    .phase-big-num {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 3.5rem;
+      line-height: 1;
+      color: rgba(255,255,255,0.1);
+      letter-spacing: 0;
+      flex-shrink: 0;
+    }
+    .phase-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.45rem;
+      color: #fff;
+      letter-spacing: 0.02em;
+      margin-bottom: 3px;
+    }
+    .phase-weeks {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .phase-teal { color: var(--teal); }
+    .phase-gold { color: var(--gold); }
+    .phase-body { padding: 22px 26px; }
+    .phase-steps { margin-bottom: 20px; }
+    .phase-steps li {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+    .phase-steps li:last-child { border-bottom: none; }
+    .phase-step-arrow {
+      color: var(--teal);
+      font-size: 0.8rem;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+    .phase-prize-box {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--gold-dim);
+      border: 1px solid rgba(201,162,39,0.22);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+    }
+    .phase-prize-amount {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.9rem;
+      color: var(--gold);
+      letter-spacing: 0.02em;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .phase-prize-note {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .phase-prize-note strong { color: var(--gold); }
+
+    /* Workshops */
+    .workshops-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .workshops-header-line {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--teal);
+    }
+    .workshops-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    .workshop-card {
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 22px 24px;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+    .workshop-card:hover {
+      border-color: rgba(29,158,117,0.28);
+      transform: translateY(-3px);
+    }
+    .workshop-num {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 2.4rem;
+      color: rgba(29,158,117,0.35);
+      line-height: 1;
+      margin-bottom: 8px;
+      letter-spacing: 0;
+    }
+    .workshop-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.1rem;
+      color: #fff;
+      letter-spacing: 0.02em;
+      margin-bottom: 8px;
+    }
+    .workshop-topics {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    /* ============================================================
+       6. PRIZES
+    ============================================================ */
+    #prizes { background: var(--navy); }
+    .prizes-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 26px;
+      margin-top: 54px;
+      margin-bottom: 36px;
+    }
+    .prize-col {
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .prize-col-head {
+      padding: 18px 26px;
+      border-bottom: 1px solid var(--border);
+    }
+    .prize-col-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.3rem;
+      color: #fff;
+      letter-spacing: 0.03em;
+      margin-bottom: 2px;
+    }
+    .prize-col-sub {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .prize-list { padding: 6px 0; }
+    .prize-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px 26px;
+      border-bottom: 1px solid var(--border);
+    }
+    .prize-row:last-child { border-bottom: none; }
+    .prize-amount {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.75rem;
+      color: var(--gold);
+      letter-spacing: 0.02em;
+      line-height: 1;
+      flex-shrink: 0;
+      min-width: 72px;
+    }
+    .prize-emoji {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+      min-width: 28px;
+      margin-top: 2px;
+      text-align: center;
+    }
+    .prize-name {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .prize-detail {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Non-monetary */
+    .non-monetary {
+      background: var(--navy-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+    }
+    .non-monetary h3 {
+      font-size: 1.7rem;
+      color: #fff;
+      margin-bottom: 26px;
+    }
+    .nm-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+    .nm-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 0.86rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+    .nm-check {
+      color: var(--teal);
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* ============================================================
+       7. TIMELINE
+    ============================================================ */
+    #timeline { background: var(--navy-2); }
+    .tl-wrap {
+      position: relative;
+      margin-top: 56px;
+    }
+    .tl-axis {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 24px;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, var(--teal) 0%, rgba(29,158,117,0.15) 90%);
+      pointer-events: none;
+    }
+    .tl-event {
+      display: grid;
+      grid-template-columns: 1fr 60px 1fr;
+      align-items: start;
+      margin-bottom: 10px;
+    }
+    .tl-event:last-child { margin-bottom: 0; }
+    .tl-card {
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 20px;
+      transition: border-color 0.25s;
+    }
+    .tl-card:hover { border-color: var(--border-md); }
+    .tl-event-week {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 4px;
+    }
+    .tl-event-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .tl-dot-wrap {
+      display: flex;
+      justify-content: center;
+      padding-top: 17px;
+      position: relative;
+      z-index: 1;
+    }
+    .tl-dot {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      border: 3px solid var(--navy-2);
+      flex-shrink: 0;
+    }
+    .tl-dot-teal { background: var(--teal); }
+    .tl-dot-gold { background: var(--gold); }
+    .tl-empty { /* placeholder cell */ }
+
+    /* Left-side events: card | dot | empty */
+    .tl-left .tl-card { text-align: right; }
+    /* Right-side events: empty | dot | card */
+
+    /* ============================================================
+       8. RULES / ACCORDION
+    ============================================================ */
+    #rules { background: var(--navy); }
+    .accordion {
+      margin-top: 42px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .acc-item {
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .acc-trigger {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 22px 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.2s;
+    }
+    .acc-trigger:hover { background: rgba(255,255,255,0.03); }
+    .acc-trigger[aria-expanded="true"] { background: rgba(255,255,255,0.04); }
+    .acc-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.3rem;
+      color: #fff;
+      letter-spacing: 0.04em;
+    }
+    .acc-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1rem;
+      color: var(--text-muted);
+      transition: transform 0.3s, border-color 0.3s, color 0.3s;
+    }
+    .acc-trigger[aria-expanded="true"] .acc-icon {
+      transform: rotate(45deg);
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+    .acc-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.38s ease;
+    }
+    .acc-body-inner {
+      padding: 4px 26px 26px;
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.78;
+    }
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .tag {
+      padding: 5px 13px;
+      border-radius: 20px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .tag-teal {
+      background: var(--teal-dim);
+      border: 1px solid rgba(29,158,117,0.25);
+      color: rgba(29,158,117,0.92);
+    }
+    .tag-red {
+      background: rgba(215,60,60,0.08);
+      border: 1px solid rgba(215,60,60,0.22);
+      color: rgba(220,100,100,0.92);
+    }
+
+    /* ============================================================
+       9. REGISTER CTA
+    ============================================================ */
+    #register {
+      background: var(--navy-2);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .register-glow {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 100% at 50% 50%, rgba(29,158,117,0.07) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .register-content { position: relative; z-index: 1; }
+    .register-heading {
+      font-size: clamp(2.4rem, 6vw, 5.5rem);
+      color: #fff;
+      margin-bottom: 18px;
+    }
+    .register-body {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+      line-height: 1.75;
+    }
+    .register-btns {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .register-secondary {
+      display: inline-block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.2s;
+      margin-bottom: 18px;
+    }
+    .register-secondary:hover { color: var(--text); }
+    .register-deadline {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .register-deadline span { color: var(--gold); }
+
+    /* ============================================================
+       10. FOOTER
+    ============================================================ */
+    footer {
+      background: var(--navy);
+      border-top: 1px solid var(--border);
+      padding: 44px 0 28px;
+    }
+    .footer-inner {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 28px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .footer-brand { }
+    .footer-wordmark {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.7rem;
+      letter-spacing: 0.12em;
+      color: #fff;
+    }
+    .footer-wordmark em { font-style: normal; color: var(--gold); }
+    .footer-tagline {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: var(--teal);
+      margin-top: 4px;
+    }
+    .footer-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px;
+      align-items: center;
+    }
+    .footer-nav a {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      transition: color 0.2s;
+    }
+    .footer-nav a:hover { color: var(--text); }
+    .footer-sep {
+      width: 1px;
+      height: 12px;
+      background: var(--border-md);
+    }
+    .footer-fine {
+      border-top: 1px solid var(--border);
+      padding-top: 22px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+    .footer-fine a { color: var(--teal); }
+    .footer-fine a:hover { text-decoration: underline; }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 1024px) {
+      .overview-grid { grid-template-columns: 1fr; }
+      .phases-grid  { grid-template-columns: 1fr; }
+      .workshops-grid { grid-template-columns: 1fr 1fr; }
+      .prizes-cols  { grid-template-columns: 1fr; }
+      .nm-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 900px) {
+      /* Timeline: collapse to single column with dot on left */
+      .tl-axis { left: 19px; transform: none; }
+      .tl-event {
+        grid-template-columns: 40px 1fr;
+      }
+      /* Left events: DOM order is card | dot | empty */
+      .tl-left .tl-card {
+        grid-column: 2;
+        grid-row: 1;
+        text-align: left;
+      }
+      .tl-left .tl-dot-wrap {
+        grid-column: 1;
+        grid-row: 1;
+        justify-content: flex-start;
+        padding-left: 13px;
+      }
+      .tl-left .tl-empty { display: none; }
+      /* Right events: DOM order is empty | dot | card */
+      .tl-right .tl-empty { display: none; }
+      .tl-right .tl-dot-wrap {
+        grid-column: 1;
+        grid-row: 1;
+        justify-content: flex-start;
+        padding-left: 13px;
+      }
+      .tl-right .tl-card {
+        grid-column: 2;
+        grid-row: 1;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .biz-grid { grid-template-columns: 1fr; }
+      .biz-meta  { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      section { padding: 72px 0; }
+      .nav-links { display: none; }
+      .nav-hamburger { display: flex; }
+      .nav-links.open {
+        display: flex !important;
+        flex-direction: column;
+        position: fixed;
+        inset: 0;
+        background: rgba(7,17,43,0.97);
+        backdrop-filter: blur(16px);
+        padding: 90px 32px 40px;
+        gap: 6px;
+        z-index: 800;
+        overflow-y: auto;
+      }
+      .nav-links.open a {
+        font-size: 0.9rem;
+        padding: 13px 18px;
+      }
+      .workshops-grid { grid-template-columns: 1fr; }
+      .stat-bar { grid-template-columns: repeat(2, 1fr); }
+      .stat-item:nth-child(2) { border-right: none; }
+      .stat-item:nth-child(3) { border-top: 1px solid var(--border-md); }
+      .stat-item:nth-child(4) { border-top: 1px solid var(--border-md); }
+    }
+
+    @media (max-width: 540px) {
+      .hero-headline { font-size: clamp(58px, 17vw, 90px); }
+      .hero-ctas { flex-direction: column; }
+      .hero-ctas a, .hero-ctas button { width: 100%; justify-content: center; }
+      .register-btns { flex-direction: column; align-items: center; }
+      .register-btns a { width: 100%; max-width: 300px; justify-content: center; }
+      .footer-inner { flex-direction: column; }
+      .footer-nav { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       1. STICKY NAV
+  ============================================================ -->
+  <nav id="nav" role="navigation" aria-label="Main navigation">
+    <div class="container nav-inner">
+      <a href="#hero" class="nav-wordmark" aria-label="Market Makers — back to top">
+        MARKET <em>MAKERS</em>
+      </a>
+
+      <ul class="nav-links" id="nav-links" role="list">
+        <li><a href="#overview"    class="nav-link" aria-label="Go to Overview section">Overview</a></li>
+        <li><a href="#businesses"  class="nav-link" aria-label="Go to Businesses section">Businesses</a></li>
+        <li><a href="#how-it-works" class="nav-link" aria-label="Go to How It Works section">How It Works</a></li>
+        <li><a href="#prizes"      class="nav-link" aria-label="Go to Prizes section">Prizes</a></li>
+        <li><a href="#timeline"    class="nav-link" aria-label="Go to Timeline section">Timeline</a></li>
+        <li><a href="#register"    class="nav-link nav-register" aria-label="Register your team">Register</a></li>
+      </ul>
+
+      <button
+        class="nav-hamburger"
+        id="nav-hamburger"
+        aria-label="Toggle navigation menu"
+        aria-expanded="false"
+        aria-controls="nav-links"
+      >
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============================================================
+       2. HERO
+  ============================================================ -->
+  <section id="hero" aria-label="Hero">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="hero-grid"  aria-hidden="true"></div>
+    <div class="container hero-content">
+      <div class="hero-eyebrow" aria-label="Competition year">
+        University Marketing Competition 2026
+      </div>
+      <h1 class="hero-headline">
+        MARKET<br><span class="gold">MAKERS</span>
+      </h1>
+      <p class="hero-subheadline">Turn your marketing and social media skills into a revenue stream.</p>
+      <p class="hero-body">
+        A 12-week university competition where student teams develop and execute
+        real marketing campaigns for two early-stage businesses. Real briefs.
+        Real budgets. Real results.
+      </p>
+      <div class="hero-ctas">
+        <a href="#register" class="btn-primary" aria-label="Register your team for Market Makers 2026">
+          Register your team →
+        </a>
+        <a href="#" class="btn-outline" aria-label="View the competition brief (PDF)">
+          View the brief
+        </a>
+      </div>
+
+      <div class="stat-bar" role="list" aria-label="Key competition figures">
+        <div class="stat-item" role="listitem">
+          <span class="stat-value">AU$2,500+</span>
+          <span class="stat-label">In prizes</span>
+        </div>
+        <div class="stat-item" role="listitem">
+          <span class="stat-value">2</span>
+          <span class="stat-label">Real businesses</span>
+        </div>
+        <div class="stat-item" role="listitem">
+          <span class="stat-value">12</span>
+          <span class="stat-label">Weeks</span>
+        </div>
+        <div class="stat-item" role="listitem">
+          <span class="stat-value">4–6</span>
+          <span class="stat-label">Per team</span>
+        </div>
+      </div>
+
+      <p class="hero-hashtag"><span>#MarketMakers2026</span></p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       3. OVERVIEW
+  ============================================================ -->
+  <section id="overview" aria-labelledby="overview-heading">
+    <div class="container">
+      <div class="fade-up">
+        <p class="section-label">What this is</p>
+        <h2 class="section-heading" id="overview-heading">From concept to customer</h2>
+        <p class="section-sub">Three principles that set Market Makers apart from every other student competition.</p>
+      </div>
+
+      <div class="overview-grid" role="list">
+        <article class="overview-card fade-up d1" role="listitem">
+          <div class="ov-num" aria-hidden="true">01</div>
+          <h3>Real businesses</h3>
+          <p>Students don't simulate marketing. They do it. Every strategy submitted has genuine commercial value and is judged against actual business objectives.</p>
+        </article>
+        <article class="overview-card fade-up d2" role="listitem">
+          <div class="ov-num" aria-hidden="true">02</div>
+          <h3>Real stakes</h3>
+          <p>Campaigns are judged on verified customer acquisition, not theory. Business founders score every submission against real-world performance benchmarks.</p>
+        </article>
+        <article class="overview-card fade-up d3" role="listitem">
+          <div class="ov-num" aria-hidden="true">03</div>
+          <h3>Real impact</h3>
+          <p>Winning teams earn cash prizes, LinkedIn recommendations, and a portfolio piece that genuinely stands out to future employers.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       4. BUSINESSES
+  ============================================================ -->
+  <section id="businesses" aria-labelledby="businesses-heading">
+    <div class="container">
+      <div class="fade-up">
+        <p class="section-label">Your clients</p>
+        <h2 class="section-heading" id="businesses-heading">Choose your client</h2>
+        <p class="section-sub">Two early-stage businesses. Two very different marketing challenges. One decision that shapes your entire campaign.</p>
+      </div>
+
+      <div class="biz-grid">
+
+        <!-- Business A: SubjectMatter -->
+        <article class="biz-card fade-up d1" aria-labelledby="biz-a-name">
+          <div class="biz-top">
+            <div class="biz-stripe biz-stripe-teal" aria-hidden="true"></div>
+            <div>
+              <div class="biz-name" id="biz-a-name">SubjectMatter</div>
+              <div class="biz-tag biz-tag-teal">Business A &mdash; EdTech / Tutoring</div>
+            </div>
+          </div>
+          <div class="biz-body">
+            <p class="biz-about">
+              A structured, syllabus-aligned maths tutoring system giving parents clarity, tutors steady work,
+              and students real progress. Combines a free NSW diagnostic, matched tutoring, and weekly parent updates.
+            </p>
+            <dl class="biz-meta">
+              <div class="biz-meta-item">
+                <dt class="biz-meta-key">Target audience</dt>
+                <dd class="biz-meta-val">Primary &amp; secondary maths students</dd>
+              </div>
+              <div class="biz-meta-item">
+                <dt class="biz-meta-key">Pricing</dt>
+                <dd class="biz-meta-val">$70 / hour</dd>
+              </div>
+              <div class="biz-meta-item biz-meta-full">
+                <dt class="biz-meta-key">Key differentiator</dt>
+                <dd class="biz-meta-val">The only tutoring system clearly aligned to the NSW Syllabus</dd>
+              </div>
+            </dl>
+            <div class="biz-box">
+              <div class="biz-box-key">Primary challenge</div>
+              <div class="biz-box-val">Grow brand awareness among parents in NSW</div>
+            </div>
+            <div class="biz-box">
+              <div class="biz-box-key">Success metric</div>
+              <div class="biz-box-val">Number of first-time bookings generated</div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Business B: Forever Bloom -->
+        <article class="biz-card fade-up d2" aria-labelledby="biz-b-name">
+          <div class="biz-top">
+            <div class="biz-stripe biz-stripe-gold" aria-hidden="true"></div>
+            <div>
+              <div class="biz-name" id="biz-b-name">Forever Bloom</div>
+              <div class="biz-tag biz-tag-gold">Business B &mdash; End-of-life Services</div>
+            </div>
+          </div>
+          <div class="biz-body">
+            <p class="biz-about">
+              A modern alternative to traditional funerals. Personalised celebration-of-life experiences including
+              digital memorials, nature-based ceremonies, live-streamed tributes, and grief support.
+            </p>
+            <dl class="biz-meta">
+              <div class="biz-meta-item">
+                <dt class="biz-meta-key">Target audience</dt>
+                <dd class="biz-meta-val">Families aged 35–70, sustainability-conscious consumers</dd>
+              </div>
+              <div class="biz-meta-item">
+                <dt class="biz-meta-key">Pricing</dt>
+                <dd class="biz-meta-val">AU$1,200–$8,500 per package</dd>
+              </div>
+              <div class="biz-meta-item biz-meta-full">
+                <dt class="biz-meta-key">Key differentiator</dt>
+                <dd class="biz-meta-val">Customisation, digital-first, eco-friendly, emotional support ecosystem</dd>
+              </div>
+            </dl>
+            <div class="biz-box">
+              <div class="biz-box-key">Primary challenge</div>
+              <div class="biz-box-val">Cultural sensitivity; building awareness of a stigmatised topic</div>
+            </div>
+            <div class="biz-box">
+              <div class="biz-box-key">Success metric</div>
+              <div class="biz-box-val">Consultation bookings or package enquiries</div>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       5. HOW IT WORKS
+  ============================================================ -->
+  <section id="how-it-works" aria-labelledby="how-heading">
+    <div class="container">
+      <div class="fade-up">
+        <p class="section-label">The structure</p>
+        <h2 class="section-heading" id="how-heading">Two phases. One winner.</h2>
+        <p class="section-sub">A strategy phase and an execution phase — both scored by business founders, both with cash prizes on the line.</p>
+      </div>
+
+      <div class="phases-grid">
+
+        <!-- Phase 1 -->
+        <article class="phase-card fade-up d1" aria-labelledby="phase1-title">
+          <div class="phase-head">
+            <div class="phase-big-num" aria-hidden="true">01</div>
+            <div>
+              <div class="phase-title" id="phase1-title">Strategy Design</div>
+              <div class="phase-weeks phase-teal">Weeks 1–7</div>
+            </div>
+          </div>
+          <div class="phase-body">
+            <ul class="phase-steps" aria-label="Phase 1 steps">
+              <li><span class="phase-step-arrow" aria-hidden="true">→</span> Form a team of 4–6 students</li>
+              <li><span class="phase-step-arrow" aria-hidden="true">→</span> Receive the Business Brief Pack (Week 2)</li>
+              <li><span class="phase-step-arrow" aria-hidden="true">→</span> Attend 2 free workshops</li>
+              <li><span class="phase-step-arrow" aria-hidden="true">→</span> Submit: strategy doc (25pp), pitch deck (15 slides), customer personas, budget plan</li>
+              <li><span class="phase-step-arrow" aria-hidden="true">→</span> Present to an industry judging panel</li>
+            </ul>
+            <div class="phase-prize-box" aria-label="Phase 1 prize">
+              <div class="phase-prize-amount">AU$500</div>
+              <div class="phase-prize-note">Top team prize — split equally among all winning team members</div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Phase 2 -->
+        <article class="phase-card fade-up d2" aria-labelledby="phase2-title">
+          <div class="phase-head">
+            <div class="phase-big-num" aria-hidden="true">02</div>
+            <div>
+              <div class="phase-title" id="phase2-title">Strategy Execution</div>
+              <div class="phase-weeks phase-gold">Weeks 7–12</div>
+            </div>
+          </div>
+          <div class="phase-body">
+            <ul class="phase-steps" aria-label="Phase 2 steps">
+              <li><span class="phase-step-arrow" aria-hidden="true">→</span> Open to Phase 1 teams + fresh entrants</li>
+              <li><span class="phase-step-arrow" aria-hidden="true">→</span> Select one business to run a live campaign</li>
+              <li><span class="phase-step-arrow" aria-hidden="true">→</span> AU$800 budget provided (ad credits + cash)</li>
+              <li><span class="phase-step-arrow" aria-hidden="true">→</span> 4-week active campaign window</li>
+              <li><span class="phase-step-arrow" aria-hidden="true">→</span> Measured on verified new customers or leads</li>
+            </ul>
+            <div class="phase-prize-box" aria-label="Phase 2 prize">
+              <div class="phase-prize-amount">AU$2,000</div>
+              <div class="phase-prize-note">Top team prize + <strong>AU$500 bonus</strong> if &gt;50 customers acquired</div>
+            </div>
+          </div>
+        </article>
+
+      </div>
+
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+       6. PRIZES
+  ============================================================ -->
+  <section id="prizes" aria-labelledby="prizes-heading">
+    <div class="container">
+      <div class="fade-up">
+        <p class="section-label">The rewards</p>
+        <h2 class="section-heading" id="prizes-heading">What you're competing for</h2>
+        <p class="section-sub">Cash prizes, professional recognition, and career opportunities — all on the table.</p>
+      </div>
+
+      <div class="prizes-cols">
+
+        <!-- Phase 1 prizes -->
+        <div class="prize-col fade-up d1">
+          <div class="prize-col-head">
+            <div class="prize-col-title">Phase 1 — Strategy Design</div>
+            <div class="prize-col-sub">Weeks 1–7</div>
+          </div>
+          <ul class="prize-list" aria-label="Phase 1 prizes">
+            <li class="prize-row">
+              <span class="prize-amount" aria-label="Five hundred dollars">$500</span>
+              <div>
+                <div class="prize-name">1st Place &mdash; Cash Prize</div>
+                <div class="prize-detail">Split equally among all winning team members</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Phase 2 prizes -->
+        <div class="prize-col fade-up d2">
+          <div class="prize-col-head">
+            <div class="prize-col-title">Phase 2 — Execution</div>
+            <div class="prize-col-sub">Weeks 7–12</div>
+          </div>
+          <ul class="prize-list" aria-label="Phase 2 prizes">
+            <li class="prize-row">
+              <span class="prize-amount" aria-label="Two thousand dollars">$2,000</span>
+              <div>
+                <div class="prize-name">1st Place &mdash; Cash Prize</div>
+                <div class="prize-detail">Split equally + AU$500 bonus if &gt;50 customers acquired</div>
+              </div>
+            </li>
+            <li class="prize-row">
+              <span class="prize-amount" aria-label="Five hundred dollars">$500</span>
+              <div>
+                <div class="prize-name">Runner-up</div>
+                <div class="prize-detail">AU$500 cash, split equally among team members</div>
+              </div>
+            </li>
+            <li class="prize-row">
+              <span class="prize-emoji" aria-hidden="true">💡</span>
+              <div>
+                <div class="prize-name">Innovation Award</div>
+                <div class="prize-detail">Judge's discretion — recognises exceptional creative or strategic approach</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Non-monetary rewards -->
+      <div class="non-monetary fade-up">
+        <h3>For all finalists</h3>
+        <div class="nm-grid" role="list" aria-label="Non-monetary rewards for all finalists">
+          <div class="nm-item" role="listitem">
+            <span class="nm-check" aria-hidden="true">✓</span>
+            LinkedIn recommendation letter from competition organisers
+          </div>
+          <div class="nm-item" role="listitem">
+            <span class="nm-check" aria-hidden="true">✓</span>
+            Internship interview fast-track with sponsors
+          </div>
+          <div class="nm-item" role="listitem">
+            <span class="nm-check" aria-hidden="true">✓</span>
+            Certificate of Participation for every finalist
+          </div>
+          <div class="nm-item" role="listitem">
+            <span class="nm-check" aria-hidden="true">✓</span>
+            Work featured as exemplary student example (with consent)
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+       7. TIMELINE
+  ============================================================ -->
+  <section id="timeline" aria-labelledby="timeline-heading">
+    <div class="container">
+      <div class="fade-up">
+        <p class="section-label">The schedule</p>
+        <h2 class="section-heading" id="timeline-heading">12-week calendar</h2>
+        <p class="section-sub">Every milestone from launch to awards — plan your campaign around it.</p>
+      </div>
+
+      <div class="tl-wrap" role="list" aria-label="Competition timeline">
+        <div class="tl-axis" aria-hidden="true"></div>
+
+        <div class="tl-event tl-left fade-up" role="listitem">
+          <div class="tl-card">
+            <div class="tl-event-week">Week 1</div>
+            <div class="tl-event-title">Competition launch — landing page live, social campaign begins</div>
+          </div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-teal"></div></div>
+          <div class="tl-empty"></div>
+        </div>
+
+        <div class="tl-event tl-right fade-up" role="listitem">
+          <div class="tl-empty"></div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-teal"></div></div>
+          <div class="tl-card">
+            <div class="tl-event-week">Weeks 1–2</div>
+            <div class="tl-event-title">Team registrations open</div>
+          </div>
+        </div>
+
+        <div class="tl-event tl-left fade-up" role="listitem">
+          <div class="tl-card">
+            <div class="tl-event-week">Week 2</div>
+            <div class="tl-event-title">Business Brief Pack distributed to registered teams</div>
+          </div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-teal"></div></div>
+          <div class="tl-empty"></div>
+        </div>
+
+        <div class="tl-event tl-right fade-up" role="listitem">
+          <div class="tl-empty"></div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-teal"></div></div>
+          <div class="tl-card">
+            <div class="tl-event-week">Week 2</div>
+            <div class="tl-event-title">Launch event &amp; founder Q&amp;A session</div>
+          </div>
+        </div>
+
+        <div class="tl-event tl-left fade-up" role="listitem">
+          <div class="tl-card">
+            <div class="tl-event-week">Week 4</div>
+            <div class="tl-event-title">Phase 1 team check-in with organisers</div>
+          </div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-teal"></div></div>
+          <div class="tl-empty"></div>
+        </div>
+
+        <div class="tl-event tl-right fade-up" role="listitem">
+          <div class="tl-empty"></div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-gold"></div></div>
+          <div class="tl-card">
+            <div class="tl-event-week">Week 5</div>
+            <div class="tl-event-title">⚡ Phase 1 submission deadline — 11:59 PM AEST</div>
+          </div>
+        </div>
+
+        <div class="tl-event tl-left fade-up" role="listitem">
+          <div class="tl-card">
+            <div class="tl-event-week">Week 6</div>
+            <div class="tl-event-title">Phase 1 judging — top 5 teams shortlisted</div>
+          </div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-teal"></div></div>
+          <div class="tl-empty"></div>
+        </div>
+
+        <div class="tl-event tl-right fade-up" role="listitem">
+          <div class="tl-empty"></div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-gold"></div></div>
+          <div class="tl-card">
+            <div class="tl-event-week">Week 7</div>
+            <div class="tl-event-title">🏆 Phase 1 presentations &amp; winner announced</div>
+          </div>
+        </div>
+
+        <div class="tl-event tl-left fade-up" role="listitem">
+          <div class="tl-card">
+            <div class="tl-event-week">Week 7</div>
+            <div class="tl-event-title">Phase 2 registration opens</div>
+          </div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-teal"></div></div>
+          <div class="tl-empty"></div>
+        </div>
+
+        <div class="tl-event tl-right fade-up" role="listitem">
+          <div class="tl-empty"></div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-gold"></div></div>
+          <div class="tl-card">
+            <div class="tl-event-week">Week 8</div>
+            <div class="tl-event-title">Phase 2 kick-off, campaign budgets allocated</div>
+          </div>
+        </div>
+
+        <div class="tl-event tl-left fade-up" role="listitem">
+          <div class="tl-card">
+            <div class="tl-event-week">Week 9</div>
+            <div class="tl-event-title">Phase 2 mid-point check-in with organisers</div>
+          </div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-teal"></div></div>
+          <div class="tl-empty"></div>
+        </div>
+
+        <div class="tl-event tl-right fade-up" role="listitem">
+          <div class="tl-empty"></div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-gold"></div></div>
+          <div class="tl-card">
+            <div class="tl-event-week">Week 11</div>
+            <div class="tl-event-title">⚡ Phase 2 campaign window closes</div>
+          </div>
+        </div>
+
+        <div class="tl-event tl-left fade-up" role="listitem">
+          <div class="tl-card">
+            <div class="tl-event-week">Week 12</div>
+            <div class="tl-event-title">Phase 2 implementation report due</div>
+          </div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-teal"></div></div>
+          <div class="tl-empty"></div>
+        </div>
+
+        <div class="tl-event tl-right fade-up" role="listitem">
+          <div class="tl-empty"></div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-gold"></div></div>
+          <div class="tl-card">
+            <div class="tl-event-week">Week 12</div>
+            <div class="tl-event-title">🏆 Phase 2 presentations &amp; winner announced</div>
+          </div>
+        </div>
+
+        <div class="tl-event tl-left fade-up" role="listitem">
+          <div class="tl-card">
+            <div class="tl-event-week">Week 12</div>
+            <div class="tl-event-title">🎉 Awards ceremony &amp; networking event</div>
+          </div>
+          <div class="tl-dot-wrap"><div class="tl-dot tl-dot-teal"></div></div>
+          <div class="tl-empty"></div>
+        </div>
+
+
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       8. RULES / ACCORDION
+  ============================================================ -->
+  <section id="rules" aria-labelledby="rules-heading">
+    <div class="container">
+      <div class="fade-up">
+        <p class="section-label">Competition rules</p>
+        <h2 class="section-heading" id="rules-heading">What you need to know</h2>
+        <p class="section-sub">Read before you register. Questions? <a href="mailto:contact@marketmakers.edu.au" style="color:var(--teal)">contact@marketmakers.edu.au</a></p>
+      </div>
+
+      <div class="accordion fade-up" role="list">
+
+        <div class="acc-item" role="listitem">
+          <button
+            class="acc-trigger"
+            id="acc-elig-btn"
+            aria-expanded="false"
+            aria-controls="acc-elig-body"
+          >
+            <span class="acc-title">Eligibility</span>
+            <span class="acc-icon" aria-hidden="true">+</span>
+          </button>
+          <div class="acc-body" id="acc-elig-body" role="region" aria-labelledby="acc-elig-btn">
+            <div class="acc-body-inner">
+              Open to all currently enrolled undergraduate and postgraduate students at participating universities.
+              Students on academic probation are ineligible. Staff, faculty, and direct family members of judges
+              or business owners are also ineligible.
+            </div>
+          </div>
+        </div>
+
+        <div class="acc-item" role="listitem">
+          <button
+            class="acc-trigger"
+            id="acc-allowed-btn"
+            aria-expanded="false"
+            aria-controls="acc-allowed-body"
+          >
+            <span class="acc-title">Allowed tactics</span>
+            <span class="acc-icon" aria-hidden="true">+</span>
+          </button>
+          <div class="acc-body" id="acc-allowed-body" role="region" aria-labelledby="acc-allowed-btn">
+            <div class="acc-body-inner">
+              <p>The following marketing tactics are permitted within competition rules:</p>
+              <ul class="tag-list" aria-label="Permitted marketing tactics">
+                <li class="tag tag-teal">Organic social (Instagram, LinkedIn, TikTok, Facebook, X)</li>
+                <li class="tag tag-teal">Paid social advertising</li>
+                <li class="tag tag-teal">Content marketing</li>
+                <li class="tag tag-teal">Email marketing</li>
+                <li class="tag tag-teal">Campus guerrilla marketing (with uni approval)</li>
+                <li class="tag tag-teal">Influencer outreach</li>
+                <li class="tag tag-teal">SEO</li>
+                <li class="tag tag-teal">Community events &amp; pop-ups</li>
+                <li class="tag tag-teal">Referral programmes</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="acc-item" role="listitem">
+          <button
+            class="acc-trigger"
+            id="acc-prohibited-btn"
+            aria-expanded="false"
+            aria-controls="acc-prohibited-body"
+          >
+            <span class="acc-title">Prohibited tactics</span>
+            <span class="acc-icon" aria-hidden="true">+</span>
+          </button>
+          <div class="acc-body" id="acc-prohibited-body" role="region" aria-labelledby="acc-prohibited-btn">
+            <div class="acc-body-inner">
+              <p>The following are strictly prohibited and may result in immediate disqualification:</p>
+              <ul class="tag-list" aria-label="Prohibited marketing tactics">
+                <li class="tag tag-red">Purchasing fake followers, reviews, or engagement</li>
+                <li class="tag tag-red">Spam in violation of the Spam Act 2003</li>
+                <li class="tag tag-red">False or misleading claims</li>
+                <li class="tag tag-red">Unlicensed stock images</li>
+                <li class="tag tag-red">Accessing business customer data without consent</li>
+                <li class="tag tag-red">Cold calling without consent</li>
+                <li class="tag tag-red">Targeting under-18s for Forever Bloom</li>
+                <li class="tag tag-red">AI-generated content presented as original human work without disclosure</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       9. REGISTER CTA
+  ============================================================ -->
+  <section id="register" aria-labelledby="register-heading">
+    <div class="register-glow" aria-hidden="true"></div>
+    <div class="container register-content">
+      <div class="fade-up">
+        <p class="section-label">Enter the competition</p>
+        <h2 class="section-heading register-heading" id="register-heading">Ready to make your mark?</h2>
+        <p class="register-body">Teams of 4–6 students. Open to all disciplines. Free to enter.</p>
+        <div class="register-btns">
+          <a href="#" class="btn-primary" aria-label="Register your team for Market Makers 2026">
+            Register your team →
+          </a>
+        </div>
+        <a href="#" class="register-secondary" aria-label="Download the full competition brief (PDF)">
+          Download the full competition brief
+        </a>
+        <p class="register-deadline">
+          Phase 1 submissions close <span>Week 5 — 11:59 PM AEST</span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       10. FOOTER
+  ============================================================ -->
+  <footer role="contentinfo">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <div class="footer-wordmark">MARKET <em>MAKERS</em></div>
+          <div class="footer-tagline">#MarketMakers2026</div>
+        </div>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <a href="#overview">Overview</a>
+          <span class="footer-sep" aria-hidden="true"></span>
+          <a href="#businesses">Businesses</a>
+          <span class="footer-sep" aria-hidden="true"></span>
+          <a href="#how-it-works">How It Works</a>
+          <span class="footer-sep" aria-hidden="true"></span>
+          <a href="#prizes">Prizes</a>
+          <span class="footer-sep" aria-hidden="true"></span>
+          <a href="#timeline">Timeline</a>
+          <span class="footer-sep" aria-hidden="true"></span>
+          <a href="#register">Register</a>
+        </nav>
+      </div>
+      <div class="footer-fine">
+        University Marketing Competition &middot; 2025 Academic Year &middot;
+        Questions? <a href="mailto:contact@marketmakers.edu.au">contact@marketmakers.edu.au</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       JAVASCRIPT
+  ============================================================ -->
+  <script>
+    'use strict';
+
+    // ── Nav: scroll shrink + backdrop ───────────────────────────
+    const nav = document.getElementById('nav');
+    const allNavLinks = document.querySelectorAll('.nav-link');
+    const allSections = Array.from(document.querySelectorAll('section[id]'));
+
+    function onScroll() {
+      // Shrink
+      nav.classList.toggle('scrolled', window.scrollY > 30);
+
+      // Active link
+      let current = '';
+      allSections.forEach(sec => {
+        if (window.scrollY >= sec.offsetTop - 110) current = sec.id;
+      });
+      allNavLinks.forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+      });
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll(); // run once on load
+
+    // ── Mobile hamburger ─────────────────────────────────────────
+    const hamburger = document.getElementById('nav-hamburger');
+    const navLinksEl = document.getElementById('nav-links');
+
+    hamburger.addEventListener('click', () => {
+      const open = navLinksEl.classList.toggle('open');
+      hamburger.setAttribute('aria-expanded', String(open));
+      document.body.style.overflow = open ? 'hidden' : '';
+    });
+
+    navLinksEl.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => {
+        navLinksEl.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+      });
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && navLinksEl.classList.contains('open')) {
+        navLinksEl.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+        hamburger.focus();
+      }
+    });
+
+    // ── Accordion ────────────────────────────────────────────────
+    document.querySelectorAll('.acc-trigger').forEach(trigger => {
+      trigger.addEventListener('click', () => {
+        const isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+        const bodyEl = document.getElementById(trigger.getAttribute('aria-controls'));
+
+        // Collapse all
+        document.querySelectorAll('.acc-trigger').forEach(t => {
+          t.setAttribute('aria-expanded', 'false');
+          document.getElementById(t.getAttribute('aria-controls')).style.maxHeight = '0';
+        });
+
+        // Expand clicked (unless it was already open)
+        if (!isExpanded) {
+          trigger.setAttribute('aria-expanded', 'true');
+          bodyEl.style.maxHeight = bodyEl.scrollHeight + 'px';
+        }
+      });
+    });
+
+    // ── Fade-up: IntersectionObserver ───────────────────────────
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -36px 0px' });
+
+    document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>

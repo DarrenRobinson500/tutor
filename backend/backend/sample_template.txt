@@ -1,0 +1,33 @@
+parameters:
+  s:
+    type: scenario
+    rows:
+      # [context, event, theo_display, theo_num, theo_den, trials, successes, comparison, explanation]
+      - ["A fair coin was flipped 50 times and landed on heads 23 times.", "getting heads", "1/2", 1, 2, 50, 23, lower, "23/50 = 0.46, which is slightly below the theoretical probability of 1/2 = 0.50. With only 50 flips, this small variation is expected."]
+      - ["A six-sided die was rolled 60 times and landed on 6 exactly 12 times.", "rolling a 6", "1/6", 1, 6, 60, 12, higher, "12/60 = 1/5 = 0.20, which is above the theoretical probability of 1/6 ≈ 0.167. This is a typical result for 60 rolls."]
+      - ["A spinner with 4 equal sections was spun 80 times. It landed on section A 24 times.", "landing on section A", "1/4", 1, 4, 80, 24, higher, "24/80 = 3/10 = 0.30, which is above the theoretical probability of 1/4 = 0.25."]
+      - ["A fair coin was flipped 100 times and landed on heads 47 times.", "getting heads", "1/2", 1, 2, 100, 47, lower, "47/100 = 0.47, which is slightly below the theoretical probability of 1/2 = 0.50. With 100 flips, experimental results should be close to theoretical."]
+      - ["A six-sided die was rolled 120 times. An even number appeared 54 times.", "rolling an even number", "1/2", 1, 2, 120, 54, lower, "54/120 = 9/20 = 0.45, which is below the theoretical probability of 1/2 = 0.50."]
+      - ["A bag with 3 red and 7 blue marbles was sampled 50 times with replacement. Red appeared 18 times.", "selecting a red marble", "3/10", 3, 10, 50, 18, higher, "18/50 = 9/25 = 0.36, which is above the theoretical probability of 3/10 = 0.30."]
+
+question:
+  text: "{{ s[0] }}"
+  parts:
+    - text: "What is the **experimental** probability of {{ s[1] }}? Give your answer as a simplified fraction."
+      answer: "{{ s[6] }}/{{ s[5] }}"
+      answer_format: fraction
+      solution: "Experimental probability = successes ÷ total trials = {{ s[6] }}/{{ s[5] }}"
+    - text: "What is the **theoretical** probability of {{ s[1] }}?"
+      answer: "{{ s[2] }}"
+      solution: "Theoretical probability = favourable outcomes ÷ total outcomes = {{ s[2] }}"
+    - text: "Is the experimental probability **higher than**, **lower than**, or **equal to** the theoretical probability?"
+      choices:
+        - text: Higher than the theoretical probability
+          correct: "s[7] == 'higher'"
+        - text: Lower than the theoretical probability
+          correct: "s[7] == 'lower'"
+        - text: Equal to the theoretical probability
+          correct: "s[7] == 'equal'"
+      solution: "{{ s[8] }} As the number of trials increases, experimental probability tends to get closer to the theoretical probability."
+
+diagram: none

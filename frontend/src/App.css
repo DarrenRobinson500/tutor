@@ -1,0 +1,371 @@
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.template-editor-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.editor-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+
+.editor-panel {
+  flex: 1;
+  height: 80vh;   /* or 90vh */
+  border-right: 1px solid #ddd;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.preview-panel {
+  width: 40%;
+  overflow: auto;
+}
+
+.logs-panel {
+  height: 150px;
+}
+
+.weekly-calendar .col {
+  min-height: 150px;
+}
+
+.delete-btn {
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  padding: 0;
+}
+
+.delete-btn::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background-color: #dc3545; /* Bootstrap danger red */
+}
+
+.weekly-calendar {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.week-header {
+  display: grid;
+  grid-template-columns: 60px repeat(7, 1fr);
+}
+
+
+.week-body {
+  display: flex;
+}
+
+.day-header {
+  flex: 1;
+  text-align: center;
+  font-weight: bold;
+}
+
+.day-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.time-header {
+  flex: 0 0 60px;   /* same width as time-column */
+}
+
+.time-column {
+  flex: 0 0 60px;  /* same width as header's time cell */
+  display: flex;
+  flex-direction: column;
+}
+
+
+.time-label {
+  height: calc(12 * 2px); /* 12 segments × your segment height */
+  font-size: 10px;
+  color: #444;
+  padding-top: 2px;
+}
+
+
+.segment {
+  flex: 1;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
+}
+
+.weekly-calendar .segment {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.weekly-calendar .day-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.weekly-calendar .segment.available {
+  background-color: #FFFFFF;
+}
+
+.booking-modal {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 20px;
+  border: 1px solid #ccc;
+  z-index: 9999;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.form-select.custom-blue {
+  border-color: var(--bs-primary);
+  color: var(--bs-primary);
+}
+
+.form-select.custom-blue:focus {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.skills-matrix-container {
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.skills-matrix {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+
+.skill-header {
+  text-align: left;
+  padding: 8px;
+  background: #f0f0f0;
+  font-weight: bold;
+}
+
+.grade-header {
+  text-align: center;
+  padding: 8px;
+  background: #fafafa;
+  font-weight: bold;
+}
+
+.skill-cell {
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
+}
+
+.matrix-cell {
+  width: 50px;
+  text-align: center;
+  padding: 6px;
+  border-bottom: 1px solid #eee;
+  border-left: 1px solid #f5f5f5;
+}
+
+/* Colouring */
+.matrix-cell.covered {
+  background-color: #d9f7be; /* light green */
+}
+
+.matrix-cell.empty {
+  background-color: #fafafa;
+}
+
+.skill-row {
+  display: flex;
+  align-items: center;
+}
+
+.skill-indent {
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.skill-name {
+  flex-grow: 1;
+}
+
+.parent-row {
+  background-color: #f7f7f7;   /* light grey */
+  height: 48px;                /* match button-row height */
+}
+
+.parent-row td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.skills-matrix tbody tr {
+  height: 48px;
+}
+
+.matrix-cell {
+  padding: 8px 12px;
+  min-width: 80px;
+  text-align: center;
+}
+
+/* ── Student home: focus area cards ────────────────────── */
+.fa-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  max-width: 640px;
+}
+
+.fa-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  gap: 12px;
+}
+
+.fa-card-done {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.fa-card-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  flex: 1;
+}
+
+.fa-card-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.fa-card-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.fa-done-label {
+  font-size: 0.82rem;
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.fa-improved-label {
+  font-size: 0.78rem;
+  color: #0369a1;
+  font-weight: 600;
+}
+
+/* ── Focus area learning status ────────────────────────── */
+.fa-learning-status {
+  font-size: 0.78rem;
+  display: inline-block;
+}
+
+.fa-learning-pending {
+  color: #6b7280;   /* grey — not yet done */
+}
+
+.fa-learning-done {
+  color: #16a34a;   /* green — completed */
+}
+
+.fa-learning-improved {
+  color: #0369a1;   /* blue — level changed */
+}
+
+/* ── Skill star ratings ─────────────────────────────────── */
+.skill-stars {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+  line-height: 1;
+}
+
+.star {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Standard filled star — solid amber */
+.star-filled {
+  color: #f59e0b;
+}
+
+/* Empty star — light grey outline */
+.star-empty {
+  color: #d1d5db;
+}
+
+/* Bonus star (levels 5–6) — brighter, larger, richer gold */
+.star-bonus {
+  font-size: 22px;
+  color: #d97706;
+  filter: drop-shadow(0 0 4px rgba(217, 119, 6, 0.6));
+}

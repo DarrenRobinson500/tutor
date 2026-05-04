@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone *)",
+      "Bash(mkdir -p backend/config backend/backend/migrations backend/backend/diagram backend/backend/maths backend/backend/management/commands backend/backend/render backend/backend/scripts backend/backend/templates backend/backend/stars)",
+      "Bash(mkdir -p frontend)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('scripts:', list\\(d['scripts'].keys\\(\\)\\)\\)\")",
+      "Bash(C:/Users/darre/PycharmProjects/tutor/.venv/Scripts/pip install *)",
+      "Bash(C:/Users/darre/PycharmProjects/tutor/.venv/Scripts/python manage.py check)",
+      "Bash(C:/Users/darre/PycharmProjects/tutor/.venv/Scripts/python manage.py migrate)",
+      "Bash(C:/Users/darre/PycharmProjects/tutor/.venv/Scripts/python *)",
+      "Bash(node *)",
+      "Bash(python *)",
+      "Bash(findstr *)",
+      "Bash(xargs grep *)"
+    ]
+  }
+}

@@ -1,0 +1,182 @@
+[
+  {
+    "code": "NSW.MATH.NUMALG",
+    "description": "Number and Algebra",
+    "children": [
+      {
+        "code": "NSW.MATH.NUMALG.WHOLE",
+        "description": "Whole Numbers",
+        "children": [
+          { "code": "NSW.MATH.NUMALG.WHOLE.1", "description": "Understanding whole number place value" },
+          { "code": "NSW.MATH.NUMALG.WHOLE.2", "description": "Applying whole number operations" },
+          { "code": "NSW.MATH.NUMALG.WHOLE.3", "description": "Estimating and checking calculations" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.NUMALG.ADD_SUB",
+        "description": "Addition and Subtraction",
+        "children": [
+          { "code": "NSW.MATH.NUMALG.ADD_SUB.1", "description": "Developing addition strategies" },
+          { "code": "NSW.MATH.NUMALG.ADD_SUB.2", "description": "Developing subtraction strategies" },
+          { "code": "NSW.MATH.NUMALG.ADD_SUB.3", "description": "Solving problems using addition and subtraction" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.NUMALG.MULT_DIV",
+        "description": "Multiplication and Division",
+        "children": [
+          { "code": "NSW.MATH.NUMALG.MULT_DIV.1", "description": "Understanding multiplication concepts" },
+          { "code": "NSW.MATH.NUMALG.MULT_DIV.2", "description": "Understanding division concepts" },
+          { "code": "NSW.MATH.NUMALG.MULT_DIV.3", "description": "Applying multiplication and division strategies" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.NUMALG.FRACTIONS",
+        "description": "Fractions and Decimals",
+        "children": [
+          { "code": "NSW.MATH.NUMALG.FRACTIONS.1", "description": "Representing fractions" },
+          { "code": "NSW.MATH.NUMALG.FRACTIONS.2", "description": "Comparing and ordering fractions" },
+          { "code": "NSW.MATH.NUMALG.FRACTIONS.3", "description": "Understanding decimal notation" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.NUMALG.RATIO",
+        "description": "Ratios, Rates and Percentages",
+        "children": [
+          { "code": "NSW.MATH.NUMALG.RATIO.1", "description": "Understanding ratios" },
+          { "code": "NSW.MATH.NUMALG.RATIO.2", "description": "Understanding rates" },
+          { "code": "NSW.MATH.NUMALG.RATIO.3", "description": "Understanding percentages" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.NUMALG.PATTERNS",
+        "description": "Patterns and Algebra",
+        "children": [
+          { "code": "NSW.MATH.NUMALG.PATTERNS.1", "description": "Identifying number patterns" },
+          { "code": "NSW.MATH.NUMALG.PATTERNS.2", "description": "Describing algebraic relationships" },
+          { "code": "NSW.MATH.NUMALG.PATTERNS.3", "description": "Using variables and simple expressions" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.NUMALG.FINANCE",
+        "description": "Financial Mathematics",
+        "children": [
+          { "code": "NSW.MATH.NUMALG.FINANCE.1", "description": "Understanding money and budgeting" },
+          { "code": "NSW.MATH.NUMALG.FINANCE.2", "description": "Calculating simple financial transactions" }
+        ]
+      }
+    ]
+  },
+
+  {
+    "code": "NSW.MATH.MEASGEO",
+    "description": "Measurement and Geometry",
+    "children": [
+      {
+        "code": "NSW.MATH.MEASGEO.LENGTH",
+        "description": "Length",
+        "children": [
+          { "code": "NSW.MATH.MEASGEO.LENGTH.1", "description": "Measuring and comparing lengths" },
+          { "code": "NSW.MATH.MEASGEO.LENGTH.2", "description": "Converting between units of length" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.MEASGEO.AREA",
+        "description": "Area",
+        "children": [
+          { "code": "NSW.MATH.MEASGEO.AREA.1", "description": "Understanding area concepts" },
+          { "code": "NSW.MATH.MEASGEO.AREA.2", "description": "Calculating area of shapes" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.MEASGEO.VOLUME",
+        "description": "Volume and Capacity",
+        "children": [
+          { "code": "NSW.MATH.MEASGEO.VOLUME.1", "description": "Measuring volume" },
+          { "code": "NSW.MATH.MEASGEO.VOLUME.2", "description": "Understanding capacity" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.MEASGEO.MASS",
+        "description": "Mass",
+        "children": [
+          { "code": "NSW.MATH.MEASGEO.MASS.1", "description": "Measuring mass" },
+          { "code": "NSW.MATH.MEASGEO.MASS.2", "description": "Comparing mass" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.MEASGEO.TIME",
+        "description": "Time",
+        "children": [
+          { "code": "NSW.MATH.MEASGEO.TIME.1", "description": "Reading and interpreting time" },
+          { "code": "NSW.MATH.MEASGEO.TIME.2", "description": "Calculating elapsed time" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.MEASGEO.SPACE2D",
+        "description": "2D Space",
+        "children": [
+          { "code": "NSW.MATH.MEASGEO.SPACE2D.1", "description": "Identifying 2D shapes" },
+          { "code": "NSW.MATH.MEASGEO.SPACE2D.2", "description": "Understanding symmetry and transformations" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.MEASGEO.SPACE3D",
+        "description": "3D Space",
+        "children": [
+          { "code": "NSW.MATH.MEASGEO.SPACE3D.1", "description": "Identifying 3D objects" },
+          { "code": "NSW.MATH.MEASGEO.SPACE3D.2", "description": "Understanding nets and surface area" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.MEASGEO.ANGLES",
+        "description": "Angles",
+        "children": [
+          { "code": "NSW.MATH.MEASGEO.ANGLES.1", "description": "Naming and identifying angles" },
+          { "code": "NSW.MATH.MEASGEO.ANGLES.2", "description": "Measuring and constructing angles" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.MEASGEO.COORD",
+        "description": "Coordinates",
+        "children": [
+          { "code": "NSW.MATH.MEASGEO.COORD.1", "description": "Plotting points on a grid" },
+          { "code": "NSW.MATH.MEASGEO.COORD.2", "description": "Interpreting coordinate relationships" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.MEASGEO.TRIG",
+        "description": "Trigonometry",
+        "children": [
+          { "code": "NSW.MATH.MEASGEO.TRIG.1", "description": "Understanding right‑angle trigonometry" },
+          { "code": "NSW.MATH.MEASGEO.TRIG.2", "description": "Applying trigonometric ratios" }
+        ]
+      }
+    ]
+  },
+
+  {
+    "code": "NSW.MATH.STATPROB",
+    "description": "Statistics and Probability",
+    "children": [
+      {
+        "code": "NSW.MATH.STATPROB.DATA",
+        "description": "Data",
+        "children": [
+          { "code": "NSW.MATH.STATPROB.DATA.1", "description": "Collecting and organising data" },
+          { "code": "NSW.MATH.STATPROB.DATA.2", "description": "Representing data using graphs" },
+          { "code": "NSW.MATH.STATPROB.DATA.3", "description": "Interpreting data displays" }
+        ]
+      },
+      {
+        "code": "NSW.MATH.STATPROB.CHANCE",
+        "description": "Chance",
+        "children": [
+          { "code": "NSW.MATH.STATPROB.CHANCE.1", "description": "Describing chance events" },
+          { "code": "NSW.MATH.STATPROB.CHANCE.2", "description": "Conducting chance experiments" },
+          { "code": "NSW.MATH.STATPROB.CHANCE.3", "description": "Understanding probability models" }
+        ]
+      }
+    ]
+  }
+]

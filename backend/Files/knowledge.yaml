@@ -1,0 +1,103 @@
+- title: Arc Length
+  text: Arc Length = 2 * 3.14 * radius * (angle / 360)
+  diagram: ''
+  text_2: ''
+  skill_codes: []
+- title: Area
+  text: 'Circle: A = $\pi$r$^2$
+
+    Rectangle A = length x width
+
+    Parallelogram: A = base x height
+
+    Rhombus: A = ½ × p x q
+
+    Kite: A = ½ × p x q
+
+    Trapezium A = ½ × (a + b) × h'
+  diagram: ''
+  text_2: ''
+  skill_codes: []
+- title: Census vs Sample
+  text: "A census studies every member of a population, while \nA sample studies only\
+    \ a subset of that population"
+  diagram: ''
+  text_2: ''
+  skill_codes: []
+- title: Circumference of a Circle
+  text: The circumference of a circle is calculated using the formula $C = 2 \pi R$,
+    where $C$ is the circumference and $R$ is the radius of the circle.
+  diagram: 'Circle(radius: 5, label_r: true, label_d: false)'
+  text_2: For example, if the radius of a circle is 5 units, the circumference is
+    $C = 2 \pi \times 5 = 10\pi$ units.
+  skill_codes: []
+- title: Expression, Equation, Formula
+  text: "An expression is a mathematic phrase with no equals sign (eg 3x + 2). \n\
+    An equation is a statement that two things are equal and has an equals sign. \n\
+    A formula is a rule showing relationships between quantities, true in  general\
+    \ (e.g. Area = length times width)."
+  diagram: ''
+  text_2: ''
+  skill_codes: []
+- title: Index Laws
+  text: "- Product law: a^m × a^n = a^(m+n) \n- Quotient law: a^m ÷ a^n = a^(m−n)\
+    \ \n- Power law: (a^m)^p = a^(mp)"
+  diagram: ''
+  text_2: ''
+  skill_codes: []
+- title: Multiplying and Dividing Positives and Negatives
+  text: "Products\n - The product of two positives is a positive\n - The product of\
+    \ two negatives is a positive\n - The product of a positive and negative is a\
+    \ negative\nDivision\n - The division of two positives is a positive\n - The division\
+    \ of two negatives is a positive\n - The division of a positive and negative is\
+    \ a negative"
+  diagram: ''
+  text_2: ''
+  skill_codes: []
+- title: Number Types
+  text: "The types of numbers in mathematics include:\n - Whole Numbers: Numbers starting\
+    \ from zero (0, 1, 2, 3, ...).\n - Integers: Whole numbers that can be positive,\
+    \ negative, or zero (..., -2, -1, 0, 1, 2, ...).\n - Rational Numbers: Numbers\
+    \ that can be expressed as a fraction of two integers (e.g., 1/2, 3/4).\n - Irrational\
+    \ Numbers: Numbers that cannot be expressed as a simple fraction (e.g., √2, π).\n\
+    \ - Real Numbers: All rational and irrational numbers."
+  diagram: ''
+  text_2: ''
+  skill_codes:
+  - NSW.MATH.S4.2.3
+- title: Numerical vs Categorical Data
+  text: '**Numerical data** represents quantitative information — values you can measure,
+    count, and use in mathematical operations. (Age, Weight, Speed, Count)
+
+    **Categorical data** represents qualitative information — values that describe
+    labels, groups, or categories rather than measurable quantities. (Postcode, Fav
+    sport, Educational level)'
+  diagram: ''
+  text_2: ''
+  skill_codes:
+  - NSW.MATH.S4.14.1
+- title: Prime and Composite numbers
+  text: 'A prime number has exactly 2 factors: 1 and itself. A composite number has
+    more than 2 factors.'
+  diagram: ''
+  text_2: ''
+  skill_codes: []
+- title: Pythagoras
+  text: A right-angle triangle has a² + b² = c²
+  diagram: 'Triangle(a:3, b:4, c:5, labels: "a, b, c")'
+  text_2: ''
+  skill_codes: []
+- title: Quadratic Equation
+  text: 'When 𝑎𝑥^2 + 𝑏𝑥 + 𝑐 = 0
+
+
+    $$x = \frac{-({{ b }}) \pm \sqrt{{ b }}^2 - 4({{ a }})({{ c }})}{2{{ a }}}$$'
+  diagram: ''
+  text_2: ''
+  skill_codes: []
+- title: Rate vs Ratio
+  text: "A ratio compares two quantities with the same units. \nA rate compares two\
+    \ quantities with different units."
+  diagram: ''
+  text_2: ''
+  skill_codes: []

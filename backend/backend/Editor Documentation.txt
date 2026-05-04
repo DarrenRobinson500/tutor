@@ -1,0 +1,2636 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TEMPLATE EDITOR — TUTOR DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A Template is a reusable question definition written in YAML.
+Each time a student sees the question, random values are
+substituted into it, so no two attempts are identical.
+
+The editor has three panels:
+  Left   — the YAML source you write
+  Middle — the YAML with random values substituted in
+  Right  — the student-facing question rendered with LaTeX
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DIFFICULTY LEVELS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Each template can be assigned a difficulty level to help teachers select questions appropriate for their students’ stage of learning. Difficulty levels do not change how the template functions; instead, they describe the cognitive demand of the question.
+
+── Easy ──────────────────────────────────────────────────
+Designed to support students who are still developing confidence with the skill.
+
+An Easy template includes additional guidance, such as:
+- A formula provided in the question
+- A partially completed example
+- Highlighted steps
+- Hints embedded in the wording
+
+Students who can complete Easy templates are demonstrating progress toward the syllabus expectations, with scaffolding.
+
+── Medium ──────────────────────────────────────────────────
+A Medium template assesses the skill as required by the syllabus.
+
+Questions:
+- Contain no extra hints or scaffolds
+- Use standard mathematical language
+- Require students to apply the skill independently
+
+A student who can consistently complete Medium templates is performing at the expected curriculum level.
+
+── Hard ──────────────────────────────────────────────────
+Hard templates extend beyond the syllabus requirements.
+
+These questions may involve:
+- Multi‑step reasoning
+- Unfamiliar contexts
+- More abstract or complex variations of the skill
+- Combinations of multiple concepts
+- Algebraic generalisations or proofs
+
+Hard templates are intended for enrichment, challenge tasks, or extension work.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TEMPLATE STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A template includes parameters, the question, the answer and
+the solution (which is shown if an incorrect answer is provided).
+The template can also include validation and diagrams.
+    parameters:
+        a:
+          size: small
+        b:
+          size: small
+        ans: a + b
+    question:
+      text: "What is {{ a }} + {{ b }}?"
+      answer: "{{ ans }}"
+      solution: "Add the two numbers. {{ a }} + {{ b }} = {{ ans }}"
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARAMETERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Every value that changes between attempts is declared in
+the parameters block. Parameters can be referenced in the
+question, answers, and solution using {{ parameter_name }}.
+
+
+── Integer ──────────────────────────────────────────────────
+
+Generates a whole number between min and max (inclusive).
+
+  parameters:
+    a:
+      size: small
+
+  size: small            # small  = 2–5
+                         # medium = 2–10
+                         # large  = 20–1000, rounded to 2 significant figures
+                         #          e.g. 35, 80, 140, 600
+
+  sign: pos              # pos     → always positive (default)
+                         # neg     → always negative
+                         # pos_neg → randomly positive or negative
+  Example:
+    a:
+      size: small
+      sign: neg          # generates -15 to -2
+
+    b:
+      size: medium
+      sign: pos_neg      # generates -10 to -2 or 2 to 10
+
+  brackets_when_negative: true
+    When set, a negative value is displayed in parentheses;
+    a positive value is shown as-is. e.g. -7 → (-7),  6 → 6
+    Also available as a pipe: {{ n | brackets }}
+
+If more flexibility is required use min, max and step:
+
+  parameters:
+    a:
+      min: 10
+      max: 100
+      step: 10
+
+
+── Fraction ─────────────────────────────────────────────────
+
+Generates a proper or improper fraction, or a mixed number.
+
+  parameters:
+    a:
+      type: fraction
+      size: small        # small = denominator 2–5
+                         # medium = denominator 2–10
+                         # large  = denominator 2–20
+      proper: true       # true  → numerator < denominator
+                         # false → improper fraction
+                         # omit  → either
+      simplified: true   # default true; false allows unreduced fractions
+      sign: pos          # pos (default), neg, or pos_neg (random sign)
+
+  Mixed number (whole part + fractional part):
+    a:
+      type: fraction
+      mixed: true
+      size: small
+      min_whole: 1       # minimum whole-number part (default 1)
+      max_whole: 5       # maximum whole-number part (default 5)
+
+  Fractions render automatically as LaTeX (\frac{}{}) in the
+  question and solution — do NOT write \frac manually.
+
+
+── Decimal ──────────────────────────────────────────────────
+
+Generates a decimal number with a fixed number of decimal places.
+
+  parameters:
+    a:
+      type: decimal
+      size: small
+      decimal_places: 1  # how many decimal places (default 1)
+
+  Example output: 3.4, 7.8, 2.0 (trailing zeros stripped)
+
+── Dollar Amount ─────────────────────────────────────────────
+
+Generates a dollar value.
+
+  parameters:
+    price:
+      type: dollar
+      size: small    # whole dollars only, $3–$8
+                     # medium = dollars and cents, $3.00–$10.00
+                     # large  = round amounts (multiples of $10), $10–$1000
+
+  Displays as $5, $7.45, or $200 depending on size.
+  Do not combine size with min/max.
+
+
+── Percentage ───────────────────────────────────────────────
+
+Generates a percentage.
+
+  parameters:
+    rate:
+      type: percent
+      min: 10
+      max: 90
+      step: 5
+
+  Displays as "35%".
+  The % sign is added automatically. The value is stored as 0.35
+  rather than 35.
+
+  common: true
+    Picks from a fixed set of commonly used percentages:
+    1%, 5%, 10%, 12.5%, 20%, 25%, 50%
+
+Note that a percentage is stored after dividing by 100. So:
+ - Incorrect: principle * rate / 100
+ - Correct: principle * rate
+
+parameters:
+  rate:
+    type: percent
+    common: true
+
+
+── Choice ───────────────────────────────────────────────────
+
+Picks one value at random from a list.
+
+  parameters:
+    angle:
+      type: choice
+      values: [10, 30, 45, 60, 80, 90]
+
+
+── Name ─────────────────────────────────────────────────────
+
+Picks a unique child's name at random from a built-in pool.
+
+  parameters:
+    student:
+      type: name
+
+  The pool contains 10 names (Emma, Olivia, Ava, Isabella,
+  Sophia, Liam, Noah, Oliver, Elijah, James). If multiple
+  name parameters are declared in the same template, each
+  receives a different name automatically.
+
+  Example:
+    parameters:
+      buyer:
+        type: name
+      seller:
+        type: name
+      price:
+        type: dollar
+        size: small
+
+    question:
+      text: "{{ buyer }} bought a book from {{ seller }} for {{ price }}."
+
+
+── List ──────────────────────────────────────────────────────
+
+Generates a list of random integers. Use for statistics questions
+(mode, median, mean, range) where you need a dataset.
+
+  parameters:
+    data:
+      type: list
+      count: 5      # number of values in the list
+      size: small   # refers to the size of each number
+      # size: small   → min: 2, max: 9
+      # size: medium  → min: 2, max: 20
+      # size: large   → min: 2, max: 99
+      order: false  # set to true to sort the list smallest to largest
+
+Display the list in the question using a pipe:
+  {{ data | sorted }}   — sorted ascending: "2, 3, 5, 7, 8"
+  {{ data }}            — original (random) order: "5, 2, 8, 3, 7"
+
+List functions for use in expressions and answers:
+  mode(data)      — most frequent value
+  median(data)    — middle value (average of two middles if even count)
+  mean(data)      — arithmetic mean
+  min(data)       — smallest value
+  max(data)       — largest value
+  range_of(data)  — max − min
+  len(data)       — count of values
+  sum(data)       — total
+
+Example — mode question:
+
+    parameters:
+        data:
+          type: list
+          count: 7
+          size: small
+        ans: {{ mode(data) }}
+
+    validation:
+    - "len([v for v in data if v == mode(data)]) >= 2"
+
+    question:
+      text: "What is the mode of {{ data | sorted }}?"
+      answer: "{{ ans }}"
+      solution: "**{{ mode(data) }}** appears most often. The mode is **{{ mode(data) }}**."
+
+
+── Scenario ──────────────────────────────────────────────────
+
+Picks a random row from a fixed table of (question text, answer)
+pairs.
+
+  parameters:
+    item:
+      type: scenario
+      rows:
+        - [a soccer pitch, m]
+        - [a pencil, cm]
+        - [a person, m]
+        - [a tower, m]
+        - [a staple, cm]
+        - [a fingernail, mm]
+        - [a marathon route, km]
+    question_text: item[0]
+    unit: item[1]
+
+Access fields by index inside {{ }}. This can be used in the question, solution or validation:
+  {{ item[0] }}   — first field (the thing to measure)
+  {{ item[1] }}   — second field (the correct unit)
+  {{ item[2] }}   — third field (if the row has a third value), etc.
+
+  question:
+    text: "Which unit (m, cm, mm, km) is most appropriate to measure {{ question_text }}?"
+    answers:
+      - text: m
+        correct: "unit == 'm'"
+      - text: cm
+        correct: "unit == 'cm'"
+      - text: mm
+        correct: "unit == 'mm'"
+      - text: km
+        correct: "unit == 'km'"
+    solution: "The most appropriate unit to measure {{ question_text }} is {{ unit }}."
+
+Rules:
+  • Each row must have the same number of fields.
+  • Row values can be strings, numbers, or a mix.
+  • Rows with more than two fields work the same way — just
+    reference item[2], item[3], etc.
+
+
+── Derived (expr) ────────────────────────────────────────────
+
+Computes a value from an expression over other parameters.
+Use this to name an intermediate result so you can reference it
+cleanly in the question, solution and answers without repeating
+the full expression each time.
+
+  parameters:
+    a:
+      size: small
+    b:
+      size: small
+    perimeter: 2 * (a + b)
+    area: a * b"
+
+  question:
+    text: "A rectangle has length {{ a }} and width {{ b }}. What is its perimeter?"
+    answer: "{{ perimeter }}"
+    answer_format: integer
+    solution: "Perimeter = 2 × ({{ a }} + {{ b }}) = {{ perimeter }}"
+
+Rules:
+  • The expr parameter must be defined after any parameters it
+    references (definition order is top-to-bottom).
+  • The {{ and "" wrappers are optional — each form works:
+      perimeter: 2 * (a + b)
+      perimeter: "2 * (a + b)"
+      perimeter: "{{ 2 * (a + b) }}"
+  • Derived parameters can reference other derived parameters as
+    long as they appear in the calculated order.
+  • The value is available in {{ }}, answers, solution, and
+    validation rules just like any other parameter.
+
+
+── Fixed Value ───────────────────────────────────────────────
+
+Sets a parameter to a fixed constant (no randomisation).
+
+  parameters:
+    total_cards:
+      value: 52
+    diamond_cards:
+      value: 13
+
+  Useful when a question has a known constant (e.g. a deck of
+  cards, number of days in a week) that you want to reference
+  by name in expressions rather than hard-coding the number.
+
+
+── Bool ──────────────────────────────────────────────────────
+
+Randomly generates true or false (50/50 by default). Use this
+when a question has two distinct cases — for example, whether
+an angle is a right angle, or whether a number is even.
+
+  parameters:
+    right_angle:
+      type: bool
+
+Full example
+
+    parameters:
+      right_angle:
+        type: bool
+
+    question:
+      text: "Is a triangle {{ 'with' if right_angle else 'without'}} a 90° angle a right-angle triangle?"
+      answers:
+        - text: "Yes"
+          correct: "right_angle"
+        - text: "No"
+          correct: "not right_angle"
+      solution: "A triangle {{ 'with' if right_angle else 'without'}} a 90° angle is {{ '' if right_angle else 'not '}}a right-angle triangle."
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXPRESSIONS  {{ }}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Any text enclosed in {{ }} is evaluated as a mathematical
+expression using the current parameter values.
+
+  {{ a }}           — renders the value of parameter a
+  {{ a + b }}       — evaluates a + b
+  {{ a * b }}       — evaluates a × b
+  {{ a / b }}       — evaluates a ÷ b (as a fraction if needed)
+  {{ a ** 2 }}      — evaluates a²
+  {{ rate / 100 }}  — converts a percentage to a decimal
+
+Expressions can appear in question text, solution text, and
+answer expressions.
+
+── Built-in Math Functions ──────────────────────────────────
+
+Standard mathematical functions can be used directly inside
+{{ }} expressions:
+
+  {{ a ** 2 }}          — a squared
+  {{ a ** 0.5 }}        — square root of a (also sqrt(a))
+  {{ sqrt(a) }}         — square root
+  {{ abs(a - b) }}      — absolute value
+  {{ factorial(n) }}    — n!  (e.g. factorial(5) = 120)
+  {{ sin(a) }}          — sine (angle in radians)
+  {{ cos(a) }}          — cosine (angle in radians)
+
+
+── Surd Functions ───────────────────────────────────────────
+
+These functions simplify square roots into surd form and are
+used together with the | surd format pipe.
+
+  {{ sqrt(n) | surd }}
+    Renders the simplified surd form of √n.
+    e.g. n=12 → 2\sqrt{3},  n=8 → 2\sqrt{2},  n=16 → 4
+
+  {{ surd_coeff(n) }}
+    Returns the integer coefficient extracted from √n.
+    e.g. surd_coeff(12) = 2  (because √12 = 2√3)
+
+  {{ surd_radicand(n) }}
+    Returns the remaining radicand after simplification.
+    e.g. surd_radicand(12) = 3  (because √12 = 2√3)
+
+Use surd_coeff and surd_radicand to construct distractor
+answers for surd simplification questions:
+
+  parameters:
+    n:
+      type: choice
+      values: [8, 12, 18, 20, 27, 32, 45, 50, 72, 75]
+
+  question:
+    text: "Express $\\sqrt{{{ n }}}$ in simplified form."
+    answers:
+      - text: "${{ sqrt(n) | surd }}$"
+        correct: true
+      - text: "$\\sqrt{{{ n }}}$"
+        correct: false
+      - text: "${{ surd_coeff(n) }}$"
+        correct: false
+      - text: "${{ surd_coeff(n) ** 2 }}\\sqrt{{{ surd_radicand(n) }}}$"
+        correct: false
+
+  The three distractors represent common mistakes:
+    $\sqrt{n}$          — not simplified at all
+    $a$                 — forgot the remaining radical
+    $a²\sqrt{b}$        — used the square of the coefficient
+
+
+── Fraction Part Functions ──────────────────────────────────
+
+Extract the numerator or denominator of a fraction parameter:
+
+  {{ denominator(a) }}  — the denominator of fraction a
+                          e.g. if a = 3/4, returns 4
+  {{ numerator(a) }}    — the numerator of fraction a
+                          e.g. if a = 3/4, returns 3
+
+These are useful when you need to refer to the parts of a
+fraction separately in a question or solution:
+
+  question:
+    text: "Write a fraction with denominator {{ denominator(a) }}
+           that is equivalent to {{ a }}."
+    solution: "Multiply both parts by {{ denominator(a) }}:
+               {{ numerator(a) }} / {{ denominator(a) }} = {{ a }}"
+
+Also useful in answer expressions:
+  question:
+    text: "..."
+    answers:
+      - text: "{{ a * 12 / denominator(a) }}"
+        format: fraction
+        correct: true
+
+
+── Repeat Function ──────────────────────────────────────────
+
+repeat(value, count, separator) repeats a value count times,
+joined by separator. Useful for expanded index-notation questions.
+
+  repeat(A, n, ' × ')
+    Repeats A, n times, separated by ' × '.
+    e.g. A='a', n=4  →  a × a × a × a
+
+Example — index notation:
+
+  parameters:
+    A:
+      type: choice
+      values: [a, b, x, y]
+    n:
+      type: int
+      min: 2
+      max: 5
+
+  question:
+    text: "Write in index notation: {{ repeat(A, n, ' × ') }}"
+    parts:
+      - text: "Write {{ repeat(A, n, ' × ') }} in index notation."
+        answer: "{{ A }}^{{ n }}"
+
+The separator can be anything — use ' × ' for a multiplication
+symbol, ' \\times ' for LaTeX, or '' (empty string) for no gap.
+
+── Probability Functions ────────────────────────────────────
+
+These functions are available for probability and combinatorics
+questions:
+
+  nCr(n, r)
+    Combinations — the number of ways to choose r items from n
+    without regard to order.
+    Formula: n! / (r! × (n-r)!)
+    Example: {{ nCr(n, r) }}  → "How many ways can {{ r }} students
+             be chosen from a class of {{ n }}?"
+
+  nPr(n, r)
+    Permutations — the number of ways to arrange r items chosen
+    from n where order matters.
+    Formula: n! / (n-r)!
+    Example: {{ nPr(n, r) }}  → "How many 3-digit codes can be
+             formed from {{ n }} different digits?"
+
+  ways_sum(dice, target)
+    Counts how many outcomes of rolling a given number of standard
+    6-sided dice produce a specific total.
+    Example: {{ ways_sum(2, 7) }} → number of ways two dice sum to 7
+    Use with a choice parameter for the target:
+      target:
+        type: choice
+        values: [5, 6, 7, 8, 9]
+
+  hypergeom(N, K, n, k)
+    Hypergeometric probability — the probability of drawing exactly
+    k "successes" when drawing n items without replacement from a
+    population of N that contains K successes.
+    N = population size
+    K = number of successes in population
+    n = number of draws
+    k = desired number of successes
+    Example: {{ hypergeom(10, 4, 3, 2) }} → probability that exactly
+             2 of 3 drawn items are defective, from a batch of 10
+             containing 4 defective items.
+
+Probability function examples in a full answer expression:
+  question:
+    text: "How many ways can {{ r }} items be chosen from {{ n }}?"
+    answers:
+      - text: "{{ nCr(n, r) }}"
+        correct: true
+      - text: "{{ nPr(n, r) }}"
+        correct: false
+      - text: "{{ nCr(n, r) * 2 }}"
+        correct: false
+      - text: "{{ nCr(n-1, r) }}"
+        correct: false
+
+
+── Unit Conversion ──────────────────────────────────────────
+
+unit_multiplier(input_prefix, output_prefix)
+  Returns the multiplier M such that:
+    quantity_in_input_unit × M = quantity_in_output_unit
+
+  Both arguments are SI prefix strings (see table below).
+  Use '' (empty string) for the base unit (metres, grams, etc.).
+  Returns an integer when M ≥ 1, otherwise a decimal.
+
+  Examples:
+    {{ unit_multiplier('k', 'c') }}   → 100000  (1 km = 100 000 cm)
+    {{ unit_multiplier('k', '')  }}   → 1000    (1 km = 1 000 m)
+    {{ unit_multiplier('',  'c') }}   → 100     (1 m  = 100 cm)
+    {{ unit_multiplier('c', 'k') }}   → 0.00001 (1 cm = 0.00001 km)
+    {{ unit_multiplier('M', 'k') }}   → 1000    (1 Mm = 1 000 km)
+
+  Supported prefixes:
+    'T'   tera   ×10¹²
+    'G'   giga   ×10⁹
+    'M'   mega   ×10⁶
+    'k'   kilo   ×10³
+    'h'   hecto  ×10²
+    'da'  deca   ×10¹
+    ''    (base) ×10⁰
+    'd'   deci   ×10⁻¹
+    'c'   centi  ×10⁻²
+    'm'   milli  ×10⁻³
+    'u'   micro  ×10⁻⁶  (also 'μ')
+    'n'   nano   ×10⁻⁹
+    'p'   pico   ×10⁻¹²
+
+  Typical template pattern — randomise the input prefix and ask
+  the student to convert to a fixed output unit:
+
+    parameters:
+      from_prefix:
+        type: choice
+        values: ["k", "c", "m"]
+      value:
+        min: 1
+        max: 20
+
+    question:
+      text: "Convert ${{ value }}$ {{ from_prefix }}m to centimetres."
+      answer: "{{ value * unit_multiplier(from_prefix, 'c') }}"
+
+
+── Algebraic Expressions ────────────────────────────────────
+
+When an answer contains a variable letter (like x or y),
+collect all like terms into a single {{ }} coefficient:
+
+  WRONG:  "{{ 2 * a }}x + {{ 2 * b }}x"    ← two x-terms
+  RIGHT:  "{{ 2 * a + 2 * b }}x"            ← combined
+
+Write in standard form: highest degree first, constant last.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VALIDATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+If there are some combinations of parameter values that should
+be ignored, these can be rejected using validation.
+
+  validation:
+      - m != 0
+      - a + b > 0
+      - a != b
+      - len([v for v in data if v == mode(data)]) >= 2
+
+Rules use standard Python comparison operators:
+  !=  not equal
+  ==  equal
+  >   greater than
+  <   less than
+  >=  greater than or equal
+  <=  less than or equal
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+QUESTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The question block is a single text field. Use {{ }} for
+parameter references and calculations.
+
+  question: What is {{ a }} + {{ b }}?
+
+── Highlighting ─────────────────────────────────────────────
+
+Use ** before and after text you would like to highlight.
+
+  question: What is **{{ a }} + {{ b }}**?
+
+── Indentation ──────────────────────────────────────────────
+
+Use \quad (or \qquad for more space) inside math mode to indent.
+
+  question: "Solve the equation:\n\n  $\\quad x^2 + {{ p }}x + {{ q }} = 0$"
+
+── Format Pipes ─────────────────────────────────────────────
+
+If a value is defined with a type it will be formatted based on that type.
+To adjust default formatting or to format an expression (expressions don't have types)
+use pipes.
+
+  {{ expr | fraction }}                     — displays as a fraction
+  {{ expr | mixed_number }}                 — displays as a mixed number
+  {{ expr | decimal }}                      — displays as a decimal (fixed 2 decimal places by default)
+  {{ expr | decimal(decimal_places=1) }}    — fixed 1 dp, e.g. 7.5, 6.0
+  {{ expr | dollar }}                       — displays as $X.XX
+  {{ expr | percent }}                      — displays as X%
+  {{ expr | percent(decimal_places=1) }}    — fixed 1 dp, e.g. 33.3%
+  {{ expr | integer }}                      — rounds to nearest whole number
+  {{ expr | words }}                        — spells the integer out in English
+  {{ expr | factor }}                       — prime factorisation, e.g. 12 → 2 x 2 x 3
+  {{ expr | scientific_notation }}          — scientific notation, e.g. 3200 → 3.2 × 10³
+  {{ expr | scientific_notation(sig_figs=2) }} — control significant figures (default 3)
+  {{ expr | expr }}                         — formats an algebraic expression string for display:
+                                              removes * (2*x → 2x), converts ** to ^,
+                                              collapses sign pairs (+ - → -, - - → +)
+                                              ^ is rendered as a superscript by the Latex component
+                                              and by the AlgebraTable diagram label.
+
+  Example:
+    parameters:
+      expr_string:
+        expr: "{{ m }}*x^2 + {{ b }}"
+
+    question:
+      text: "Evaluate {{ expr_string | expr }} for the given values of x."
+      diagram: AlgebraTable(x_min: 1, x_max: 6, expr: "{{ expr_string | expr }}")
+
+  With m=2, b=-4 this produces the label "2x^2 - 4" with the 2 rendered as a superscript.
+
+── Multi-part questions ─────────────────────────────────────────────
+
+A multi-part question asks the student several questions in sequence. Each part has
+its own question text, accepted answer, and solution explanation. Each part has:
+  text              — the question text for this part (supports {{ }})
+  answer            — the accepted answer (supports {{ }} expressions)
+  solution          — shown after the student answers (supports {{ }})
+  choices           — (optional) list of multiple-choice options (see below)
+  tolerance         — (optional) numeric tolerance for answer matching
+  format_instruction — (optional) hint shown below the input box
+
+  question:
+    text: "Use the graph to answer the questions below."
+    parts:
+      - text: "Which month has the highest temperature?"
+        answer: "July"
+        solution: "July is the peak of the graph."
+      - text: "Which month has the lowest temperature?"
+        answer: "January"
+        solution: "January is the lowest point."
+      - text: "What is the drop from July to August?"
+        answer: "{{ jul - aug }}"
+        solution: "The temperature drops from {{ jul }} to {{ aug }},
+                   a fall of {{ jul - aug }}°C."
+
+── Multiple-choice parts ─────────────────────────────────────
+
+If you need a multiple choice answer as part of the multi-part question
+replace the answer with choices:
+
+  parts:
+    - text: "Is {{ a }} a terminating decimal?"
+      choices:
+        - text: "Yes"
+          correct: true
+        - text: "No"
+          correct: false
+      solution: "{{ a }} terminates because its denominator has
+                 only factors of 2 and 5."
+
+
+── Example: Multiple Part Multiple Choice question────────────
+
+  parameters:
+    a:
+      type: fraction
+      size: small
+      proper: true
+    is_term:
+      expr: denominator(a) % 2 == 0 or denominator(a) % 5 == 0
+    ans:
+      expr: '"Yes" if is_term else "No"'
+
+  question:
+    text: "Consider the fraction {{ a | fraction }}."
+    parts:
+      - text: "Write {{ a | fraction }} as a decimal."
+        answer: "{{ a | decimal }}"
+        solution: "{{ a | fraction }} = {{ a | decimal }}"
+      - text: "Is {{ a | fraction }} a terminating decimal?"
+        choices:
+          - text: "Yes"
+            correct: is_term
+          - text: "No"
+            correct: not is_term
+        solution: "{{ ans }}, because the denominator
+                   {{ 'has' if is_term else 'does not have' }}
+                   only factors of 2 and 5."
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANSWERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Answer keys use the same flat structure whether the question is
+single-part or a part inside a multi-part question. The keys
+sit alongside the question text at the same level:
+
+  question:
+    text: "What is {{ a }} + {{ b }}?"
+    answer: "{{ a + b }}"
+    answer_format: integer
+    tolerance: 0.5
+    format_instruction: "Enter a whole number"
+    solution: "{{ a }} + {{ b }} = {{ a + b }}"
+
+The same keys work identically inside a parts: item:
+
+  question:
+    text: "Consider the numbers {{ a }} and {{ b }}."
+    parts:
+      - text: "What is their sum?"
+        answer: "{{ a + b }}"
+        answer_format: integer
+        solution: "{{ a }} + {{ b }} = {{ a + b }}"
+
+── answer ───────────────────────────────────────────────────
+
+  answer: "{{ a + b }}"
+
+The expression is evaluated and the student's response is
+compared to it. Comparison is case-insensitive and trims
+whitespace. Numeric answers are compared with a small
+tolerance so that e.g. "10.0" matches "10".
+
+── answer_format ────────────────────────────────────────────
+
+If an answer must be provided in a particular format use
+answer_format. If an incorrect format is submitted an error
+is shown but the attempt is not counted as incorrect.
+
+  answer_format: fraction            — input must be an improper fraction n/d
+                                       (e.g. 7/3). Mixed numbers like "2 1/3"
+                                       are rejected, so students must convert.
+  answer_format: integer             — input must be a whole number
+  answer_format: decimal             — input must be a decimal number
+  answer_format: ratio               — input must contain :  (e.g. 1:2)
+  answer_format: scientific_notation — input must be in scientific notation,
+                                       e.g. 3.2 × 10³ or 3.2e3. The answer
+                                       is compared numerically so the student
+                                       can type any equivalent form.
+  answer_format: equation            — replaces the text box with a custom
+                                       base^exponent input widget. The value
+                                       is stored as "base^exp" (e.g. "5^2")
+                                       and compared numerically to the correct
+                                       answer (25).
+
+Example — fraction to decimal conversion:
+
+  parameters:
+    a: { type: fraction, size: small, proper: true }
+  question:
+    text: "What is {{ a | fraction }} as a decimal?"
+    answer: "{{ a | decimal }}"
+    answer_format: decimal
+    solution: "{{ a | fraction }} = {{ a | decimal }}"
+
+── tolerance ────────────────────────────────────────────────
+
+For answers where an exact match is not required:
+
+  question:
+    text: "What is 1/3 as a decimal to 2 d.p.?"
+    answer: "{{ 1/3 | decimal(decimal_places=2) }}"
+    tolerance: 0.005
+
+Any response within ± tolerance of the correct answer is
+marked correct.
+
+── format_instruction ───────────────────────────────────────
+
+When answer_format is set, a default instruction is shown to
+the student (e.g. "Enter as a fraction, e.g. 7/3"). Override
+it with:
+
+  question:
+    text: "..."
+    answer: "{{ a * b }}"
+    format_instruction: "Enter a whole number, e.g. 42"
+
+── Multiple Choice ───────────────────────────────────────────
+
+Use answers: with a list of {text, correct} dicts. The text is
+shown on each button and supports {{ }} expressions and
+conditional text. correct may be a boolean or an expression.
+
+  question:
+    text: "What is {{ a }} × {{ b }}?"
+    answers:
+      - text: "{{ a * b }}"
+        correct: true
+      - text: "{{ a + b }}"
+        correct: false
+      - text: "{{ a * b * 2 }}"
+        correct: false
+      - text: "{{ a - b }}"
+        correct: false
+
+The format: key applies a pipe formatter to the text value:
+
+  answers:
+    - text: "{{ a * b }}"
+      format: fraction
+      correct: true
+
+── Multiple Choice Diagrams ──────────────────────────────────
+
+For questions where the answer IS a diagram (e.g. "which graph
+shows…?"), use a diagram key inside each answer item:
+
+  question:
+    text: "Which graph shows y = {{ m }}x + {{ b }}?"
+    answers:
+      - diagram: "Cartesian(xmin: -6, xmax: 6, ymin: -6, ymax: 6, eq: \"{{ m }}*x + {{ b }}\")"
+        correct: true
+      - diagram: "Cartesian(xmin: -6, xmax: 6, ymin: -6, ymax: 6, eq: \"{{ -m }}*x + {{ b }}\")"
+        correct: false
+
+The correct key supports expressions evaluated against parameters:
+
+      correct: rel_type == "linear"
+
+── Multiple Answers ──────────────────────────────────────────
+
+When a question has more than one answer (e.g. two roots), use
+answers: with a list of {answer:, label:} dicts. The student
+gets one input box per item.
+
+  question:
+    text: "Solve ${{ a }}x^2 + {{ b }}x + {{ c }} = 0$"
+    answers:
+      - answer: "{{ r1 }}"
+        label: "x₁"
+      - answer: "{{ r2 }}"
+        label: "x₂"
+
+This renders as:   x₁ = [    ]   x₂ = [    ]   [Submit]
+
+Labeled inputs are matched positionally. Omit label: for
+order-insensitive matching (student may enter values in any
+order).
+
+Each item can carry its own answer_format and tolerance,
+overriding any question-level default:
+
+  question:
+    text: "Find the gradient and y-intercept."
+    answer_format: fraction        # default for both inputs
+    answers:
+      - answer: "{{ m }}"
+        label: "Gradient"
+      - answer: "{{ b }}"
+        label: "y-intercept"
+        answer_format: integer     # override for this input only
+
+The same structure works inside a parts: item:
+
+  parts:
+    - text: "Find both x-intercepts."
+      answers:
+        - answer: "{{ r1 }}"
+          label: "x₁"
+        - answer: "{{ r2 }}"
+          label: "x₂"
+
+Legacy syntax (still supported):
+
+  answer:
+    multiple_answers: [r1, r2]              # unlabelled
+
+  answer:
+    multiple_answers:                       # labelled
+      - x: x0
+      - y: y0
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SOLUTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The solution appears when an incorrect answer is provided.
+It can provide some insight into how to answer the question,
+although this is often left to the tutor.
+
+  question:
+    text: "..."
+    solution: "The answer is: {{ answer }}"
+
+Providing a solution to a question is optional. In the case
+where a solution is not provided, a simple default solution
+that shows the answer is provided.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONDITIONAL TEXT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The Python ternary pattern works inside any {{ }} expression.
+Use it when wording is conditional.
+
+Syntax:
+  {{ 'text if true' if condition else 'text if false' }}
+
+Condition can be any Python expression:
+  if some_bool              — bool parameter
+  if x == 'value'           — choice parameter equality
+  if x == 'a' else ... else — chained choices (see below)
+  if n > 10                 — numeric comparison
+  if n % 2 == 0             — any expression
+
+Chaining for choice parameters:
+
+  When a choice parameter has more than two values, chain the
+  ternary to cover each case:
+
+  {{
+      'A segment' if type == 'Segment' else
+      'A ray' if type == 'Ray' else
+      'A line'
+  }}
+
+  This is equivalent to:
+    if type == 'Segment' → 'A segment'
+    elif type == 'Ray'   → 'A ray'
+    else                 → 'A line'
+
+Conditional solution example (choice parameter):
+
+  parameters:
+    type:
+      type: choice
+      values: ['Segment', 'Ray', 'Line']
+
+  question:
+    text: "What is this figure called?"
+    solution: >
+      {{ 'An interval (or segment) has two endpoints and
+      does not extend.' if type == 'Segment' else
+      'A ray has one endpoint and extends infinitely in
+      one direction.' if type == 'Ray' else
+      'A line extends infinitely in both directions.' }}
+
+Conditional mid-sentence:
+
+  question:
+    text: "..."
+    solution: "The figure is {{ 'bounded at both ends' if type == 'Segment' else 'bounded at one end' if type == 'Ray' else 'unbounded' }}."
+
+Numeric condition example:
+
+  parameters:
+    n: { size: small }
+
+  question:
+    text: "..."
+    solution: "{{ n }} is {{ 'even' if n % 2 == 0 else 'odd' }}."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DIAGRAMS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+To include a diagram, add 'diagram:' and the required diagram.
+
+── Angle Diagram ────────────────────────────────────────────
+
+Draws rays from a vertex with arcs and labels for one or more
+named angle segments.
+
+Syntax:
+
+  diagram: 'Angle(A: 40)'
+  diagram: 'Angle(A: 30, B: 90, C: 20)'
+  diagram: 'Angle(A: 40, size: 180)'
+  diagram: 'Angle(A: 30, B: 60, label_A: "x", label_B: "2x", arc_B: 2)'
+  diagram: 'Angle(A: {{ a }}, B: {{ b }}, C: {{ c }}, arc_B: 2, arc_C: 3, labels: false)'
+
+Parameters:
+
+  A / B / C …   Named angle segments in degrees (any uppercase letter).
+                Multiple angles are laid out consecutively from 0°.
+                Boundary rays are drawn at 0°, between each segment,
+                and at the end of the last named segment.
+
+  size          Total extent of the diagram. Must be 90, 180, or 360.
+                  size: 90   — draws a right-angle context (quarter turn)
+                  size: 180  — draws a straight-line context (half turn)
+                  size: 360  — draws a full revolution (no closing ray)
+                If omitted, the diagram extent equals the sum of the
+                named angles (just the angles, no extra space).
+                When size > sum of named angles, an extra unlabelled
+                region fills the remainder.
+
+  label_X       Override the display label for angle X.
+                Default label is the numeric value with a ° symbol.
+                Set to "" to hide the label entirely.
+                  label_A: "x"         — shows "x" instead of "40°"
+                  label_A: "{{ a }}°"  — dynamic label from a parameter
+                  label_A: ""          — hides the label
+
+  arcs_X / arc_X  Number of concentric arcs drawn for angle X (default 1).
+                Use different arc counts to distinguish angles in a diagram.
+                Both arc_X and arcs_X are accepted.
+                  arc_A: 1   — single arc (default)
+                  arc_B: 2   — double arc
+                  arc_C: 3   — triple arc
+
+  labels        Set to false to hide all angle labels globally.
+                  labels: false   — no labels drawn for any angle
+                  labels: true    — default, labels shown
+                Individual label_X overrides still apply when labels: true.
+
+Legacy syntax:
+
+  diagram: 'Angle(deg: {{ angle }})'   — single unnamed angle, still supported
+
+Examples:
+
+  Single angle — "Estimate the size of the angle shown":
+
+    parameters:
+      angle:
+        type: choice
+        values: [10, 30, 45, 60, 80, 90, 120, 135, 150]
+
+    diagram: 'Angle(A: {{ angle }})'
+
+    question:
+      text: "Estimate the size of the angle shown."
+      answers:
+        - text: "{{ angle }}°"
+          correct: true
+        - text: "{{ angle + 20 }}°"
+          correct: false
+        - text: "{{ angle - 20 }}°"
+          correct: false
+
+  Angles on a straight line (sum = 180°):
+
+    parameters:
+      a: { size: small }
+      b: { size: small }
+    diagram: 'Angle(A: {{ a }}, B: {{ b }}, size: 180, label_A: "{{ a }}°", label_B: "{{ b }}°")'
+
+  Two angles distinguished by arc count:
+
+    diagram: 'Angle(A: 40, B: 75, arcs_A: 1, arcs_B: 2, label_A: "x", label_B: "y")'
+
+  Right-angle context with an unknown angle:
+
+    parameters:
+      a: { size: small }
+    diagram: 'Angle(A: {{ a }}, size: 90, label_A: "{{ a }}°")'
+
+  Full revolution showing one reflex angle:
+
+    parameters:
+      a:
+        type: int
+        min: 200
+        max: 340
+    diagram: 'Angle(A: {{ a }}, size: 360)'
+
+
+── Line Diagram ─────────────────────────────────────────────
+
+Draws a straight line segment with optional labels at the start
+endpoint, end endpoint, and midpoint.
+
+  diagram: 'Line(start: (x1, y1), end: (x2, y2))'
+
+  Coordinates use a standard maths system (y increases upward).
+
+  Parameters:
+    start    — start point as (x, y), e.g. start: (-10, 0)
+    end      — end point as (x, y), e.g. end: (10, 0)
+    label_s  — label at the start endpoint (e.g. "A")
+    label_e  — label at the end endpoint (e.g. "B")
+    label_m  — label at the midpoint, offset above the line
+
+  Examples:
+
+  Labelled line segment:
+    diagram: 'Line(start: (-12, 0), end: (12, 0), label_s: "A", label_e: "B", label_m: "{{ d }} cm")'
+
+  Diagonal line:
+    diagram: 'Line(start: (-10, -8), end: (10, 8), label_s: "P", label_e: "Q")'
+
+
+── Triangle Diagram ─────────────────────────────────────────
+
+Draws a triangle from side lengths and/or an included angle.
+
+  Parameters:
+    a, b       — two side lengths (required)
+    c          — third side length (optional; see below)
+    C          — angle at vertex C in degrees (used to compute c when
+                 c is omitted and C is not 90°)
+    label_a/b/c — text label shown on each side
+    label_A/B/C — text label shown at each angle vertex
+    ticks_a/b/c — number of tick marks on each side (1–3)
+    arcs_A/B/C  — number of arc indicators at each vertex (1–3)
+    label_v    — true shows the numeric value of each side length
+    labels     — shorthand: labels: "p, q, r" sets label_a/b/c at once
+    pos        — centre position, default (0, 0)
+    scale      — size multiplier, default 1
+
+  Right-angle behaviour:
+    When c is omitted and C is not given, a right angle at C is assumed
+    and the hypotenuse is computed automatically. A square right-angle
+    marker is drawn at C whenever the angle is 90°.
+
+  Examples:
+
+  Right-angled triangle (hypotenuse computed automatically):
+    diagram: 'Triangle(a: {{ a }}, b: {{ b }})'
+
+  Right-angled triangle with explicit 90° angle:
+    diagram: 'Triangle(a: {{ a }}, b: {{ b }}, C: 90)'
+
+  Triangle with a given included angle:
+    diagram: 'Triangle(a: {{ a }}, b: {{ b }}, C: {{ angle }})'
+
+  Show numeric side labels:
+    diagram: 'Triangle(a: 3, b: 4, label_v: true)'
+
+  Show letter labels on sides:
+    diagram: 'Triangle(a: {{ a }}, b: {{ b }}, labels: "a, b, c")'
+
+  Full three-side triangle with custom labels:
+    diagram: 'Triangle(a: {{ a }}, b: {{ b }}, c: {{ c }}, label_a: "{{ a }}", label_b: "{{ b }}", label_c: "c")'
+
+
+── Rectangle Diagram ────────────────────────────────────────
+
+Draws a labelled rectangle showing its width and height.
+
+  diagram: "Rect(x: {{ w }}, y: {{ h }})"
+
+  Parameters:
+    x           — width of the rectangle
+    y           — height of the rectangle
+    pos         — centre position in the diagram, default (0, 0)
+    scale       — scaling factor, default 1
+    labels      — true (default) shows dimension labels; false hides them
+    name        — optional text displayed in the centre of the rectangle (e.g. a shape name or area expression)
+    right_angle — false (default) | true: draws a small square corner marker at all four corners
+
+  Examples:
+    diagram: "Rect(x: {{ w }}, y: {{ h }}, labels: true, name: \"Garden\")"
+    diagram: "Rect(x: {{ w }}, y: {{ h }}, labels: true, right_angle: true)"
+
+  Typical use: area and perimeter of a rectangle questions.
+
+
+── Kite Diagram ─────────────────────────────────────────────
+
+Draws a kite defined by its two diagonals. The intersection sits
+35% of the way from the top vertex to the bottom vertex. Both
+diagonals are shown as dotted lines with a right-angle marker at
+their intersection.
+
+  diagram: 'Kite(p: 6, q: 10)'
+
+  Parameters:
+    p         — horizontal diagonal length (width)
+    q         — vertical diagonal length (height)
+    labels    — false (default) | true: auto-labels p and q
+    label_p   — custom label along the horizontal diagonal
+    label_q   — custom label along the vertical diagonal
+    pos       — centre position, default (0, 0)
+    scale     — scaling factor, default 1
+
+  Geometric notation is drawn automatically:
+    - Single tick marks on the two top sides (equal)
+    - Double tick marks on the two bottom sides (equal)
+
+  Example:
+    diagram: 'Kite(p: {{ p }}, q: {{ q }}, labels: true)'
+
+  Typical use: properties of a kite, area using diagonals.
+
+
+── Rhombus Diagram ──────────────────────────────────────────
+
+Draws a rhombus defined by its two diagonals. The four vertices
+sit at the midpoints of the bounding-box edges. Both diagonals are
+shown as dotted lines with right-angle markers at the centre.
+
+  diagram: 'Rhombus(p: 8, q: 5)'
+
+  Parameters:
+    p         — horizontal diagonal length
+    q         — vertical diagonal length
+    labels    — false (default) | true: auto-labels p and q
+    label_p   — custom label along the horizontal diagonal
+    label_q   — custom label along the vertical diagonal
+    pos       — centre position, default (0, 0)
+    scale     — scaling factor, default 1
+
+  Geometric notation is drawn automatically:
+    - Single tick marks on all four sides (all equal)
+    - Single chevron arrows on one parallel pair of sides
+    - Double chevron arrows on the other parallel pair of sides
+
+  Example:
+    diagram: 'Rhombus(p: {{ p }}, q: {{ q }}, labels: true)'
+
+  Typical use: properties of a rhombus, area using diagonals.
+
+
+── Parallelogram Diagram ────────────────────────────────────
+
+Draws a parallelogram with a given base and perpendicular height.
+A dotted vertical line shows the height with a right-angle marker
+at the base, making it clear the height is measured perpendicularly.
+
+Geometric notation is drawn automatically:
+  - Single tick marks on the top and bottom edges (equal length b)
+  - Double tick marks on the two slanted legs (equal length)
+  - Single chevron arrows on top and bottom (parallel pair)
+  - Double chevron arrows on the two legs (parallel pair)
+
+  diagram: 'Parallelogram(b: {{ b }}, h: {{ h }}, labels: true)'
+
+  Parameters:
+    b         — base length
+    h         — perpendicular height
+    labels    — true shows numeric values for b and h; false (default) hides them
+    label_b   — custom label for the base (overrides labels: true for b)
+    label_h   — custom label for the height line (overrides labels: true for h)
+    pos       — centre position in the diagram, default (0, 0)
+    scale     — scaling factor, default 1
+
+  label_b and label_h accept any string, including {{ }} expressions that have
+  already been substituted. Use them when you want units or a custom format:
+
+    diagram: 'Parallelogram(b: {{ b }}, h: {{ h }}, label_b: "{{ b }} cm", label_h: "h = {{ h }}")'
+
+  labels: true is a shorthand that auto-formats both values. Individual label_b
+  and label_h always take precedence over labels: true.
+
+  Example:
+    parameters:
+      b:
+        size: medium
+      h:
+        size: small
+      area:
+        expr: "b * h"
+
+    diagram: 'Parallelogram(b: {{ b }}, h: {{ h }}, label_b: "{{ b }}", label_h: "h={{ h }}")'
+
+    question:
+      text: "Find the area of this parallelogram."
+      answer: "{{ area }}"
+      solution: "Area = base × height = {{ b }} × {{ h }} = {{ area }}"
+
+  Typical use: area of a parallelogram questions.
+
+
+── Trapezium Diagram ────────────────────────────────────────
+
+Draws a symmetric (isosceles) trapezium with a given top edge (a),
+base (b), and perpendicular height (h). A dotted vertical height line
+with a right-angle marker is always drawn inside the shape: when b ≥ a
+it drops from the top-left vertex to the base; when a > b it rises from
+the bottom-left vertex to the top edge.
+
+Geometric notation is drawn automatically:
+  - Single chevron arrow on each parallel side (top and bottom) to
+    indicate they are parallel
+
+  diagram: 'Trapezium(a: {{ a }}, b: {{ b }}, h: {{ h }}, labels: true)'
+
+  Parameters:
+    a         — length of the top edge
+    b         — length of the base (bottom edge)
+    h         — perpendicular height
+    labels    — true shows numeric values for a, b, and h; false (default) hides them
+    label_a   — custom label for the top edge
+    label_b   — custom label for the base
+    label_h   — custom label for the height line
+    pos       — centre position in the diagram, default (0, 0)
+    scale     — scaling factor, default 1
+
+  label_a, label_b, and label_h accept any string, including substituted
+  {{ }} expressions. Use them when you want units or a custom format:
+
+    diagram: 'Trapezium(a: {{ a }}, b: {{ b }}, h: {{ h }}, label_a: "{{ a }} cm", label_b: "{{ b }} cm", label_h: "h = {{ h }}")'
+
+  Example:
+    parameters:
+      a:
+        size: small
+      b:
+        size: medium
+      h:
+        size: small
+      area:
+        expr: "(a + b) * h / 2"
+
+    diagram: 'Trapezium(a: {{ a }}, b: {{ b }}, h: {{ h }}, label_a: "{{ a }}", label_b: "{{ b }}", label_h: "h={{ h }}")'
+
+    question:
+      text: "Find the area of this trapezium."
+      answer: "{{ area }}"
+      solution: "Area = ½ × (a + b) × h = ½ × ({{ a }} + {{ b }}) × {{ h }} = {{ area }}"
+
+  Typical use: area of a trapezium questions.
+
+
+── Polygon Diagram ──────────────────────────────────────────
+
+Draws a closed polygon. By default uses equal interior angles so the
+shape looks like a regular n-gon with the given side lengths. Supply
+angles to draw a geometrically accurate shape. Supply label_angles to
+show angle arc markers and labels at each vertex.
+
+Syntax:
+  Polygon(sides: [...] [, angles: [...]] [, label_angles: [...]]
+          [, labels: true|false] [, name: ""] [, scale: N] [, pos: (x, y)])
+
+Parameters:
+
+  sides        List of side lengths, one per side (minimum 3).
+               Optional when angles is given — defaults to all 1.0
+               (useful when you only want to show the angle relationships).
+
+  angles       Interior angles in degrees, one per vertex. When provided
+               the polygon is drawn with accurate geometry.
+               e.g. angles: [60, 120, 60, 120]
+
+  label_angles Text label shown at each vertex, with an arc marker.
+               Supply as a bracket list matching the number of vertices.
+               Empty entries suppress individual labels.
+               A vertex whose angle is ≈ 90° gets a square corner marker
+               instead of a curved arc.
+               e.g. label_angles: [60°, 120°, 60°, 120°]
+               e.g. label_angles: [{{ a }}, ?, {{ a }}, ?]
+               e.g. label_angles: [, , ]   ← arcs only, no text
+
+               IMPORTANT: angles[i] is the interior angle AT vertex i.
+               label_angles[i] is drawn at the same vertex i. They are
+               correctly aligned — do not offset the lists.
+
+  labels       true (default) shows each side length; false hides them.
+
+  name         Optional text shown at the centre of the shape.
+
+  scale        Size multiplier; omit to auto-scale to fit the canvas.
+
+  pos          Centre position in SVG units (default 0, 0).
+
+Examples:
+
+  Angle relationships only (no sides specified):
+    diagram: 'Polygon(angles: [60, 120, 60, 120], label_angles: [60°, 120°, 60°, 120°], labels: false)'
+
+  Mixed sides and angles (parallelogram):
+    diagram: 'Polygon(sides: [{{ a }}, {{ b }}, {{ a }}, {{ b }}], angles: [{{ ang }}, {{ 180 - ang }}, {{ ang }}, {{ 180 - ang }}], label_angles: [{{ ang }}°, , , ])'
+
+  Right-angled triangle with square corner marker:
+    diagram: 'Polygon(sides: [3, 4, 5], angles: [90, 53, 37], label_angles: [, , ])'
+
+  Perimeter question (equal angles, side labels only):
+    diagram: 'Polygon(sides: [{{ a }}, {{ b }}, {{ c }}, {{ d }}])'
+
+  Named shape:
+    diagram: 'Polygon(sides: [5, 5, 5, 5], name: "ABCD")'
+
+  Typical use: perimeter, area, angle sum questions, identifying
+  quadrilateral types by their angles.
+
+
+── Circle Diagram ───────────────────────────────────────────
+
+Draws a circle with optional radius/diameter labels and labelled
+parts (arc, chord, sector, segment, tangent).
+
+  diagram: 'Circle(radius: {{ r }}, label_r: true)'
+
+  ── Value labels ──────────────────────────────────────────
+    radius   — numeric value shown in labels
+    label_r  — show radius line + value (default true)
+    label_d  — show diameter line + value (default false)
+
+  When both are true the diameter is drawn horizontally and the
+  radius at 45° upward-right. Typical use: area/circumference
+  questions.
+
+  ── Part labels ───────────────────────────────────────────
+  Each flag draws the named part in colour with the word label.
+
+    show_arc: true       arc highlighted in blue
+    show_chord: true     chord drawn in blue
+    show_sector: true    sector shaded light blue, radii + arc in blue
+    show_segment: true   segment shaded light green, chord + arc in green
+    show_tangent: true   tangent line in red, dashed radius, right-angle marker
+
+  Angle parameters (degrees, CCW from the positive x-axis):
+    angle1: 40     start of arc / chord / sector / segment (default 40)
+    angle2: 140    end   of arc / chord / sector / segment (default 140)
+    angle_t: 0     tangent contact point (default 0 = rightmost point)
+
+  Examples:
+
+  Radius only:
+    diagram: 'Circle(radius: {{ r }}, label_r: true)'
+
+  Diameter only:
+    diagram: 'Circle(radius: {{ r }}, label_r: false, label_d: true)'
+
+  Label an arc:
+    diagram: 'Circle(radius: 5, label_r: false, show_arc: true)'
+
+  Label a chord:
+    diagram: 'Circle(radius: 5, label_r: false, show_chord: true)'
+
+  Label a sector (custom angles):
+    diagram: 'Circle(radius: 5, label_r: false, show_sector: true, angle1: 0, angle2: 90)'
+
+  Label a segment:
+    diagram: 'Circle(radius: 5, label_r: false, show_segment: true)'
+
+  Label a tangent at the top of the circle:
+    diagram: 'Circle(radius: 5, label_r: false, show_tangent: true, angle_t: 90)'
+
+  Show arc and chord together (they share angle1/angle2):
+    diagram: 'Circle(radius: 5, label_r: false, show_arc: true, show_chord: true)'
+
+
+── Prism Diagram ────────────────────────────────────────────
+
+Draws a 3D prism with a triangular or rectangular cross-section.
+The front face and back face are drawn, with connecting edges between
+each corresponding pair of corners. The back face is offset to the
+upper-right to give a perspective effect.
+
+  diagram: 'Prism(sides: [3, 4, 5], depth: 4, labels: true)'
+  diagram: 'Prism(sides: [6, 4, 6, 4], depth: 3, labels: true)'
+
+  Parameters:
+    sides   — list of side lengths:
+                [a, b, c]       → triangular prism
+                [w, h, w, h]    → rectangular prism (width × height)
+    depth   — length of the prism
+    labels  — true (default) shows side lengths on the front face and
+              depth on the rightmost connecting edge; false hides all labels
+    label_h — (triangular prism only) text to display on the triangle height.
+              When set, a dashed perpendicular line is drawn from the apex
+              down to the base on the front face, with a right-angle marker
+              at the foot. The label can be a number or a letter (e.g. "h").
+
+  Examples:
+
+  Triangular prism (right-triangle cross-section):
+    diagram: 'Prism(sides: [{{ a }}, {{ b }}, {{ c }}], depth: {{ d }}, labels: true)'
+
+  Triangular prism with height shown:
+    diagram: 'Prism(sides: [{{ a }}, {{ b }}, {{ c }}], depth: {{ d }}, label_h: "h")'
+
+  Triangular prism with numeric height label:
+    diagram: 'Prism(sides: [{{ a }}, {{ b }}, {{ c }}], depth: {{ d }}, label_h: "{{ h }}")'
+
+  Rectangular prism:
+    diagram: 'Prism(sides: [{{ w }}, {{ h }}, {{ w }}, {{ h }}], depth: {{ d }}, labels: true)'
+
+
+── Cartesian Diagram (Line Graph) ───────────────────────────
+
+Plots a mathematical function on a labelled x-y axis.
+
+  diagram: "Cartesian(xmin: -6, xmax: 6, ymin: -9, ymax: 9, eq: \"{{ m }}*x + {{ b }}\")"
+
+  Parameters:
+    xmin, xmax  — horizontal axis range
+    ymin, ymax  — vertical axis range
+    eq          — the equation to plot in blue (use * for multiplication,
+                  ** for powers; x is the variable)
+    eq2         — optional second equation plotted in red (same syntax as eq)
+    x_label        — optional label shown centred below the x-axis tick numbers
+                     (replaces the italic "x" variable label)
+    y_label        — optional label shown just above the top of the y-axis
+                     (replaces the italic "y" variable label)
+    x_tick_labels  — optional comma-separated list of custom labels for the x-axis
+                     ticks, replacing the auto-generated numbers. Labels are placed
+                     evenly from xmin to xmax. Use xmin: 1 and xmax matching the
+                     number of labels so grid lines align with each label.
+    points      — optional list of named points drawn as filled blue dots.
+                  Syntax: points: ((x1, y1, "Label1"), (x2, y2, "Label2"), ...)
+                  The label is optional — omit it or leave it empty for an
+                  unlabelled dot.
+
+  Example with axis labels:
+    diagram: 'Cartesian(xmin: 0, xmax: 120, ymin: 0, ymax: 50, eq: "5/9*(x-32)", x_label: "Temperature (°F)", y_label: "Temperature (°C)")'
+
+  Example with custom x tick labels (monthly rainfall):
+    diagram: 'Cartesian(xmin: 1, xmax: 12, ymin: 0, ymax: 200, eq: "0", x_label: "Month", y_label: "Rainfall (mm)", x_tick_labels: "Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec")'
+
+  Example with two lines (simultaneous equations):
+    diagram: 'Cartesian(xmin: -4, xmax: 4, ymin: -4, ymax: 4, eq: "{{ m1 }}*x + 1", eq2: "{{ m2 }}*x - 1")'
+
+  Example with labelled points (distance formula, midpoint):
+    diagram: 'Cartesian(xmin: -6, xmax: 6, ymin: -6, ymax: 6, points: (({{ x1 }}, {{ y1 }}, "A"), ({{ x2 }}, {{ y2 }}, "B")))'
+
+  Example combining a line and points (show the y-intercept):
+    diagram: 'Cartesian(xmin: -6, xmax: 6, ymin: -9, ymax: 9, eq: "{{ m }}*x + {{ b }}", points: ((0, {{ b }}, "")))'
+
+  Examples:
+    Linear:    eq: "{{ m }}*x + {{ b }}"
+    Quadratic: eq: "{{ a }}*x**2 + {{ b }}"
+    With trig: eq: "sin(x)"
+
+  Use integer or decimal parameters as coefficients — never
+  fraction-type parameters (they cannot be substituted into
+  the equation string reliably).
+
+  Choose axis ranges so the line or curve is clearly visible:
+    For y = mx + b with m in [-4, 4] and b in [-5, 5]:
+      xmin: -6, xmax: 6, ymin: -9, ymax: 9
+
+  Labelling the x-axis with strings instead of numbers:
+
+    Use x_tick_labels to replace the auto-generated numeric tick marks with
+    custom text. Labels are placed evenly across the x range from xmin to xmax.
+    Set xmin: 1 and xmax to the number of labels so each label sits on a whole
+    number position and the grid lines align correctly.
+
+    Months of the year:
+      diagram: 'Cartesian(xmin: 1, xmax: 12, ymin: 0, ymax: 300, eq: "...",
+        x_label: "Month", y_label: "Rainfall (mm)",
+        x_tick_labels: "Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec")'
+
+    Days of the week:
+      diagram: 'Cartesian(xmin: 1, xmax: 7, ymin: 0, ymax: 100, eq: "...",
+        x_tick_labels: "Mon,Tue,Wed,Thu,Fri,Sat,Sun")'
+
+    When x_tick_labels is set:
+      - The italic "x" variable label is hidden automatically.
+      - Use x_label to add a descriptive axis title below the tick labels.
+      - Keep labels short (3–5 characters) to avoid overlapping.
+
+  Ensure the gradient parameter m is never 0 by adding a
+  validation rule (see VALIDATION below).
+
+
+── Parallel Lines Diagram ───────────────────────────────────
+
+Draws two horizontal parallel lines cut by a transversal.
+Double-chevron marks on each line indicate they are parallel.
+
+Syntax:
+  ParallelLines(angle: N [, arc_1: N, ..., arc_8: N]
+                          [, label_1: text, ..., label_8: text]
+                          [, labels_angle: [t1, t2, t3, t4, t5, t6, t7, t8]]
+                          [, labels: [A, B, C, D, E, F, G, H]]
+                          [, colour: name]
+                          [, scale: N])
+
+Parameters:
+
+  angle         Transversal angle from horizontal in degrees (1–179).
+                e.g. angle: 60
+
+  arc_N         Arc marker for angle region N (0 = none, 1 = single arc,
+                2 = double arc). N runs from 1 to 8.
+                e.g. arc_1: 1, arc_5: 2
+
+  label_N       Text label for angle region N. Accepts plain text, numbers,
+                or {{ expr }} expressions. N runs from 1 to 8.
+                e.g. label_1: {{ angle }}, label_5: ?
+
+  labels_angle  Bracket shorthand to set all eight angle labels at once.
+                Empty entries leave that label unset.
+                e.g. labels_angle: [{{ a }}, , , , {{ b }}, , , ]
+
+  colour        Highlight a set of line segments in golden yellow to
+  (or color)    illustrate an angle relationship. Accepted values:
+                  cointerior    — co-interior (same-side interior) angles
+                  corresponding — corresponding angles
+                  alternate     — alternate (Z) angles
+                  vert_opposite — vertically opposite angles
+
+  scale         Overall size multiplier (default 1.0).
+
+  labels        Vertex labels for the eight named points on the diagram.
+                Supply as a bracket list: labels: [A, B, C, D, E, F, G, H]
+                Empty entries hide that label. Labels render in italic.
+
+Angle numbering:
+
+  The transversal creates four angle regions at each intersection.
+  Numbering is the same at both intersections (1–4 at the top, 5–8
+  at the bottom):
+
+    Top intersection:        Bottom intersection:
+        2  |  1                  6  |  5
+      ─────+─────              ─────+─────
+        3  |  4                  7  |  8
+
+    1/5 = upper-right    2/6 = upper-left
+    3/7 = lower-left     4/8 = lower-right
+
+Vertex layout (for the labels parameter):
+
+              A
+             /
+   B ─────  C  ───── D      (top parallel line)
+            /
+           /
+   E ─────  F  ───── G      (bottom parallel line)
+            /
+           H
+
+    A = above top intersection (along transversal)
+    B = left end of top line       C = top intersection
+    D = right end of top line
+    E = left end of bottom line    F = bottom intersection
+    G = right end of bottom line
+    H = below bottom intersection (along transversal)
+
+Examples:
+
+  Basic co-interior question (angles sum to 180°):
+
+    diagram: 'ParallelLines(angle: {{ angle }}, arc_2: 1, arc_6: 1,
+              label_2: {{ angle }}, label_6: ?, colour: cointerior)'
+
+  Alternate angles with vertex labels:
+
+    diagram: 'ParallelLines(angle: {{ angle }}, arc_4: 1, arc_6: 1,
+              label_4: {{ angle }}, label_6: ?,
+              labels: [, , C, , , F, , ], colour: alternate)'
+
+  Corresponding angles:
+
+    diagram: 'ParallelLines(angle: {{ angle }}, arc_1: 1, arc_5: 1,
+              label_1: {{ angle }}, label_5: ?, colour: corresponding)'
+
+  Typical parameters block:
+
+    parameters:
+      angle:
+        type: choice
+        values: [40, 55, 65, 70, 75, 80]
+
+
+── Clock Diagram ────────────────────────────────────────────
+
+Draws an analogue clock face showing a specified time.
+No numbers are shown on the face — students read the hands.
+
+  diagram: "Clock(time: 3:30, pos: (0, 0))"
+
+  Parameters:
+    time  — the time to display in HH:MM format (24-hour or 12-hour)
+    pos   — centre position in the diagram
+
+  To use a random time, combine choice parameters:
+
+  parameters:
+    hour:
+      type: choice
+      values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    minute:
+      type: choice
+      values: [0, 15, 30, 45]
+
+  Note: the time field does not currently support {{ }} substitution,
+  so use a fixed time or generate several separate templates for
+  different times.
+
+  Typical use: reading analogue clocks, elapsed time questions.
+
+
+── Net Diagram ──────────────────────────────────────────────
+
+Draws the unfolded net of a 3D shape. Faces are shown as
+flat shapes with a light fill and labelled with key dimensions.
+
+  diagram: 'Net(shape: rect_prism, width: 4, height: 3, depth: 2)'
+  diagram: 'Net(shape: cylinder, radius: 3, height: 5)'
+  diagram: 'Net(shape: cone, radius: 3, slant: 5)'
+  diagram: 'Net(shape: rect_pyramid, width: 4, depth: 4, height: 3)'
+  diagram: 'Net(shape: tri_prism, a: 3, b: 4, c: 5, depth: 6)'
+  diagram: 'Net(shape: tri_pyramid, a: 5)'
+
+  Parameters:
+    shape   — one of: rect_prism | cylinder | cone | rect_pyramid |
+                      tri_prism | tri_pyramid
+    labels  — true (default) shows dimension labels; false hides them
+    show    — comma-separated list of part names to display; omit to
+              show the full net (all parts)
+
+  Dimensions by shape:
+    rect_prism   — width, height, depth
+    cylinder     — radius, height
+    cone         — radius, slant  (or radius + height; slant is auto-computed
+                   as sqrt(radius²+height²) if omitted or 0)
+    rect_pyramid — width, depth, height
+    tri_prism    — a, b, c (triangle sides), depth
+    tri_pyramid  — a (side length of equilateral tetrahedron)
+
+  Net layouts and part names:
+    rect_prism   — cross layout: top/bottom faces above and below the front
+                   face, left/right/back faces in a row
+                   Parts: top, front, bottom, left, right, back
+
+    cylinder     — rectangle (circumference × height) with circles above
+                   and below for the two caps
+                   Parts: rect, top, bottom
+
+    cone         — sector for the lateral surface + circle for the base
+                   Parts: sector, base
+
+    rect_pyramid — square/rect base in centre, four triangular faces
+                   folded outward on each edge
+                   Parts: base, front, back, left, right
+
+    tri_prism    — three side rectangles in a row with the two triangular
+                   end faces above and below the first rectangle
+                   Parts: rect_a, rect_b, rect_c, tri_top, tri_bottom
+
+    tri_pyramid  — four equilateral triangles: one base + three unfolded
+                   faces (reflects each face outward from base)
+                   Parts: base, face_a, face_b, face_c
+
+  Note: dimension labels are associated with their part — hiding a part
+  also hides its label.
+
+  Examples:
+
+  Rectangular prism net:
+    diagram: 'Net(shape: rect_prism, width: {{ w }}, height: {{ h }}, depth: {{ d }})'
+
+  Cylinder net (full):
+    diagram: 'Net(shape: cylinder, radius: {{ r }}, height: {{ h }})'
+
+  Cylinder net — rectangle and one circle only:
+    diagram: 'Net(shape: cylinder, radius: {{ r }}, height: {{ h }}, show: rect,bottom)'
+
+  Cylinder net — single circle only (e.g. to identify the cap shape):
+    diagram: 'Net(shape: cylinder, radius: {{ r }}, height: {{ h }}, show: top)'
+
+  Cone net (slant given):
+    diagram: 'Net(shape: cone, radius: {{ r }}, slant: {{ l }})'
+
+  Cone net (height given, slant auto-computed):
+    diagram: 'Net(shape: cone, radius: {{ r }}, height: {{ h }})'
+
+  Rectangular pyramid net:
+    diagram: 'Net(shape: rect_pyramid, width: {{ w }}, depth: {{ d }}, height: {{ h }})'
+
+  Rectangular pyramid — base and two faces only:
+    diagram: 'Net(shape: rect_pyramid, width: {{ w }}, depth: {{ d }}, height: {{ h }}, show: base,front,back)'
+
+  Triangular prism net:
+    diagram: 'Net(shape: tri_prism, a: {{ a }}, b: {{ b }}, c: {{ c }}, depth: {{ dep }})'
+
+  Equilateral tetrahedron net:
+    diagram: 'Net(shape: tri_pyramid, a: {{ a }})'
+
+
+── Number Line Diagram ──────────────────────────────────────
+
+Draws a labelled number line, optionally with arrows showing
+a jump or range.
+
+  diagram: "NumberLine(min: 0, max: 20, arrows: [({{ a }}, {{ a + b }})], pos: (0, 0))"
+
+  Parameters:
+    min     — left end of the number line
+    max     — right end of the number line
+    arrows  — a list of (start, end) pairs drawn as blue arrows above the line;
+              leave empty for a plain number line: arrows: []
+    pos     — centre position
+
+  Examples:
+    Plain number line:
+      diagram: "NumberLine(min: 0, max: 10, arrows: [], pos: (0, 0))"
+
+    Showing addition as a jump:
+      diagram: "NumberLine(min: 0, max: 20, arrows: [({{ a }}, {{ a + b }})], pos: (0, 0))"
+
+  Typical use: addition and subtraction on a number line,
+  locating fractions or decimals.
+
+
+── Fraction Bar Diagram ─────────────────────────────────────
+
+Draws two equal-width horizontal fraction bars stacked vertically.
+The top bar is subdivided by the denominator of the first fraction
+and its numerator cells are highlighted in blue. The bottom bar does
+the same for the second fraction. Useful for showing equivalent
+fractions side by side.
+
+  diagram: "FractionBar(a: 2/3, b: 4/6, label: true)"
+  diagram: "FractionBar(a: 2/3, den: 12, label: true)"
+
+  Parameters:
+    a       — the first fraction (top bar); accepts n/d, \frac{n}{d}, or a
+              fraction parameter e.g. {{ p }}/{{ q }}
+    b       — the second fraction (bottom bar); use this OR den, not both
+    den     — target denominator for the bottom bar; the equivalent
+              numerator is calculated automatically
+              e.g. a: 2/3, den: 12  →  bottom bar shows 8/12
+    label     — true (default) shows the fraction above the top bar and
+                below the bottom bar; false hides both labels
+    label_den — false (default); when true writes the denominator of each
+                bar to the right of that bar (e.g. "3", "12")
+
+  Examples:
+    Explicit second fraction:
+      diagram: "FractionBar(a: 2/3, b: 4/6)"
+
+    Auto-calculated equivalent fraction:
+      diagram: "FractionBar(a: {{ p }}/{{ q }}, den: {{ d }})"
+
+    Without labels:
+      diagram: "FractionBar(a: 3/4, b: 6/8, label: false)"
+
+    Denominator labels to the right of each bar:
+      diagram: "FractionBar(a: 2/3, den: 12, label_den: true)"
+
+  Typical use: fraction equivalence, comparing fractions,
+  introducing equivalent fractions in Stage 4.
+
+
+── Dot Array Diagram ────────────────────────────────────────
+
+Draws a rectangular grid of filled dots. Useful for showing
+multiplication as an array or visualising groups.
+
+  diagram: "DotArray(count: {{ a }}x{{ b }}, pos: (0, 0))"
+
+  Parameters:
+    count   — number of dots as either a single number (one row)
+              or ROWSxCOLS (e.g. 3x4 = 3 rows, 4 columns)
+    pos     — centre position
+
+  Examples:
+    Single row of dots:
+      diagram: "DotArray(count: {{ n }}, pos: (0, 0))"
+
+    Grid (rows × columns):
+      diagram: "DotArray(count: {{ a }}x{{ b }}, pos: (0, 0))"
+
+  Note: {{ }} substitution works inside the count value.
+  Typical use: multiplication arrays, counting questions,
+  early number sense.
+
+
+── Balls Diagram ────────────────────────────────────────────
+
+Draws a collection of coloured balls arranged in rows.
+Used for probability questions involving drawing from a bag.
+
+  diagram: "Balls(red: {{ r }}, blue: {{ b }}, pos: (0, 0))"
+
+  Parameters:
+    red     — number of red balls (default 0)
+    blue    — number of blue balls (default 0)
+    green   — number of green balls (default 0)
+    yellow  — number of yellow balls (default 0)
+    pos     — centre position
+    scale   — size scaling factor (default 1)
+
+  At least one colour must be non-zero.
+
+  Example — bag with mixed colours:
+    diagram: "Balls(red: {{ r }}, blue: {{ b }}, green: {{ g }}, pos: (0, 0))"
+
+    question:
+      text: "A bag contains {{ r }} red, {{ b }} blue and {{ g }} green balls.
+             One ball is drawn at random. What is the probability it is red?"
+      answers:
+        - text: "{{ r / (r + b + g) }}"
+          format: fraction
+          correct: true
+
+  Typical use: probability from a bag, theoretical vs experimental
+  probability.
+
+
+── Dice Sum Grid Diagram ────────────────────────────────────
+
+Draws a 6×6 sample space grid for the sum of two dice, with
+one target sum highlighted in yellow.
+
+  diagram: "DiceSumGrid(target: {{ total }}, pos: (0, 0))"
+
+  Parameters:
+    target  — the sum to highlight across the grid
+    pos     — centre position
+
+  parameters:
+    total:
+      type: choice
+      values: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+  Typical use: probability with two dice, counting favourable
+  outcomes, sample space questions.
+
+  Pair with the ways_sum() function for the correct answer:
+    answers:
+      - text: "{{ ways_sum(2, total) }}"
+        correct: true
+
+
+── Column Graph Diagram ─────────────────────────────────────
+
+Draws a vertical bar (column) chart from a list of
+label-value pairs.
+
+  diagram: "GraphColumn(points: [(\"Dogs\", 5), (\"Cats\", 8), (\"Birds\", 3)], pos: (0, 0))"
+
+  Parameters:
+    points  — list of (label, value) pairs in display order
+    pos     — centre position
+
+  With parameter substitution (fixed labels, random values):
+    diagram: "GraphColumn(points: [(\"Mon\", {{ a }}), (\"Tue\", {{ b }}), (\"Wed\", {{ c }})], pos: (0, 0))"
+
+  Typical use: reading column graphs, comparing categories,
+  finding the mode from a display.
+
+
+── Histogram Diagram ────────────────────────────────────────
+
+Draws a histogram from a list of class-interval / frequency pairs.
+Bars are touching (no gaps). A y-axis with nice tick marks is drawn
+on the left. The first bar does not touch the y-axis.
+
+  diagram: "GraphHistogram(points: [(\"1–5\", 3), (\"6–10\", 7), (\"11–15\", 5)], pos: (0, 0))"
+
+  Parameters:
+    points  — list of (label, value) pairs in display order; labels
+              are typically class intervals, values are frequencies
+    pos     — centre position
+    freq    — false (default) | true: overlay a frequency polygon
+              (red line connecting the midpoint of each bar's top,
+              anchored to zero one half-bar beyond each end)
+    label   — false (default) | true: show the frequency value above
+              each bar
+
+  With parameter substitution:
+    diagram: "GraphHistogram(points: [(\"0–9\", {{ a }}), (\"10–19\", {{ b }}), (\"20–29\", {{ c }})], pos: (0, 0))"
+
+  With frequency polygon:
+    diagram: "GraphHistogram(points: [(\"1–5\", 4), (\"6–10\", 9), (\"11–15\", 6)], pos: (0, 0), freq: true)"
+
+  Typical use: reading histograms, comparing class frequencies,
+  drawing or interpreting frequency polygons.
+
+
+── Line Graph Diagram ───────────────────────────────────────
+
+Draws a connected line chart from a list of label-value pairs.
+Points are connected in order and marked with dots. The chart fills
+the full SVG width with a y-axis on the left showing grid lines and
+tick labels.
+
+  diagram: 'GraphLine(points: [("Jan", 45), ("Feb", 62), ("Mar", 38)], y_label: "Rainfall (mm)")'
+
+  Parameters:
+    points       — list of (label, value) pairs in display order
+    y_label      — optional label shown just above the top of the y-axis
+    show_values  — true (default) shows the value above each data point; false hides them
+    pos          — centre position, default (0, 0)
+
+  Example (monthly rainfall):
+    diagram: 'GraphLine(points: [("Jan", 45), ("Feb", 62), ("Mar", 38), ("Apr", 71)], y_label: "Rainfall (mm)")'
+
+  Multi-part questions:
+    Use question.parts to ask several questions about the same graph.
+    See the MULTI-PART QUESTIONS section for full syntax and examples.
+
+
+── Pie Chart Diagram ────────────────────────────────────────
+
+Draws a pie chart from a list of label-value pairs.
+Slices are labelled outside the chart. Values are treated as
+frequencies (not percentages) — the chart converts them
+proportionally.
+
+  diagram: "GraphPie(points: [(\"Pizza\", 15), (\"Pasta\", 9), (\"Salad\", 6)], pos: (0, 0))"
+
+  Parameters:
+    points  — list of (label, value) pairs; values are counts or
+              frequencies, not necessarily percentages
+    pos     — centre position
+
+  Typical use: sector graphs, reading proportions, finding
+  percentages from a pie chart.
+
+
+── AlgebraTable Diagram ─────────────────────────────────────
+
+Renders a two-row table: the top row shows x values and the
+bottom row shows the output of an algebraic expression for
+each x. One or more output cells can be left blank for the
+student to complete interactively.
+
+Basic syntax (single blank cell):
+
+  diagram: 'AlgebraTable(x_min: 1, x_max: 7, expr: "x+2", blank: 4)'
+
+This displays x values 1–7 with outputs computed from x+2.
+The output cell for x=4 is highlighted in yellow and left
+blank for the student to fill in.
+
+  Parameters:
+    x_min    — first x value (integer)
+    x_max    — last x value (integer)
+    step     — increment between x values (default 1)
+               Use step: 10 for values like 10, 20, 30, 40, 50
+    expr     — algebraic expression using x as the variable
+               Supports: +, -, *, /, ** and implicit multiplication
+               e.g. "x+2", "2x+5", "3x-1", "x**2"
+               Parameters can be substituted: "{{a}}x+{{b}}"
+    blank    — the x value whose output cell is left blank (single blank)
+    label_1  — label for the top row (default: x)
+    label_2  — label for the bottom row (default: the expression)
+
+  Example — table for y = 3x + 1, asking for the value at x=5:
+
+    parameters:
+      a:
+        type: choice
+        values: [3, 4, 5]
+
+    question:
+      text: "Complete the table for $y = 3x + 1$."
+      answer: "{{ 3 * a + 1 }}"
+      answer_format: integer
+      solution: "When $x = {{ a }}$: $3 \\times {{ a }} + 1 = {{ 3 * a + 1 }}$"
+
+    diagram: 'AlgebraTable(x_min: 1, x_max: 6, expr: "3x+1", blank: {{ a }})'
+
+
+  Example — scones question with custom row labels and step:
+
+    diagram: 'AlgebraTable(x_min: 10, x_max: 50, step: 10, expr: "2x+150",
+              label_1: "Scones", label_2: "Temperature")'
+
+    Produces columns for 10, 20, 30, 40, 50 with labelled rows.
+
+
+── AlgebraTable — Multi-step blanks ────────────────────────
+
+When multiple output cells should be blank simultaneously, use
+the blanks parameter with a comma-separated list of x values.
+The student fills them in one at a time — the highlighted
+(yellow) cell advances automatically when each answer is
+correct. Previously answered cells show their value.
+
+  diagram: 'AlgebraTable(x_min: 1, x_max: 7, expr: "x+2", blanks: "3,4,5")'
+
+  Parameters (in addition to the basic ones above):
+    blanks    — comma-separated x values to leave blank, e.g. "3,4,5"
+    highlight — which blank is currently active (yellow); defaults to
+                the first value in blanks — omit this in templates
+
+  The answers block is NOT needed for multi-step AlgebraTable —
+  the engine computes the correct answer for each blank directly
+  from the expression.
+
+  The solution field IS used: it is rendered separately for each
+  blank, with blank_x set to the x value being answered. This
+  lets you show working for each step.
+
+  Full multi-step example:
+
+    parameters:
+      a:
+        type: choice
+        values: [2, 3, 4]
+      b:
+        type: choice
+        values: [1, 2, 3, 5]
+
+    question:
+      text: "Complete the table for $y = {{ a }}x + {{ b }}$."
+      solution: "When $x = {{ blank_x }}$: ${{ a }} \\times {{ blank_x }} + {{ b }} = {{ a * blank_x + b }}$"
+
+    diagram: 'AlgebraTable(x_min: 1, x_max: 6, expr: "{{a}}x+{{b}}", blanks: "2,4,6")'
+
+  Note: blank_x is a special variable available only inside the
+  solution field of a multi-step template. It automatically takes
+  the value of the x column being answered at each step.
+
+  The student sees:
+    • "I don't know" button — reveals the answer for the current
+      cell and flags the question for tutor review.
+    • On incorrect answer — the solution for that cell is shown.
+    • Table fills in left to right as each blank is answered.
+
+
+── Data Table Diagram ───────────────────────────────────────
+
+Renders a static data table with a grey header row and white
+data rows. Useful for presenting sets of values to students —
+reading-off questions, statistics, unit conversion tables, etc.
+
+  diagram: 'DataTable(headers: [Month, Rainfall], rows: [(Jan, 45), (Feb, 62), (Mar, 38)])'
+
+  Parameters:
+    headers   — comma-separated column heading strings in [ ]
+    rows      — list of data rows, each a (val, val, ...) tuple
+    label_col — false (default) | true: also shades the first
+                column grey, making it act as a row-header column
+
+  Column layout mirrors AlgebraTable: the first column is 1.5×
+  the width of each data column so label text (e.g. "January")
+  has room to breathe.
+
+  Supports {{ }} substitution in any cell value:
+    rows: [(Jan, {{ r1 }}), (Feb, {{ r2 }}), (Mar, {{ r3 }})]
+
+  Example — monthly rainfall reading question:
+
+    parameters:
+      r1: { min: 20, max: 120 }
+      r2: { min: 20, max: 120 }
+      r3: { min: 20, max: 120 }
+
+    diagram: 'DataTable(headers: [Month, Rainfall (mm)], rows: [(Jan, {{ r1 }}), (Feb, {{ r2 }}), (Mar, {{ r3 }})])'
+
+    question:
+      text: "Which month had the highest rainfall?"
+      answers:
+        - text: "January"
+          correct: "r1 > r2 and r1 > r3"
+        - text: "February"
+          correct: "r2 > r1 and r2 > r3"
+        - text: "March"
+          correct: "r3 > r1 and r3 > r2"
+
+  Example — two-column table with label_col:
+
+    diagram: 'DataTable(headers: [Shape, Area formula], rows: [(Square, s^2), (Rectangle, l × w), (Triangle, ½bh)], label_col: true)'
+
+  Typical use: reading tables, statistics questions, data
+  interpretation, unit conversion references.
+
+
+── Combining Multiple Diagrams ─────────────────────────────
+
+Multiple diagram calls can be combined in a single diagram field by separating
+them with a semicolon (;). Each part is rendered onto the same SVG canvas.
+Use the pos parameter to position each shape so they do not overlap.
+
+IMPORTANT: Always use semicolon (;) to separate multiple diagrams — do NOT use
+the YAML block scalar (|) as it causes rendering issues.
+
+The coordinate system is centred at (0, 0). Positive x moves right; positive y
+moves down (SVG convention). A typical canvas spans roughly -30 to +30 in x and
+-15 to +15 in y.
+
+  Example — two rectangles side by side for a size comparison question:
+
+    diagram: 'Rect(x: 10, y: 11.9, pos: (-10, 0), labels: false, name: "Vic"); Rect(x: 10, y: 3.4, pos: (10, 0), labels: false, name: "Tas")'
+
+  Positioning tips:
+    - Separate shapes horizontally: each shape's pos x should be offset by at
+      least half the sum of their widths plus a small gap (e.g. 2 units).
+    - Centre the overall composition at x=0 so it fills the canvas evenly.
+    - Use the name parameter on Rect to label each shape from inside it.
+    - Scale raw parameter values down to SVG units (canvas ≈ ±30 x, ±15 y).
+      e.g. if vic_height: 238, use 238/20 = 11.9 in the diagram string.
+
+  Note: the viewBox is taken from the last diagram entry, so for multi-diagram
+  layouts the default viewBox (-30 -15 60 30) applies. Scale shapes accordingly.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COMPLETE EXAMPLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Example 1: Simple  ──────────────────
+
+  parameters:
+    a:
+      size: small
+    b:
+      size: small
+
+  question:
+    text: "What is {{ a }} + {{ b }}?"
+    answer: "{{ a + b }}"
+    solution: "{{ a }} + {{ b }} = {{ a + b }}"
+
+
+── Example 2: Formatting pipes ───────────────────────
+
+  parameters:
+    rate:
+      type: percent
+      common: true
+    amount:
+      type: dollar
+      size: large
+    ans: rate * amount
+
+  question:
+    text: "Find {{ rate }} of {{ amount }}."
+    answer: "{{ ans }}"
+    solution: "{{ rate }} of {{ amount }} = {{ rate }} × {{ amount }} = {{ ans | dollar }}"
+
+── Example 3: Validation and Diagram ─────────────────────────
+
+  parameters:
+    m:
+      size: small
+    b:
+      size: small
+
+  question:
+    text: "What is the gradient of the line shown in the graph?"
+    answer: "{{ m }}"
+    tolerance: 1
+    solution: "Read rise over run from the graph. The gradient is {{ m }}."
+  diagram: "Cartesian(xmin: -6, xmax: 6, ymin: -9, ymax: 9, eq: '{{ m }}*x + {{ b }}')"
+
+── Example 6: List example for data questions ─────────────────────────────────────────
+
+  parameters:
+    data:
+      type: list
+      count: 5
+      size: small
+
+  question:
+    text: "What is the median of ${{ data | sorted }}$?"
+    answer: "{{ median(data) }}"
+    solution: "Sorted: ${{ data | sorted }}$. The middle value is {{ median(data) }}."
+
+── Example 7: Validation ensuring an integer answer  ───────────────────────────────────
+
+  parameters:
+    data:
+      type: list
+      count: 5
+      size: small
+
+  validation:
+    - sum(data) % len(data) == 0
+
+  question:
+    text: "What is the mean of {{ data | sorted }}?"
+    answer: "{{ mean(data) }}"
+    solution: "Add the values: {{ sum(data) }}. Divide by {{ len(data) }}: \n {{ sum(data) }} \\div {{ len(data) }} = {{ mean(data) }}."
+
+
+── Example: Scenario ──────────────────────────────────────────
+
+  parameters:
+    item:
+      type: scenario
+      rows:
+        - [a soccer pitch, m]
+        - [a pencil, cm]
+        - [a person, m]
+        - [a tower, m]
+        - [a staple, cm]
+        - [a fingernail, mm]
+        - [a marathon route, km]
+    question_text: item[0]
+    unit: item[1]
+
+  question:
+    text: "Which unit (m, cm, mm, km) is most appropriate to measure {{ question_text }}?"
+    answers:
+      - text: m
+        correct: "unit == 'm'"
+      - text: cm
+        correct: "unit == 'cm'"
+      - text: mm
+        correct: "unit == 'mm'"
+      - text: km
+        correct: "unit == 'km'"
+    solution: "The most appropriate unit to measure {{ question_text }} is {{ unit }}."
+
+
+── Example: List for Data Questions ──────────────────────────────────────────
+    parameters:
+        data:
+          type: list
+          count: 7
+          size: small
+        ans: {{ mode(data) }}
+
+    validation:
+    - "len([v for v in data if v == mode(data)]) >= 2"
+
+    question:
+      text: "What is the mode of {{ data | sorted }}?"
+      answer: "{{ ans }}"
+      solution: "**{{ mode(data) }}** appears most often. The mode is **{{ mode(data) }}**."
+
+── Example: Conditional Text ──────────────────────────────────────────
+
+    parameters:
+      right_angle:
+        type: bool
+
+    question:
+      text: "Is a triangle {{ 'with' if right_angle else 'without'}} a 90° angle a right-angle triangle?"
+      answers:
+        - text: "Yes"
+          correct: "right_angle"
+        - text: "No"
+          correct: "not right_angle"
+      solution: "A triangle {{ 'with' if right_angle else 'without'}} a 90° angle is {{ '' if right_angle else 'not '}}a right-angle triangle."
+
+── Example: Multipart question with multiple choice ──────────────────────────────────────────
+
+  parameters:
+    a:
+      type: fraction
+      size: small
+      proper: true
+    is_term:
+      expr: denominator(a) % 2 == 0 or denominator(a) % 5 == 0
+    ans:
+      expr: '"Yes" if is_term else "No"'
+
+  question:
+    text: "Consider the fraction {{ a | fraction }}."
+    parts:
+      - text: "Write {{ a | fraction }} as a decimal."
+        answer: "{{ a | decimal }}"
+        solution: "{{ a | fraction }} = {{ a | decimal }}"
+      - text: "Is {{ a | fraction }} a terminating decimal?"
+        choices:
+          - text: "Yes"
+            correct: is_term
+          - text: "No"
+            correct: not is_term
+        solution: "{{ ans }}, because the denominator {{ 'has' if is_term else 'does not have' }} only factors of 2 and 5."
+
+── Example: Equation input box for indices ──────────────────────────────────────────
+
+Example — index notation (equation entry widget):
+
+  parameters:
+    base: {min: 2, max: 4}
+    exp:  {min: 2, max: 4}
+    ans:  "{{ base ** exp }}"
+
+  question:
+    text: "Write ${{ ans }}$ as an index."
+    answer: "{{ ans }}"
+    answer_format: equation
+    solution: "{{ base }}^{{ exp }} = {{ ans }}"
+
+
+── Example: Ensuring a value is an integer ──────────────────────────────────────────
+
+    parameters:
+      a:
+        size: small
+      b:
+        size: small
+      c:
+        size: small
+      total:
+        expr: a + b + c
+      mean:
+        expr: (a + b + c) / 3
+
+    validation:
+      - (a + b + c) % 3 == 0
+
+── Example: Variable operation sign ──────────────────────────────────────────
+
+parameters:
+  a:
+    size: small
+  b_0:
+    size: small
+    sign: pos
+  c:
+    size: small
+    sign: pos
+  b:
+    expr: b_0 * c
+
+  op_1:
+    type: choice
+    values: ["+", "-"]
+  op_2:
+    type: choice
+    values: ["*", "/"]
+
+  result:
+    expr: a op_1 b op_2 c
+
+validation:
+  - result > 0
+
+question:
+  text: "What is {{ a }} {{ op_1 | operation }} {{ b }} {{ op_2 | operation }} {{ c }}?"
+  answer: "{{ result }}"
+  solution: "{{ a }} {{ op_1 | operation }} {{ b }} {{ op_2 | operation }} {{ c }} = {{ result }}."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KNOWLEDGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+To add information to a question use knowledge. This can be
+placed in the question, the solution or below the answer. If
+added to the solution, the information only shows if the
+student answers incorrect.
+
+post_answer: '{{ Knowledge("Multiplying and Dividing Positives and Negatives") }}'
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+QUICK REFERENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Parameter types
+  (no type)             integer range         min, max [, size, sign, brackets_when_negative]
+  type: fraction        fraction              size, proper, mixed, sign
+  type: decimal         decimal               min, max, decimal_places
+  type: dollar          dollar amount         size (small/medium/large)
+  type: percent         percentage            min, max [, common: true]
+  type: choice          pick from list        values: [...]
+  type: list            list of integers      count, min, max  [or size: small/medium/large]
+  type: scenario        random row from table rows: [[q1,a1],[q2,a2],...]  access via item[0], item[1]
+  type: bool            true/false            [weight: 0.0–1.0 (default 0.5)]
+  expr: "..."           derived value         computed from other params (define after dependencies)
+
+List functions (for use in {{ }} expressions when data is a list param)
+  mode(data)    median(data)    mean(data)    range_of(data)
+  min(data)     max(data)       sum(data)     len(data)
+
+Format pipes  {{ expr | format }}
+  integer               whole number
+  fraction              \frac{a}{b}
+  mixed_number          a\frac{b}{c}
+  decimal               3.14
+  dollar                $12.50
+  percent               35%  (optional: decimal_places=1 → 33.3%)
+  surd                  a\sqrt{b} (simplified square root)
+  brackets              (-7) if negative, 7 if positive
+  words                 three hundred and twenty-seven (English words)
+  sorted                (list only) sort and display comma-separated
+
+Answer types
+  text + format + correct                           multiple choice (4 answers)
+  input + correct                                   text input (1 answer)
+  input + correct + format_instruction              text input with hint
+  input + correct + answer_format                   text input with format enforcement
+  input + correct + answer_format + format_instruction  text input with both
+  diagram + correct                                 diagram choice
+
+Multi-part questions
+  question.parts: [{ text, answer, solution }, ...]   sequential parts on one diagram
+  Works with any diagram type or none. See MULTI-PART QUESTIONS section.
+
+Inline knowledge
+  {{ Knowledge("title") }}                            reference DB item — place in question.text or solution.text
+  knowledge: { title, text, text_2, diagram, show }   inline content (no DB); show: question | solution | both
+  See INLINE KNOWLEDGE section.
+
+Post-answer text
+  post_answer: "text or {{ Knowledge("title") }}"     shown after student answers, below solution
+  Supports LaTeX, {{ }} expressions, and {{ Knowledge("...") }}
+
+Diagram types
+  none
+  Angle(degrees: N)
+  AlgebraTable(x_min, x_max, expr: "...", blank: N)
+  AlgebraTable(x_min, x_max, expr: "...", blanks: "N,N,N")   ← multi-step
+    optional: step, label_1, label_2, highlight
+  DataTable(headers: [ColA, ColB, ...], rows: [(v, v), ...] [, label_col: true])
+  Cartesian(xmin, xmax, ymin, ymax, eq: "..." [, eq2: "..."] [, x_label: "...", y_label: "...", x_tick_labels: "A,B,C,..."] [, points: ((x, y, "Label"), ...)])
+  ParallelLines(angle: N [, arc_1..8: N] [, label_1..8: text] [, colour: cointerior|corresponding|alternate|vert_opposite] [, labels: [...]] [, scale: N])
+  Triangle(a, b, C)
+  Rect(x, y [, labels, scale, name, right_angle: true|false, pos: (x, y)])
+  Kite(p, q [, labels, label_p, label_q, scale, pos: (x, y)])
+  Rhombus(p, q [, labels, label_p, label_q, scale, pos: (x, y)])
+  Clock(time: H:MM, pos: (x, y))
+  NumberLine(min, max, arrows: [...], pos: (x, y))
+  DotArray(count: NxM, pos: (x, y))
+  Balls(red, blue, green, yellow [, scale])
+  DiceSumGrid(target: N, pos: (x, y))
+  GraphColumn(points: [("Label", N), ...], pos: (x, y))
+  GraphHistogram(points: [("Label", N), ...], pos: (x, y) [, freq: true|false, label: true|false])
+  GraphLine(points: [("Label", N), ...] [, y_label: "...", pos: (x, y)])
+  GraphPie(points: [("Label", N), ...], pos: (x, y))
+  Circle(radius: N [, label_r: true, label_d: false,
+         show_arc, show_chord, show_sector, show_segment, show_tangent,
+         angle1: 40, angle2: 140, angle_t: 0])
+  Polygon(sides: [N, ...] [, angles: [N, ...]] [, label_angles: [text, ...]] [, labels: true|false] [, name: ""] [, scale: N] [, pos: (x, y)])
+  Parallelogram(b: N, h: N [, labels: true, label_b: "...", label_h: "..."])  ← base, height; dotted height line shown
+  Trapezium(a: N, b: N, h: N [, labels: true, label_a: "...", label_b: "...", label_h: "..."])  ← top, base, height
+  FractionBar(a: n/d, b: n/d [, label: true])          ← explicit second fraction
+  FractionBar(a: n/d, den: N [, label: true])           ← auto equivalent fraction
+
+MULTIPLE DIAGRAMS — separate with semicolons in a single-quoted string:
+  diagram: 'Rect(x: 10, y: 11.9, pos: (-10, 0), labels: false, name: "Vic"); Rect(x: 10, y: 3.4, pos: (10, 0), labels: false, name: "Tas")'
+  Use pos to space shapes so they don't overlap. Canvas centre is (0,0); spans ~±30 x, ~±15 y.
+  Scale parameter values down to SVG units (e.g. divide by 20 to fit a value of 238 into ~12 SVG units).
+
+
+Probability functions
+  nCr(n, r)             combinations (n choose r)
+  nPr(n, r)             permutations
+  ways_sum(dice, total) outcomes of dice summing to total
+  hypergeom(N, K, n, k) hypergeometric probability
+
+Math functions
+  sqrt(x)   abs(x)   factorial(n)   sin(x)   cos(x)
+
+Surd functions
+  sqrt(x) | surd        simplified surd form, e.g. 2\sqrt{3}
+  surd_coeff(x)         coefficient of the surd, e.g. 2
+  surd_radicand(x)      remaining radicand, e.g. 3
+
+Fraction part functions
+  denominator(x)        denominator of fraction x
+  numerator(x)          numerator of fraction x
+
+Unit conversion
+  unit_multiplier(from, to)   multiplier between SI prefixes
+    Prefixes: 'T' 'G' 'M' 'k' 'h' 'da' '' 'd' 'c' 'm' 'u' 'n' 'p'
+    '' = base unit (m, g, L, …)
+    e.g. unit_multiplier('k','c') → 100000

@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutor Payments</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f8f9fa; }
+    .login-card { max-width: 400px; margin: 80px auto; }
+    .month-card { margin-bottom: 1.5rem; }
+    .total-badge { font-size: 1rem; }
+    .empty-row td { color: #aaa; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="login-screen" class="container">
+  <div class="card login-card shadow-sm">
+    <div class="card-body p-4">
+      <h4 class="card-title mb-4 text-center">Tutor Payments Login</h4>
+      <div id="login-error" class="alert alert-danger d-none"></div>
+      <div class="mb-3">
+        <label class="form-label">Username</label>
+        <input id="username" type="text" class="form-control" placeholder="Username">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Password</label>
+        <input id="password" type="password" class="form-control" placeholder="Password">
+      </div>
+      <button id="login-btn" class="btn btn-primary w-100">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payments Screen -->
+<div id="payments-screen" class="d-none">
+  <nav class="navbar navbar-light bg-white border-bottom px-4">
+    <span class="navbar-brand fw-bold">Tutor Payments</span>
+    <div class="d-flex align-items-center gap-3">
+      <span id="tutor-name" class="text-muted small"></span>
+      <button id="logout-btn" class="btn btn-outline-secondary btn-sm">Sign Out</button>
+    </div>
+  </nav>
+
+  <div class="container py-4">
+    <div id="payments-error" class="alert alert-danger d-none"></div>
+    <div id="loading" class="text-center py-5 text-muted">Loading payments…</div>
+    <div id="payments-content" class="d-none"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const API = window.location.origin;
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function fmtMoney(val) {
+  return '$' + parseFloat(val || 0).toFixed(2);
+}
+
+function buildTable(payments) {
+  if (!payments.length) {
+    return `<tr class="empty-row"><td colspan="5">No payments recorded</td></tr>`;
+  }
+  return payments.map(p => `
+    <tr>
+      <td>${fmtDate(p.date_tuition)}</td>
+      <td>${p.student_name}</td>
+      <td class="text-muted small">${p.focus_area || '—'}</td>
+      <td class="text-end">${fmtMoney(p.amount_paid)}</td>
+      <td class="text-end fw-semibold">${fmtMoney(p.amount_tutor)}</td>
+    </tr>
+  `).join('');
+}
+
+function buildMonthCard(label, data, isOlder) {
+  const heading = isOlder ? 'Older Payments' : label;
+  const totalLabel = isOlder ? '' : `<span class="badge bg-success total-badge ms-2">${fmtMoney(data.total_tutor)}</span>`;
+  return `
+    <div class="card month-card shadow-sm">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <strong>${heading}</strong>
+        ${totalLabel}
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Date</th>
+              <th>Student</th>
+              <th>Focus Area</th>
+              <th class="text-end">Amount Paid</th>
+              <th class="text-end">Your Earnings</th>
+            </tr>
+          </thead>
+          <tbody>${buildTable(data.payments)}</tbody>
+          ${!isOlder && data.payments.length ? `
+          <tfoot class="table-light">
+            <tr>
+              <td colspan="3" class="text-end text-muted small">Month total</td>
+              <td class="text-end fw-semibold">${fmtMoney(data.total_tutor)}</td>
+              <td></td>
+            </tr>
+          </tfoot>` : ''}
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderPayments(data) {
+  const content = document.getElementById('payments-content');
+  const allTotal = (
+    parseFloat(data.current_month.total_tutor || 0) +
+    parseFloat(data.last_month.total_tutor || 0) +
+    parseFloat(data.older.total_tutor || 0)
+  ).toFixed(2);
+
+  content.innerHTML = `
+    <div class="d-flex align-items-center justify-content-between mb-4">
+      <h5 class="mb-0">Payment History</h5>
+      <span class="text-muted small">All-time earnings: <strong>$${allTotal}</strong></span>
+    </div>
+    ${buildMonthCard(data.current_month.label, data.current_month, false)}
+    ${buildMonthCard(data.last_month.label, data.last_month, false)}
+    ${data.older.payments.length ? buildMonthCard(null, data.older, true) : ''}
+  `;
+
+  document.getElementById('loading').classList.add('d-none');
+  content.classList.remove('d-none');
+}
+
+async function loadPayments(token, tutorId) {
+  const res = await fetch(`${API}/api/tutors/${tutorId}/payments/`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to load payments');
+  return res.json();
+}
+
+async function login() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.classList.add('d-none');
+
+  try {
+    const res = await fetch(`${API}/api/auth/jwt/login/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.detail || 'Invalid credentials');
+    }
+    const { access } = await res.json();
+
+    // Fetch user info to get tutor ID
+    const meRes = await fetch(`${API}/api/auth/me/`, {
+      headers: { Authorization: `Bearer ${access}` }
+    });
+    if (!meRes.ok) throw new Error('Could not load user profile');
+    const me = await meRes.json();
+
+    if (me.role !== 'tutor') {
+      throw new Error('This page is only available to tutors');
+    }
+
+    sessionStorage.setItem('gl_token', access);
+    sessionStorage.setItem('gl_tutor_id', me.id);
+    sessionStorage.setItem('gl_tutor_name', me.first_name + ' ' + me.last_name);
+
+    showPaymentsScreen(access, me.id, me.first_name + ' ' + me.last_name);
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.classList.remove('d-none');
+  }
+}
+
+async function showPaymentsScreen(token, tutorId, name) {
+  document.getElementById('login-screen').classList.add('d-none');
+  document.getElementById('payments-screen').classList.remove('d-none');
+  document.getElementById('tutor-name').textContent = name;
+
+  try {
+    const data = await loadPayments(token, tutorId);
+    renderPayments(data);
+  } catch (e) {
+    document.getElementById('loading').classList.add('d-none');
+    const errEl = document.getElementById('payments-error');
+    errEl.textContent = e.message;
+    errEl.classList.remove('d-none');
+  }
+}
+
+function logout() {
+  sessionStorage.clear();
+  document.getElementById('payments-screen').classList.add('d-none');
+  document.getElementById('payments-content').classList.add('d-none');
+  document.getElementById('loading').classList.remove('d-none');
+  document.getElementById('login-screen').classList.remove('d-none');
+  document.getElementById('username').value = '';
+  document.getElementById('password').value = '';
+}
+
+// Event listeners
+document.getElementById('login-btn').addEventListener('click', login);
+document.getElementById('logout-btn').addEventListener('click', logout);
+document.getElementById('password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+
+// Auto-login if session still valid
+const savedToken = sessionStorage.getItem('gl_token');
+const savedId = sessionStorage.getItem('gl_tutor_id');
+const savedName = sessionStorage.getItem('gl_tutor_name');
+if (savedToken && savedId) {
+  showPaymentsScreen(savedToken, savedId, savedName || '');
+}
+</script>
+</body>
+</html>
