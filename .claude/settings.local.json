@@ -12,7 +12,17 @@
       "Bash(node *)",
       "Bash(python *)",
       "Bash(findstr *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(npx tsc *)",
+      "PowerShell(pip show *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\backend\" -Directory)",
+      "PowerShell(New-Item *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\backend\\\\backend\\\\diagram\" -Filter \"*.py\")",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(.venv/Scripts/pip install *)",
+      "Bash(.venv/Scripts/python -m pytest backend/diagram/test_tree_diagram.py -v)"
     ]
   }
 }

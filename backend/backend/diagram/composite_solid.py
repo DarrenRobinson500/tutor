@@ -47,18 +47,17 @@ class Face:
         return [_proj(x, y, z) for x, y, z in self.verts]
 
     def avg_depth(self) -> float:
-        """Average Z of projected points — higher Z = closer to viewer."""
-        return sum(z * _OY + y * _OY for x, y, z in self.verts) / len(self.verts)
+        """Painter's-algorithm depth: project each vertex and average."""
+        return sum(_proj(x, y, z)[1] for x, y, z in self.verts) / len(self.verts)
 
     def is_visible(self) -> bool:
         if self.normal is None:
             return True
-        # View direction: we look in -z (with oblique offset toward +x, +y)
-        # A face is visible if its outward normal has a positive component toward viewer.
         nx, ny, nz = self.normal
-        # Viewer direction approx: (−_OX, _OY, 1) (viewer is at +z, looking toward origin)
-        dot = nx * (-_OX) + ny * _OY + nz * 1.0
-        return dot >= -0.01   # small tolerance for edge-on faces
+        # Projection: sx = x + z*_OX, sy = -(y + z*_OY)
+        # Null-space of projection → viewer direction = (-_OX, -_OY, +1)
+        dot = nx * (-_OX) + ny * (-_OY) + nz * 1.0
+        return dot >= -0.01
 
 
 # ── Shape colours ─────────────────────────────────────────────────────────────

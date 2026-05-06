@@ -7,6 +7,7 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
   const [prevValue, setPrevValue] = useState<number | null>(null);
   const [operator, setOperator] = useState<Op>(null);
   const [waitingForNew, setWaitingForNew] = useState(false);
+  const [showTrig, setShowTrig] = useState(false);
 
   function inputDigit(d: string) {
     if (waitingForNew) {
@@ -100,12 +101,45 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
     setWaitingForNew(false);
   }
 
+  function pressSin() {
+    setDisplay(clean(Math.sin(parseFloat(display) * Math.PI / 180)));
+    setWaitingForNew(true);
+  }
+
+  function pressCos() {
+    setDisplay(clean(Math.cos(parseFloat(display) * Math.PI / 180)));
+    setWaitingForNew(true);
+  }
+
+  function pressTan() {
+    const r = Math.tan(parseFloat(display) * Math.PI / 180);
+    setDisplay(Math.abs(r) > 1e10 ? "Error" : clean(r));
+    setWaitingForNew(true);
+  }
+
+  function pressAsin() {
+    const n = parseFloat(display);
+    setDisplay(n < -1 || n > 1 ? "Error" : clean(Math.asin(n) * 180 / Math.PI));
+    setWaitingForNew(true);
+  }
+
+  function pressAcos() {
+    const n = parseFloat(display);
+    setDisplay(n < -1 || n > 1 ? "Error" : clean(Math.acos(n) * 180 / Math.PI));
+    setWaitingForNew(true);
+  }
+
+  function pressAtan() {
+    setDisplay(clean(Math.atan(parseFloat(display)) * 180 / Math.PI));
+    setWaitingForNew(true);
+  }
+
   const isActiveOp = (op: Op) => operator === op && waitingForNew;
 
   const btn = (
     label: string,
     onClick: () => void,
-    opts: { wide?: boolean; color?: string; text?: string } = {}
+    opts: { wide?: boolean; color?: string; text?: string; fontSize?: number } = {}
   ) => (
     <button
       key={label}
@@ -116,9 +150,32 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
         color: opts.text ?? "#fff",
         border: "none",
         borderRadius: 8,
-        fontSize: 20,
+        fontSize: opts.fontSize ?? 20,
         fontWeight: 500,
         padding: "14px 0",
+        cursor: "pointer",
+        transition: "filter 0.1s",
+      }}
+      onMouseDown={e => (e.currentTarget.style.filter = "brightness(1.3)")}
+      onMouseUp={e => (e.currentTarget.style.filter = "")}
+      onMouseLeave={e => (e.currentTarget.style.filter = "")}
+    >
+      {label}
+    </button>
+  );
+
+  const trigBtn = (label: string, onClick: () => void) => (
+    <button
+      key={label}
+      onClick={onClick}
+      style={{
+        background: "#3a3a3c",
+        color: "#fff",
+        border: "none",
+        borderRadius: 8,
+        fontSize: 13,
+        fontWeight: 500,
+        padding: "10px 0",
         cursor: "pointer",
         transition: "filter 0.1s",
       }}
@@ -138,7 +195,7 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
   return (
     <div style={{
       background: "#1c1c1e",
-      borderRadius: onClose ? "0 0 16px 16px" : 16,
+      borderRadius: "0 0 16px 16px",
       padding: 12,
       userSelect: "none",
       boxShadow: "0 4px 24px rgba(0,0,0,0.25)",
@@ -187,12 +244,24 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
         </span>
       </div>
 
+      {/* Trig panel */}
+      {showTrig && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
+          {trigBtn("sin", pressSin)}
+          {trigBtn("cos", pressCos)}
+          {trigBtn("tan", pressTan)}
+          {trigBtn("sin⁻¹", pressAsin)}
+          {trigBtn("cos⁻¹", pressAcos)}
+          {trigBtn("tan⁻¹", pressAtan)}
+        </div>
+      )}
+
       {/* Button grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-        {btn("x²",  pressSquare, { color: "#3a3a3c" })}
-        {btn("√x",  pressSqrt,   { color: "#3a3a3c" })}
-        {btn("π",   pressPi,     { color: "#3a3a3c" })}
-        <div />
+        {btn("x²",   pressSquare,                  { color: "#3a3a3c" })}
+        {btn("√x",   pressSqrt,                    { color: "#3a3a3c" })}
+        {btn("π",    pressPi,                      { color: "#3a3a3c" })}
+        {btn("Trig", () => setShowTrig(v => !v),   { color: showTrig ? "#0a84ff" : "#3a3a3c", fontSize: 16 })}
 
         {btn("AC",  pressClear,    { color: "#a5a5a5", text: "#000" })}
         {btn("+/−", pressNegate,   { color: "#a5a5a5", text: "#000" })}

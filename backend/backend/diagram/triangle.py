@@ -369,8 +369,8 @@ def _arc_indicators(cx, cy, angle_from, angle_to, count, sw, base_r=3.52, gap_r=
     return "\n".join(parts)
 
 
-def _angle_label(vx, vy, cent_svgx, cent_svgy, text, font_size):
-    """Label placed 40% of the way from vertex toward the SVG centroid."""
+def _angle_label(vx, vy, cent_svgx, cent_svgy, text, font_size, min_label_r=0.0):
+    """Label placed toward the SVG centroid, guaranteed beyond min_label_r from vertex."""
     if not text:
         return ""
     dx = cent_svgx - vx
@@ -379,7 +379,7 @@ def _angle_label(vx, vy, cent_svgx, cent_svgy, text, font_size):
     if dist == 0:
         return ""
     ux, uy = dx / dist, dy / dist
-    label_r = dist * 0.44
+    label_r = max(dist * 0.44, min_label_r + font_size)
     lx = vx + ux * label_r
     ly = vy + uy * label_r
     return (
@@ -410,10 +410,18 @@ def _side_label(x1, y1, x2, y2, opp_x, opp_y, text, font_size, offset=None):
         offset = font_size * 1.1
     lx = mx + px * offset
     ly = my + py * offset
+    # For near-vertical sides the label is offset horizontally; centering the text
+    # would push half of it back into the triangle.  Anchor to the near edge instead.
+    if px > 0.5:
+        anchor = "start"   # label is to the right — text extends further right
+    elif px < -0.5:
+        anchor = "end"     # label is to the left  — text extends further left
+    else:
+        anchor = "middle"
     return (
         f'<text x="{lx:.3f}" y="{ly:.3f}" '
         f'font-size="{font_size}" font-family="system-ui, -apple-system, sans-serif" '
-        f'text-anchor="middle" dominant-baseline="middle">'
+        f'text-anchor="{anchor}" dominant-baseline="middle">'
         f'{text}</text>'
     )
 
@@ -468,6 +476,24 @@ def render(d: TriangleDiagram, viz_scale: float = None) -> str:
     ra_size      = 2.0   * viz_scale  # right-angle square marker
     out = []
 
+    # Per-vertex arc radius: 25% of shorter adjacent side, capped at a fixed SVG-unit
+    # maximum so arcs don't become oversized on large triangles.  The cap is NOT
+    # multiplied by viz_scale so arcs scale with the triangle geometry rather than
+    # the viewBox zoom level.  The gap ratio is constant (arc_gap/arc_base = 0.72/3.52).
+    svg_a = math.hypot(scx - sbx, scy - sby)
+    svg_b = math.hypot(scx - sax, scy - say)
+    svg_c = math.hypot(sbx - sax, sby - say)
+    _arc_max   = 3.52                   # fixed SVG-unit cap
+    _gap_ratio = 0.72 / 3.52            # arc_gap / arc_base — constant
+
+    def _vert_arc(shorter_side: float):
+        r = min(_arc_max, 0.25 * shorter_side)
+        return r, r * _gap_ratio
+
+    arc_r_A, arc_g_A = _vert_arc(min(svg_b, svg_c))
+    arc_r_B, arc_g_B = _vert_arc(min(svg_a, svg_c))
+    arc_r_C, arc_g_C = _vert_arc(min(svg_a, svg_b))
+
     # Sides
     out.append(f'<line x1="{sbx:.3f}" y1="{sby:.3f}" x2="{scx:.3f}" y2="{scy:.3f}" stroke="black" stroke-width="{sw}" stroke-linecap="round"/>')
     out.append(f'<line x1="{sax:.3f}" y1="{say:.3f}" x2="{scx:.3f}" y2="{scy:.3f}" stroke="black" stroke-width="{sw}" stroke-linecap="round"/>')
@@ -478,10 +504,11 @@ def render(d: TriangleDiagram, viz_scale: float = None) -> str:
     out.append(_tick_marks(sax, say, scx, scy, d.ticks_b, sw * 0.8, tick_half, tick_gap))
     out.append(_tick_marks(sax, say, sbx, sby, d.ticks_c, sw * 0.8, tick_half, tick_gap))
 
-    # Side length labels: opposite vertex used to determine outward direction
-    out.append(_side_label(sbx, sby, scx, scy, sax, say, d.label_a, font_size, label_offset))  # side a, opp A
-    out.append(_side_label(sax, say, scx, scy, sbx, sby, d.label_b, font_size, label_offset))  # side b, opp B
-    out.append(_side_label(sax, say, sbx, sby, scx, scy, d.label_c, font_size, label_offset))  # side c, opp C
+    # Side length labels — suppressed in pass 1 (viz_scale == 1.0) to avoid inflating the bbox
+    if viz_scale != 1.0:
+        out.append(_side_label(sbx, sby, scx, scy, sax, say, d.label_a, font_size, label_offset))  # side a, opp A
+        out.append(_side_label(sax, say, scx, scy, sbx, sby, d.label_b, font_size, label_offset))  # side b, opp B
+        out.append(_side_label(sax, say, sbx, sby, scx, scy, d.label_c, font_size, label_offset))  # side c, opp C
 
     # Height line (only in height mode: h > 0)
     if d.h > 0:
@@ -495,7 +522,7 @@ def render(d: TriangleDiagram, viz_scale: float = None) -> str:
         # Right-angle marker at the foot (up toward apex, right toward C)
         out.append(_right_angle_marker(s_foot_x, s_foot_y, math.pi / 2, 0.0, ra_size, sw))
         # Label at the midpoint of the height line, offset to the right
-        if d.label_h:
+        if d.label_h and viz_scale != 1.0:
             lx = sax + font_size * 1.2
             ly = s_foot_y + 0.3 * (say - s_foot_y)
             out.append(
@@ -515,13 +542,17 @@ def render(d: TriangleDiagram, viz_scale: float = None) -> str:
 
     ang_atob = math_angle(sax, say, sbx, sby)
     ang_atoc = math_angle(sax, say, scx, scy)
-    out.append(_arc_indicators(sax, say, *short_arc(ang_atob, ang_atoc), d.arcs_A, sw * 0.8, arc_base, arc_gap))
-    out.append(_angle_label(sax, say, s_cent_x, s_cent_y, d.label_A, font_size))
+    out.append(_arc_indicators(sax, say, *short_arc(ang_atob, ang_atoc), d.arcs_A, sw * 0.8, arc_r_A, arc_g_A))
+    if viz_scale != 1.0:
+        outer_r_A = (arc_r_A + (d.arcs_A - 1) * arc_g_A) if d.arcs_A > 0 else 0.0
+        out.append(_angle_label(sax, say, s_cent_x, s_cent_y, d.label_A, font_size, outer_r_A))
 
     ang_btoa = math_angle(sbx, sby, sax, say)
     ang_btoc = math_angle(sbx, sby, scx, scy)
-    out.append(_arc_indicators(sbx, sby, *short_arc(ang_btoa, ang_btoc), d.arcs_B, sw * 0.8, arc_base, arc_gap))
-    out.append(_angle_label(sbx, sby, s_cent_x, s_cent_y, d.label_B, font_size))
+    out.append(_arc_indicators(sbx, sby, *short_arc(ang_btoa, ang_btoc), d.arcs_B, sw * 0.8, arc_r_B, arc_g_B))
+    if viz_scale != 1.0:
+        outer_r_B = (arc_r_B + (d.arcs_B - 1) * arc_g_B) if d.arcs_B > 0 else 0.0
+        out.append(_angle_label(sbx, sby, s_cent_x, s_cent_y, d.label_B, font_size, outer_r_B))
 
     ang_ctoa = math_angle(scx, scy, sax, say)
     ang_ctob = math_angle(scx, scy, sbx, sby)
@@ -529,10 +560,12 @@ def render(d: TriangleDiagram, viz_scale: float = None) -> str:
     if abs(cos_C) < 0.01:  # right angle at C — draw square marker
         out.append(_right_angle_marker(scx, scy, ang_ctoa, ang_ctob, ra_size, sw))
     else:
-        out.append(_arc_indicators(scx, scy, *short_arc(ang_ctoa, ang_ctob), d.arcs_C, sw * 0.8, arc_base, arc_gap))
-    out.append(_angle_label(scx, scy, s_cent_x, s_cent_y, d.label_C, font_size))
+        out.append(_arc_indicators(scx, scy, *short_arc(ang_ctoa, ang_ctob), d.arcs_C, sw * 0.8, arc_r_C, arc_g_C))
+    if viz_scale != 1.0:
+        outer_r_C = (arc_r_C + (d.arcs_C - 1) * arc_g_C) if d.arcs_C > 0 else 0.0
+        out.append(_angle_label(scx, scy, s_cent_x, s_cent_y, d.label_C, font_size, outer_r_C))
 
-    if d.name:
+    if d.name and viz_scale != 1.0:
         out.append(
             f'<text x="{s_cent_x:.3f}" y="{s_cent_y + font_size * 0.35:.3f}" text-anchor="middle" '
             f'font-size="{font_size}" font-family="system-ui, -apple-system, sans-serif" fill="#333">{d.name}</text>'

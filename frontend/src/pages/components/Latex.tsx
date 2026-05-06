@@ -148,12 +148,29 @@ function renderLatexContent(children: string): React.ReactNode[] {
   });
 }
 
+function isTableRow(line: string): boolean {
+  return /^\s*\|.*\|\s*$/.test(line);
+}
+
+function parseTableRow(line: string): string[] {
+  return line.trim().slice(1, -1).split("|").map(c => c.trim());
+}
+
+function isSeparatorRow(cells: string[]): boolean {
+  return cells.length > 0 && cells.every(c => /^:?-+:?$/.test(c));
+}
+
 export function Latex({ children }: LatexProps) {
-  // Split into segments: consecutive "* item" lines become bullet lists;
+  // Split into segments: consecutive "* item" lines become bullet lists,
+  // consecutive "| ... |" lines become tables;
   // everything else is rendered through the normal LaTeX pipeline.
   const lines = children.split("\n");
 
-  type Segment = { type: "bullets"; items: string[] } | { type: "text"; lines: string[] };
+  type Segment =
+    | { type: "bullets"; items: string[] }
+    | { type: "ordered"; items: string[] }
+    | { type: "table"; lines: string[] }
+    | { type: "text"; lines: string[] };
   const segments: Segment[] = [];
 
   for (const line of lines) {
@@ -163,6 +180,20 @@ export function Latex({ children }: LatexProps) {
         last.items.push(line.replace(/^\*\s+/, ""));
       } else {
         segments.push({ type: "bullets", items: [line.replace(/^\*\s+/, "")] });
+      }
+    } else if (/^\d+\.\s+/.test(line)) {
+      const last = segments[segments.length - 1];
+      if (last?.type === "ordered") {
+        last.items.push(line.replace(/^\d+\.\s+/, ""));
+      } else {
+        segments.push({ type: "ordered", items: [line.replace(/^\d+\.\s+/, "")] });
+      }
+    } else if (isTableRow(line)) {
+      const last = segments[segments.length - 1];
+      if (last?.type === "table") {
+        last.lines.push(line);
+      } else {
+        segments.push({ type: "table", lines: [line] });
       }
     } else {
       const last = segments[segments.length - 1];
@@ -186,6 +217,58 @@ export function Latex({ children }: LatexProps) {
             </ul>
           );
         }
+
+        if (seg.type === "ordered") {
+          return (
+            <ol key={i} style={{ marginTop: 4, marginBottom: 4, paddingLeft: 24 }}>
+              {seg.items.map((item, j) => (
+                <li key={j}><Latex>{item}</Latex></li>
+              ))}
+            </ol>
+          );
+        }
+
+        if (seg.type === "table") {
+          const rows = seg.lines.map(parseTableRow);
+          const sepIdx = rows.findIndex(isSeparatorRow);
+          const headerRows = sepIdx > 0 ? rows.slice(0, sepIdx) : [];
+          const bodyRows = sepIdx >= 0 ? rows.slice(sepIdx + 1) : rows;
+          const cellStyle: React.CSSProperties = {
+            border: "1px solid #d0d0d0",
+            padding: "5px 10px",
+            textAlign: "left",
+          };
+          const headStyle: React.CSSProperties = {
+            ...cellStyle,
+            background: "#f0f0f0",
+            fontWeight: 600,
+          };
+          return (
+            <table key={i} style={{ borderCollapse: "collapse", fontSize: "inherit", marginBottom: 8, marginTop: 4 }}>
+              {headerRows.length > 0 && (
+                <thead>
+                  {headerRows.map((row, ri) => (
+                    <tr key={ri}>
+                      {row.map((cell, ci) => (
+                        <th key={ci} style={headStyle}><Latex>{cell}</Latex></th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+              )}
+              <tbody>
+                {bodyRows.map((row, ri) => (
+                  <tr key={ri} style={ri % 2 === 1 ? { background: "#fafafa" } : {}}>
+                    {row.map((cell, ci) => (
+                      <td key={ci} style={cellStyle}><Latex>{cell}</Latex></td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          );
+        }
+
         return (
           <React.Fragment key={i}>
             {renderLatexContent(seg.lines.join("\n"))}

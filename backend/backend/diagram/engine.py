@@ -141,7 +141,7 @@ def _split_diagram_code(code: str) -> List[str]:
     current = []
     depth = 0
     for ch in code:
-        if ch in '\n;' or (ch == ',' and depth == 0):
+        if depth == 0 and ch in '\n;,':
             segment = ''.join(current).strip()
             if segment:
                 segments.append(segment)
@@ -234,14 +234,14 @@ def render_diagram_from_code(code: str, width: int = 500) -> str:
 
     # ── Pass 1: render at natural scale (viz_scale=1.0) to get combined bbox ─
     body1 = "\n".join(_render(m, p, 1.0) for m, p in items)
-    vb1 = _auto_zoom_viewbox(vb, body1, min_width_ratio=0.6, min_height_ratio=0.9)
+    vb1 = _auto_zoom_viewbox(vb, body1, min_width_ratio=0.9, min_height_ratio=0.9)
 
     # Derive the global viz_scale from the combined viewBox width
     global_viz_scale = vb1[2] / DEFAULT_VIEWBOX[2]   # final_vw / 60.0
 
     # ── Pass 2: render with globally-consistent viz_scale ────────────────────
     body = "\n".join(_render(m, p, global_viz_scale) for m, p in items)
-    vb = _auto_zoom_viewbox(vb, body, min_width_ratio=0.6, min_height_ratio=0.9)
+    vb = _auto_zoom_viewbox(vb, body, min_width_ratio=0.9, min_height_ratio=0.9)
 
     vb_min_x, vb_min_y, vb_w, vb_h = vb
     svg_w = width

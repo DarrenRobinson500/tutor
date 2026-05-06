@@ -60,6 +60,7 @@ import ParentRegisterPage from "./pages/public/ParentRegisterPage";
 import TutorRegisterPage from "./pages/public/TutorRegisterPage";
 import AssessmentLaunchPage from "./pages/public/AssessmentLaunchPage";
 import ParentHomePage from "./pages/ParentHomePage";
+import RequestTutorPage from "./pages/RequestTutorPage";
 import { TutoringRoomPage } from "./pages/TutoringRoomPage";
 import { PostTuitionPage } from "./pages/PostTuitionPage";
 import { PostTuitionListPage } from "./pages/PostTuitionListPage";
@@ -151,6 +152,7 @@ function App() {
         {/* PROTECTED — parent */}
         <Route path="/parents/:id" element={<ProtectedRoute><ParentHomePage /></ProtectedRoute>} />
         <Route path="/parents/:id/payments" element={<ProtectedRoute><ParentPaymentsPage /></ProtectedRoute>} />
+        <Route path="/parents/:id/find-tutor" element={<ProtectedRoute><RequestTutorPage /></ProtectedRoute>} />
 
         {/* PROTECTED — other */}
         <Route path="/templates" element={<ProtectedRoute><TemplateListPage /></ProtectedRoute>} />

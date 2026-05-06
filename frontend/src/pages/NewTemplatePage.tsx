@@ -61,6 +61,16 @@ export function NewTemplatePage() {
   const pinSkillDetailId  = searchParams.get("skill_detail_id") ?? undefined;
   const pinDifficulty     = searchParams.get("difficulty")      ?? undefined;
 
+  const [skillName,       setSkillName]       = useState<string>("");
+  const [skillDetailName, setSkillDetailName] = useState<string>("");
+
+  useEffect(() => {
+    if (pinSkillId)
+      apiFetch(`/api/skills/${pinSkillId}/`).then(r => r.json()).then(d => setSkillName(d.description ?? ""));
+    if (pinSkillDetailId)
+      apiFetch(`/api/skills/${pinSkillDetailId}/`).then(r => r.json()).then(d => setSkillDetailName(d.description ?? ""));
+  }, [pinSkillId, pinSkillDetailId]);
+
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [grade, setGrade] = useState(searchParams.get("grade") ?? "");
@@ -146,9 +156,10 @@ export function NewTemplatePage() {
         {/* Pinned context banner */}
         {(pinSkillDetailId || pinDifficulty) && (
           <div className="alert alert-info py-2 mb-3" style={{ fontSize: 13 }}>
-            {pinSkillDetailId && <>Skill Detail ID: <strong>{pinSkillDetailId}</strong></>}
-            {pinDifficulty && <>, difficulty {pinDifficulty}</>}
-            {grade         && <>, Year {grade}</>}
+            {skillName       && <><strong>{skillName}</strong></>}
+            {skillDetailName && <> — {skillDetailName}</>}
+            {pinDifficulty   && <>, {pinDifficulty}</>}
+            {grade           && <>, Year {grade}</>}
           </div>
         )}
 

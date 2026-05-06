@@ -1,0 +1,62 @@
+title: Triangle Similarity — Identify the Proof
+
+years: 9
+
+difficulty: medium
+
+parameters:
+  # Randomly select one of the four similarity proofs:
+  #   1 = SSS   2 = SAS   3 = AA (equiangular)   4 = RHS
+  proof:
+    type: choice
+    values: [1, 2, 3, 4]
+
+  # Angle C: 90° for RHS (right-angled triangles), 65° otherwise
+  tri_C:
+    expr: "90 if proof == 4 else 65"
+
+  # Tick marks on side a (leg or first proportional side)
+  ta:
+    expr: "1 if proof in [1, 2, 4] else 0"
+
+  # Tick marks on side b (second proportional side — SSS and SAS only)
+  tb:
+    expr: "2 if proof in [1, 2] else 0"
+
+  # Tick marks on side c (hypotenuse for RHS, third side for SSS)
+  tc:
+    expr: "3 if proof == 1 else (2 if proof == 4 else 0)"
+
+  # Arc at angle A (AA proof only — single arc)
+  aA:
+    expr: "1 if proof == 3 else 0"
+
+  # Arc at angle B (AA proof only — double arc)
+  aB:
+    expr: "2 if proof == 3 else 0"
+
+  # Arc at angle C (SAS proof only — marks the equal included angle)
+  aC:
+    expr: "1 if proof == 2 else 0"
+
+diagram: |
+  Triangle(a: 3, b: 4, C: {{ tri_C }}, ticks_a: {{ ta }}, ticks_b: {{ tb }}, ticks_c: {{ tc }}, arcs_A: {{ aA }}, arcs_B: {{ aB }}, arcs_C: {{ aC }}, pos: (-20, 0))
+  Triangle(a: 6, b: 8, C: {{ tri_C }}, ticks_a: {{ ta }}, ticks_b: {{ tb }}, ticks_c: {{ tc }}, arcs_A: {{ aA }}, arcs_B: {{ aB }}, arcs_C: {{ aC }}, pos: (20, 0))
+
+question:
+  text: "These two triangles are similar. Which similarity proof is demonstrated by the markings in the diagram?"
+  answers:
+    - text: "SSS — If 3 sides of a triangle are proportional to 3 sides of another triangle, then they are similar."
+      correct: "proof == 1"
+    - text: "SAS — If 2 sides of a triangle are proportional to 2 sides of another triangle, and the included angles are equal, then they are similar."
+      correct: "proof == 2"
+    - text: "AA — If 2 angles of a triangle are equal to 2 angles of another triangle, then they are similar (equiangular)."
+      correct: "proof == 3"
+    - text: "RHS — If the hypotenuse and a second side of a right-angled triangle are proportional to the hypotenuse and a second side of another right-angled triangle, then they are similar."
+      correct: "proof == 4"
+
+solution: >
+  {{ 'SSS (Side-Side-Side): The single, double, and triple tick marks show that all three pairs of corresponding sides are proportional (same ratio). When all three side ratios match, the triangles must be similar.' if proof == 1 else
+     'SAS (Side-Angle-Side): The single and double tick marks show two pairs of corresponding sides are proportional. The arc at vertex C shows those included angles are equal. When two proportional sides share an equal included angle, the triangles are similar.' if proof == 2 else
+     'AA (Equiangular): The single arc at vertex A and double arc at vertex B show two pairs of corresponding angles are equal. Since angles in a triangle sum to 180°, the third pair must also be equal, so the triangles are similar.' if proof == 3 else
+     'RHS (Right-angle, Hypotenuse, Side): The square corner marker at C shows both triangles are right-angled. The double tick marks show the hypotenuses are proportional, and the single tick marks show one other corresponding side is also proportional. For right-angled triangles, this is sufficient to prove similarity.' }}

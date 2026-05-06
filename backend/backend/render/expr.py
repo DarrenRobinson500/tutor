@@ -38,6 +38,11 @@ def _repeat(value, count, sep=""):
 _STRING_CONTEXT = {
     "unit_multiplier": unit_multiplier,
     "repeat": _repeat,
+    "str": str,
+    "int": int,
+    "float": float,
+    "bool": bool,
+    "abs": abs,
 }
 
 
@@ -91,6 +96,26 @@ def _simplified_ratio(a, b):
     divisor = gcd(abs(a), abs(b)) or 1
     return f"{a // divisor}:{b // divisor}"
 
+def _gaussian_list(mean, sd, count, sort=False):
+    """Generate a list of *count* integers drawn from N(mean, sd), adjusted to hit the exact integer mean.
+
+    Example: gaussian_list(20, 2, 8) → [17, 19, 20, 21, 22, 20, 18, 23]
+    Use {{ data | sorted }} to display in order.
+    """
+    import random as _random
+    mean, sd, count = float(mean), float(sd), int(count)
+    values = [round(_random.gauss(mean, sd)) for _ in range(count)]
+    target_sum = round(mean * count)
+    for _ in range(200):
+        diff = target_sum - sum(values)
+        if diff == 0:
+            break
+        i = _random.randrange(count)
+        values[i] += 1 if diff > 0 else -1
+    if sort:
+        values.sort()
+    return values
+
 import math as _math
 
 _MATH_CONTEXT = {
@@ -99,12 +124,24 @@ _MATH_CONTEXT = {
     "sqrt":            _math.sqrt,
     "ceil":            _math.ceil,
     "floor":           _math.floor,
+    "sin":             _math.sin,
+    "cos":             _math.cos,
+    "tan":             _math.tan,
+    "asin":            _math.asin,
+    "acos":            _math.acos,
+    "atan":            _math.atan,
+    "atan2":           _math.atan2,
+    "log":             _math.log,
+    "log10":           _math.log10,
+    "degrees":         _math.degrees,
+    "radians":         _math.radians,
     "round":           round,
     "round_dp":        round_dp,
     "decimal_digit":   decimal_digit,
     "gcd":             _gcd,
     "lcm":             _lcm,
     "simplified_ratio": _simplified_ratio,
+    "gaussian_list":   _gaussian_list,
     "repeat":          _repeat,
 }
 
@@ -144,11 +181,46 @@ def list_mean(lst):
 def list_range(lst):
     return max(lst) - min(lst)
 
+def list_quartile(lst, q):
+    """Return Q1 (q=1) or Q3 (q=3) using the exclusive method.
+
+    The list is sorted and split at the median; for odd-length lists the
+    median value itself is excluded from both halves.
+    Q1 = median of the lower half, Q3 = median of the upper half.
+    """
+    if q not in (1, 2, 3):
+        raise ValueError(f"quartile() expects q=1, q=2, or q=3, got q={q}")
+    if q == 2:
+        return list_median(lst)
+    s = sorted(lst)
+    n = len(s)
+    mid = n // 2
+    lower = s[:mid]
+    upper = s[mid + 1:] if n % 2 else s[mid:]
+    return list_median(lower if q == 1 else upper)
+
+def list_stdev(lst):
+    """Sample standard deviation (divides by n−1)."""
+    n = len(lst)
+    if n < 2:
+        raise ValueError("stdev requires at least 2 values")
+    m = sum(lst) / n
+    return _math.sqrt(sum((x - m) ** 2 for x in lst) / (n - 1))
+
+def list_pop_stdev(lst):
+    """Population standard deviation (divides by n)."""
+    n = len(lst)
+    m = sum(lst) / n
+    return _math.sqrt(sum((x - m) ** 2 for x in lst) / n)
+
 _LIST_CONTEXT = {
-    "mode":     list_mode,
-    "median":   list_median,
-    "mean":     list_mean,
-    "range_of": list_range,
+    "mode":      list_mode,
+    "median":    list_median,
+    "mean":      list_mean,
+    "range_of":  list_range,
+    "quartile":  list_quartile,
+    "stdev":     list_stdev,
+    "pop_stdev": list_pop_stdev,
     "sorted":   sorted,
     "sum":      sum,
     "min":      min,

@@ -286,6 +286,46 @@ Example — mode question:
       solution: "**{{ mode(data) }}** appears most often. The mode is **{{ mode(data) }}**."
 
 
+── Gaussian List ─────────────────────────────────────────────
+
+Generates a list of integers drawn from a normal distribution with
+a target mean and standard deviation. Use for statistics questions
+that compare two datasets with different spreads.
+
+The generated values are integers and are adjusted so the mean is
+exact. Use as an expr parameter (defined after mean and sd params).
+
+  parameters:
+    mean:
+      min: 10
+      max: 30
+      step: 5
+    tight_sd:
+      type: choice
+      values: [1.2, 1.5, 1.8, 2.0, 2.2]
+    spread_sd:
+      type: choice
+      values: [5.5, 6.0, 6.5, 7.0, 7.5, 8.0]
+    data_a:
+      expr: "gaussian_list(mean, tight_sd, 8)"
+    data_b:
+      expr: "gaussian_list(mean, spread_sd, 8)"
+
+Signature:
+  gaussian_list(mean, sd, count)
+
+  mean   — target mean (integer or parameter name)
+  sd     — target standard deviation (can be a decimal value)
+  count  — number of values in the list
+
+Display the list in the question:
+  {{ data_a | sorted }}   — sorted ascending: "18, 19, 20, 20, 21, 22, 22, 23"
+  {{ data_a }}            — original (random) order
+
+All standard list functions work on gaussian_list results:
+  mean(data_a)    median(data_a)    range_of(data_a)    etc.
+
+
 ── Scenario ──────────────────────────────────────────────────
 
 Picks a random row from a fixed table of (question text, answer)
@@ -1867,6 +1907,83 @@ flat shapes with a light fill and labelled with key dimensions.
     diagram: 'Net(shape: tri_pyramid, a: {{ a }})'
 
 
+── CompositeSolid Diagram ───────────────────────────────────
+
+Draws a 3D composite solid made from two or more primitive shapes
+stacked together. Shapes are rendered with an oblique projection
+and painter's-algorithm depth sorting, giving a clear sense of
+the overall 3D structure.
+
+  diagram: 'CompositeSolid(rect_prism(w:4, h:2, d:3), half_cylinder(r:1.5, length:4, on:top))'
+
+  Syntax:
+    CompositeSolid(<shape1>, <shape2>, ...)
+
+  Each shape primitive is written as a function call with named
+  keyword arguments:
+
+  ── Shape Primitives ─────────────────────────────────────────
+
+  rect_prism(w, h, d)
+    Rectangular prism (cuboid).
+      w   — width  (x-axis)
+      h   — height (y-axis)
+      d   — depth  (z-axis)
+
+  half_cylinder(r, length, axis)
+    Upper half-cylinder with a flat face at the bottom.
+      r       — radius of the circular cross-section
+      length  — length along the chosen axis
+      axis    — x (default) or z
+
+  cylinder(r, h)
+    Full cylinder standing upright.
+      r   — radius
+      h   — height
+
+  cone(r, h)
+    Cone with its base at the bottom.
+      r   — base radius
+      h   — height
+
+  ── Positioning ──────────────────────────────────────────────
+
+  on: top | front | right
+    Stacks the shape relative to the accumulated bounding box
+    of all previously placed shapes.
+      on: top    — place on top of the current composite
+      on: front  — place in front of the current composite
+      on: right  — place to the right of the current composite
+    The shape is centred on the chosen face automatically.
+
+  at: x,y,z
+    Place the shape at an absolute position in the scene
+    (overrides on:).
+
+  ── Other Parameters ─────────────────────────────────────────
+
+  labels
+    true (default) shows dimension labels on rect_prism edges;
+    false hides all labels.
+
+  Examples:
+
+  Rectangular prism with a half-cylinder on top (e.g. a shed):
+    diagram: 'CompositeSolid(rect_prism(w:{{ w }}, h:{{ h }}, d:{{ d }}), half_cylinder(r:{{ r }}, length:{{ w }}, on:top))'
+
+  Rectangular prism with a cone on top (e.g. a tower):
+    diagram: 'CompositeSolid(rect_prism(w:{{ w }}, h:{{ h }}, d:{{ w }}), cone(r:{{ r }}, h:{{ ch }}, on:top))'
+
+  Rectangular prism with a cylinder on top (e.g. a silo):
+    diagram: 'CompositeSolid(rect_prism(w:{{ w }}, h:{{ h }}, d:{{ w }}), cylinder(r:{{ r }}, h:{{ ch }}, on:top))'
+
+  Two rectangular prisms side by side:
+    diagram: 'CompositeSolid(rect_prism(w:{{ w1 }}, h:{{ h1 }}, d:{{ d }}), rect_prism(w:{{ w2 }}, h:{{ h2 }}, d:{{ d }}, on:right))'
+
+  Three-part composite (base + body + roof):
+    diagram: 'CompositeSolid(rect_prism(w:6, h:1, d:4), rect_prism(w:4, h:3, d:3, on:top), half_cylinder(r:1.5, length:4, on:top))'
+
+
 ── Number Line Diagram ──────────────────────────────────────
 
 Draws a labelled number line, optionally with arrows showing
@@ -1988,6 +2105,100 @@ Used for probability questions involving drawing from a bag.
   probability.
 
 
+── Tree Diagram ─────────────────────────────────────────────
+
+Draws a probability tree diagram. Each level represents one stage
+of a multi-stage experiment. Branches are labelled with outcome
+names and optionally their probabilities; leaf nodes optionally
+show the combined path probability.
+
+Syntax:
+
+  diagram: 'TreeDiagram(
+    stages: ["Draw 1", "Draw 2"],
+    branches: [["Red", "Red"], ["Red", "Green"], ["Green", "Red"], ["Green", "Green"]],
+    probs: [["2/7", "1/6"], ["2/7", "5/6"], ["5/7", "2/6"], ["5/7", "5/6"]],
+    end_labels: ["2/42", "10/42", "10/42", "25/42"],
+    highlight: [3]
+  )'
+
+Parameters:
+
+  branches    Required. A list of root-to-leaf paths. Each path is a
+              list of outcome label strings, one per stage.
+              Paths with a shared prefix automatically share the
+              same node: [["Red","Red"],["Red","Green"]] draws one
+              "Red" node at stage 1 with two children.
+
+  stages      Optional. Column header labels, one per level.
+              Displayed in bold above the corresponding node column.
+
+  probs       Optional. Same shape as branches. The probability
+              label placed on each branch segment. Accepts plain
+              fractions (2/7), decimals (0.286), or LaTeX fraction
+              strings (\frac{2}{7}).
+
+  end_labels  Optional. One label per path, shown to the right of
+              each leaf node. Same format as probs.
+
+  highlight   Optional. A list of 0-based path indices to emphasise.
+              Highlighted paths render in accent blue; all others
+              render in muted grey. Omit to render all paths at
+              full default styling.
+
+  pos         Optional centre-offset position, default (0, 0).
+
+Highlight behaviour:
+  When highlight is set, non-highlighted branches and labels render
+  in grey (#9ca3af). Highlighted branch lines are thicker and
+  drawn in blue (#2563eb). Highlighted end labels also appear in
+  blue.
+
+{{ }} substitution:
+  All string values in stages, branches, probs, and end_labels
+  support {{ }} template substitution.
+
+  Example (marble bag without replacement):
+
+    parameters:
+      g:
+        min: 3
+        max: 6
+      total:
+        min: 7
+        max: 10
+
+    diagram: 'TreeDiagram(
+      stages: ["Draw 1", "Draw 2"],
+      branches: [["Green", "Green"], ["Green", "Other"],
+                 ["Other", "Green"], ["Other", "Other"]],
+      probs: [["{{ g }}/{{ total }}", "{{ g - 1 }}/{{ total - 1 }}"],
+              ["{{ g }}/{{ total }}", "{{ total - g }}/{{ total - 1 }}"],
+              ["{{ total - g }}/{{ total }}", "{{ g }}/{{ total - 1 }}"],
+              ["{{ total - g }}/{{ total }}", "{{ total - g - 1 }}/{{ total - 1 }}"]],
+      highlight: [0]
+    )'
+
+Examples:
+
+  Simple coin-flip tree (2 stages, no labels):
+    diagram: 'TreeDiagram(
+      branches: [["H", "H"], ["H", "T"], ["T", "H"], ["T", "T"]]
+    )'
+
+  Two-stage marble bag with highlight on the Green → Green path:
+    diagram: 'TreeDiagram(
+      stages: ["Draw 1", "Draw 2"],
+      branches: [["Red", "Red"], ["Red", "Green"], ["Green", "Red"], ["Green", "Green"]],
+      probs: [["2/7", "1/6"], ["2/7", "5/6"], ["5/7", "2/6"], ["5/7", "5/6"]],
+      end_labels: ["2/42", "10/42", "10/42", "25/42"],
+      highlight: [3]
+    )'
+
+  Typical use: multi-stage probability, dependent and independent
+  events, listing outcomes of a two-stage experiment.
+
+
 ── Dice Sum Grid Diagram ────────────────────────────────────
 
 Draws a 6×6 sample space grid for the sum of two dice, with
@@ -2098,6 +2309,37 @@ proportionally.
 
   Typical use: sector graphs, reading proportions, finding
   percentages from a pie chart.
+
+
+── Box Plot Diagram ─────────────────────────────────────────
+
+Draws a horizontal box-and-whisker plot for one or two datasets.
+Each box shows the five-number summary: minimum, Q1, median,
+Q3, and maximum. The IQR box is shaded; whisker ends are capped.
+Quartiles use the exclusive method (same as quartile() in
+expressions). Two datasets are stacked vertically on a shared
+axis and colour-coded blue/red.
+
+Single dataset:
+  diagram: "BoxPlot(data: [3, 7, 8, 9, 11, 13, 15])"
+
+With a label:
+  diagram: 'BoxPlot(data: [{{ data }}], label: "Class A")'
+
+Two datasets:
+  diagram: 'BoxPlot(data: [{{ data1 }}], label: "Class A", data2: [{{ data2 }}], label2: "Class B")'
+
+  Parameters:
+    data    — list of numeric values for the first dataset (required)
+    label   — optional row label for the first dataset
+    data2   — list of numeric values for the second dataset (optional)
+    label2  — optional row label for the second dataset
+
+  The axis is auto-scaled to the combined data range.
+  Axis ticks are placed at the five-number summary values.
+
+  Typical use: comparing distributions, identifying skew,
+  reading off quartiles and range.
 
 
 ── AlgebraTable Diagram ─────────────────────────────────────
@@ -2248,6 +2490,105 @@ reading-off questions, statistics, unit conversion tables, etc.
 
   Typical use: reading tables, statistics questions, data
   interpretation, unit conversion references.
+
+
+── Venn Diagram ─────────────────────────────────────────────
+
+Draws a two-circle Venn diagram inside a rounded rectangle
+representing the universal set. Each region (only A, both,
+only B, neither) shows an optional count. One region can be
+highlighted in blue for emphasis.
+
+Syntax:
+
+  diagram: 'VennDiagram(
+    label_A: "Sport", label_B: "Music",
+    only_A: 12, both: 5, only_B: 8, neither: 3,
+    total: 28,
+    highlight: "both",
+    show_labels: true,
+    label_box: "Students"
+  )'
+
+Parameters:
+
+  label_A     Label for circle A (left). Displayed inside the
+              circle near the top. Default: "A".
+
+  label_B     Label for circle B (right). Default: "B".
+
+  only_A      Count shown in the left crescent (A but not B).
+
+  both        Count shown in the lens-shaped overlap (A and B).
+
+  only_B      Count shown in the right crescent (B but not A).
+
+  neither     Count shown in the bottom-right corner of the
+              rectangle (outside both circles).
+
+  total       Optional. If provided and does not equal
+              only_A + both + only_B + neither, a small ⚠ badge
+              is shown to flag the mismatch.
+
+  highlight   Optional. A single value or a list of values to shade
+              in accent blue. Multiple values let you highlight a
+              union or any combination of regions.
+              Accepted values:
+                "only_A"   — left crescent
+                "only_B"   — right crescent
+                "both"     — overlap lens
+                "neither"  — outside both circles
+                "A"        — entire circle A (crescent + lens)
+                "B"        — entire circle B (crescent + lens)
+
+              Single region:   highlight: "both"
+              Union A ∪ B:     highlight: ["only_A", "both", "only_B"]
+              Omit for no highlight.
+
+  show_labels false (default): show count values only.
+              true: also show a small label below each count
+              ("Sport only", "Both", "Neither", etc.).
+
+  label_box   Optional text placed in the top-left corner of
+              the bounding rectangle (e.g. the universal set
+              name such as "Students" or "ξ").
+
+  pos         Optional centre-offset position, default (0, 0).
+
+{{ }} substitution:
+  All numeric values (only_A, both, only_B, neither, total)
+  support {{ }} template substitution.
+
+Example — class survey:
+
+  parameters:
+    a: { min: 5, max: 15 }
+    b: { min: 3, max: 10 }
+    c: { min: 4, max: 12 }
+    d: { min: 1, max: 6 }
+
+  diagram: 'VennDiagram(
+    label_A: "Sport", label_B: "Music",
+    only_A: {{ a }}, both: {{ b }}, only_B: {{ c }}, neither: {{ d }},
+    total: {{ a + b + c + d }},
+    label_box: "Students"
+  )'
+
+  question:
+    text: "How many students play sport?"
+    answer: "{{ a + b }}"
+    answer_format: integer
+
+Example — with highlight on the overlap:
+
+  diagram: 'VennDiagram(
+    label_A: "Swimmers", label_B: "Runners",
+    only_A: 8, both: 3, only_B: 11, neither: 2,
+    highlight: "both", show_labels: true
+  )'
+
+  Typical use: two-way sorting, set notation, Venn-diagram
+  reading questions, intersection / union problems.
 
 
 ── Combining Multiple Diagrams ─────────────────────────────
@@ -2514,10 +2855,72 @@ question:
 KNOWLEDGE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+A Knowledge item is a reusable explanation — a formula, rule,
+or definition — that can be attached to one or more Skills and
+displayed alongside a question or its solution.
+
+── Creating a Knowledge Item ────────────────────────────────
+
+1. Navigate to the Knowledge list (Knowledge in the main menu).
+2. Click "+ New".
+3. Fill in the fields on the left; a live preview appears on
+   the right as you type.
+
+Fields:
+
+  Title (required)
+    The name of the concept shown as a heading in the preview.
+    e.g. "Circumference of a Circle"
+
+  Text
+    The main explanation or formula. Supports LaTeX:
+      $...$    inline maths,  e.g. $C = 2\pi r$
+      $$...$$  display maths, e.g. $$A = \pi r^2$$
+    Use **bold** for emphasis. Plain text is also fine.
+
+  Diagram
+    An optional diagram using the same syntax as template
+    diagrams (see the DIAGRAMS section above).
+    e.g. Circle(radius: 5, label_r: true, label_d: true)
+    Leave blank if no diagram is needed.
+
+  Text 2
+    A second block of text shown below the diagram. Use this
+    for a worked example, a second formula, or additional notes.
+    Supports the same LaTeX syntax as Text.
+
+4. Click Save. The item is created and its URL updates to
+   /knowledge/<id> so you can bookmark or share it.
+
+── Linking to Skills ─────────────────────────────────────────
+
+To associate a Knowledge item with a Skill, open the item
+from the Knowledge list, find the skill by its ID, and add it
+to skill_ids. Once linked, the Knowledge item is automatically
+shown alongside the solution whenever a student answers a
+question from that skill.
+
+── Generating from an Image ──────────────────────────────────
+
+When creating a new item you can pre-fill all fields from a
+screenshot or photo of a textbook, whiteboard, or worked example:
+
+1. Click "📷 From Image" in the toolbar.
+2. Upload an image by clicking the drop zone, dragging a file
+   onto it, or pasting from the clipboard (Ctrl+V / Cmd+V).
+3. Optionally type extra instructions in the text box below
+   the image (e.g. "Focus on the formula, not the example").
+4. Click "Generate Knowledge".
+
+The AI fills in Title, Text, Diagram and Text 2 from the image.
+Review and edit the fields before saving.
+
+── Using a Knowledge Item in a Template ─────────────────────
+
 To add information to a question use knowledge. This can be
 placed in the question, the solution or below the answer. If
 added to the solution, the information only shows if the
-student answers incorrect.
+student answers incorrectly.
 
 post_answer: '{{ Knowledge("Multiplying and Dividing Positives and Negatives") }}'
 
@@ -2533,6 +2936,7 @@ Parameter types
   type: percent         percentage            min, max [, common: true]
   type: choice          pick from list        values: [...]
   type: list            list of integers      count, min, max  [or size: small/medium/large]
+  gaussian_list(m,s,n)  normal-dist integers  expr: "gaussian_list(mean, sd, count)"
   type: scenario        random row from table rows: [[q1,a1],[q2,a2],...]  access via item[0], item[1]
   type: bool            true/false            [weight: 0.0–1.0 (default 0.5)]
   expr: "..."           derived value         computed from other params (define after dependencies)
@@ -2596,6 +3000,7 @@ Diagram types
   GraphHistogram(points: [("Label", N), ...], pos: (x, y) [, freq: true|false, label: true|false])
   GraphLine(points: [("Label", N), ...] [, y_label: "...", pos: (x, y)])
   GraphPie(points: [("Label", N), ...], pos: (x, y))
+  BoxPlot(data: [N, ...] [, label: "..."] [, data2: [N, ...]] [, label2: "..."])
   Circle(radius: N [, label_r: true, label_d: false,
          show_arc, show_chord, show_sector, show_segment, show_tangent,
          angle1: 40, angle2: 140, angle_t: 0])

@@ -16,6 +16,9 @@ import { usePreferenceStore } from "../utils/pref";
 import { useTemplateApi } from "../api/useTemplateApi";
 // import { useValidationApi } from "../api/useValidationApi";
 import type { TemplateMetadata } from "../types/TemplateMetadata";
+import { ParameterHelper } from "./components/ParameterHelper";
+import { DiagramHelper } from "./components/DiagramHelper";
+import { KnowledgeHelper } from "./components/KnowledgeHelper";
 
 interface PreviewResponse {
   question: string;
@@ -74,8 +77,11 @@ export function TemplateEditorPage() {
 
   const [previewResult, setPreviewResult] = useState<any>(null);
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
-  const [rawMode, setRawMode] = useState(() => !!(location.state as any)?.rawMode);
+  const rawMode = true;
   const [showCalculator, setShowCalculator] = useState(false);
+  const [showParamHelper,    setShowParamHelper]    = useState(false);
+  const [showDiagramHelper,  setShowDiagramHelper]  = useState(false);
+  const [showKnowledgeHelper, setShowKnowledgeHelper] = useState(false);
   const [calcPos, setCalcPos] = useState({ x: window.innerWidth - 310, y: 80 });
   const calcDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
 
@@ -652,6 +658,104 @@ const handleToggleValidated = async () => {
 
 
 
+  // ── Raw editor helper handlers ───────────────────────────────────────────
+  // These mirror SectionedEditorPanel's handlers but operate on the raw YAML string.
+
+  function findTopLevelSection(lines: string[], key: string): { start: number; end: number } | null {
+    let start = -1;
+    let end = lines.length;
+    for (let i = 0; i < lines.length; i++) {
+      const m = lines[i].match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*:/);
+      if (m && !lines[i].startsWith(" ") && !lines[i].startsWith("\t")) {
+        if (m[1] === key) { start = i; }
+        else if (start !== -1) { end = i; break; }
+      }
+    }
+    return start === -1 ? null : { start, end };
+  }
+
+  function lastNonEmptyIdx(lines: string[], from: number, to: number): number {
+    let idx = to - 1;
+    while (idx > from && lines[idx].trim() === "") idx--;
+    return idx;
+  }
+
+  const handleRawInsertParameter = (yaml: string) => {
+    // yaml is already 2-space indented (e.g., "  n:\n    size: small")
+    const lines = content.split("\n");
+    const sec = findTopLevelSection(lines, "parameters");
+    let newContent: string;
+    if (!sec) {
+      newContent = "parameters:\n" + yaml + "\n\n" + content;
+    } else {
+      const last = lastNonEmptyIdx(lines, sec.start, sec.end);
+      const newLines = [...lines.slice(0, last + 1), ...yaml.split("\n"), ...lines.slice(last + 1)];
+      newContent = newLines.join("\n");
+    }
+    handleContentChange(newContent);
+  };
+
+  const handleRawAddPart = () => {
+    const newPart = `  - text: ""\n    answer: ""\n    solution: ""`;
+    const lines = content.split("\n");
+    const sec = findTopLevelSection(lines, "question");
+    if (!sec) {
+      handleContentChange(content.trimEnd() + "\nquestion:\n  parts:\n" + newPart + "\n");
+      return;
+    }
+    const qLines = lines.slice(sec.start, sec.end);
+    const partsIdx = qLines.findIndex(l => /^\s*parts\s*:/.test(l));
+    let newLines: string[];
+    if (partsIdx === -1) {
+      const last = lastNonEmptyIdx(lines, sec.start, sec.end);
+      newLines = [...lines.slice(0, last + 1), "  parts:", ...newPart.split("\n"), ...lines.slice(last + 1)];
+    } else {
+      let lastPart = sec.start + partsIdx;
+      for (let i = sec.start + partsIdx + 1; i < sec.end; i++) {
+        if (lines[i].startsWith("  ") || lines[i].trim() === "") lastPart = i;
+        else break;
+      }
+      while (lastPart > sec.start + partsIdx && lines[lastPart].trim() === "") lastPart--;
+      newLines = [...lines.slice(0, lastPart + 1), ...newPart.split("\n"), ...lines.slice(lastPart + 1)];
+    }
+    handleContentChange(newLines.join("\n"));
+  };
+
+  const handleRawInsertDiagram = (yaml: string) => {
+    // yaml is full "diagram: ..." YAML string
+    const lines = content.split("\n");
+    const sec = findTopLevelSection(lines, "diagram");
+    const yamlLines = yaml.trimEnd().split("\n");
+    let newLines: string[];
+    if (!sec) {
+      const answersSec = findTopLevelSection(lines, "answers") ?? findTopLevelSection(lines, "answer");
+      if (answersSec) {
+        newLines = [...lines.slice(0, answersSec.start), ...yamlLines, "", ...lines.slice(answersSec.start)];
+      } else {
+        newLines = [...lines, "", ...yamlLines];
+      }
+    } else {
+      newLines = [...lines.slice(0, sec.start), ...yamlLines, ...lines.slice(sec.end)];
+    }
+    handleContentChange(newLines.join("\n"));
+    setShowDiagramHelper(false);
+  };
+
+  const handleRawInsertKnowledge = (snippet: string) => {
+    // snippet is e.g. '{{ Knowledge("title") }}'
+    const lines = content.split("\n");
+    const sec = findTopLevelSection(lines, "post_answer");
+    let newContent: string;
+    if (!sec) {
+      newContent = content.trimEnd() + "\n\npost_answer: " + JSON.stringify(snippet) + "\n";
+    } else {
+      const last = lastNonEmptyIdx(lines, sec.start, sec.end);
+      const newLines = [...lines.slice(0, last + 1), "  " + snippet, ...lines.slice(last + 1)];
+      newContent = newLines.join("\n");
+    }
+    handleContentChange(newContent);
+  };
+
   return (
 <Layout>
   <div className="template-editor-page">
@@ -712,58 +816,48 @@ const handleToggleValidated = async () => {
               </div>
               <div className="d-flex gap-1 flex-wrap justify-content-end">
                 <button
-                  className={`btn btn-sm ${rawMode ? "btn-warning" : "btn-outline-secondary"}`}
+                  className={`btn btn-sm ${showParamHelper ? "btn-primary" : "btn-outline-primary"}`}
                   style={{ fontSize: 11 }}
-                  onClick={() => {
-                    if (rawAutosaveRef.current) { window.clearTimeout(rawAutosaveRef.current); rawAutosaveRef.current = null; }
-                    setRawMode(v => !v);
-                  }}
-                  title="Toggle raw YAML editor for pasting a full template"
-                >
-                  {rawMode ? "Sectioned" : "Raw"}
-                </button>
+                  onClick={() => { setShowParamHelper(v => !v); setShowDiagramHelper(false); setShowKnowledgeHelper(false); }}
+                >＋ Parameter</button>
                 <button
                   className="btn btn-sm btn-outline-secondary"
                   style={{ fontSize: 11 }}
-                  title="Remove title, years, difficulty, skill_id keys from content"
-                  onClick={() => {
-                    const metadataKeys = new Set(["title", "years", "difficulty", "skill_id", "introduction", "worked_example"]);
-                    const lines = content.split("\n");
-                    const result: string[] = [];
-                    let skipping = false;
-                    for (const line of lines) {
-                      const isBlank = line.trim() === "";
-                      const isIndented = line.startsWith(" ") || line.startsWith("\t");
-                      const keyMatch = !isIndented && line.match(/^([a-zA-Z_]\w*)\s*:/);
-                      if (keyMatch) {
-                        if (metadataKeys.has(keyMatch[1])) {
-                          skipping = true; // remove this line and any indented continuations
-                        } else {
-                          skipping = false;
-                          result.push(line);
-                        }
-                      } else if (skipping && (isIndented || isBlank)) {
-                        // continuation of a metadata value — skip
-                      } else {
-                        skipping = false;
-                        result.push(line);
-                      }
-                    }
-                    let stripped = result.join("\n").replace(/\n{3,}/g, "\n\n").trimStart();
-                    // Convert solution/question from JSON object form to inline string:
-                    //   solution:\n  {\n  "text": "..."\n  }  →  solution: "..."
-                    stripped = stripped.replace(
-                      /^(solution|question):[ \t]*\n[ \t]*\{[ \t]*\n[ \t]*"text":[ \t]*"((?:[^"\\]|\\.)*)"[ \t]*\n[ \t]*\}/gm,
-                      '$1: "$2"'
-                    );
-                    setContent(stripped);
-                    debouncedPreview(stripped, metadata.id);
-                  }}
-                >
-                  Strip Metadata
-                </button>
+                  onClick={handleRawAddPart}
+                >＋ Part</button>
+                <button
+                  className={`btn btn-sm ${showDiagramHelper ? "btn-primary" : "btn-outline-secondary"}`}
+                  style={{ fontSize: 11 }}
+                  onClick={() => { setShowDiagramHelper(v => !v); setShowParamHelper(false); setShowKnowledgeHelper(false); }}
+                >＋ Diagram</button>
+                <button
+                  className={`btn btn-sm ${showKnowledgeHelper ? "btn-primary" : "btn-outline-secondary"}`}
+                  style={{ fontSize: 11 }}
+                  onClick={() => { setShowKnowledgeHelper(v => !v); setShowParamHelper(false); setShowDiagramHelper(false); }}
+                >＋ Knowledge</button>
               </div>
             </div>
+            {showParamHelper && (
+              <ParameterHelper onInsert={handleRawInsertParameter} />
+            )}
+            {showDiagramHelper && (
+              <DiagramHelper onInsert={handleRawInsertDiagram} />
+            )}
+            {showKnowledgeHelper && (
+              <KnowledgeHelper
+                templateId={id ? Number(id) || null : null}
+                onInsert={handleRawInsertKnowledge}
+                onKnowledgeChange={async () => {
+                  const res = await apiFetch("/api/templates/preview/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ content, templateId: metadata.id }),
+                  });
+                  const data = await res.json();
+                  if (data.preview) setPreview(data.preview);
+                }}
+              />
+            )}
             <div style={{ flexShrink: 0 }}>
               {rawMode ? (
                 <Editor

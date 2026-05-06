@@ -582,6 +582,16 @@ export function PreviewPanel({
       return "Please enter a whole number, e.g. 42";
     if (format === "decimal" && !/^-?\d*\.?\d+$/.test(s))
       return "Please enter a decimal, e.g. 0.75";
+    const decimalNMatch = format.match(/^decimal_(\d+)$/);
+    if (decimalNMatch) {
+      const n = parseInt(decimalNMatch[1]);
+      if (!/^-?\d+(\.\d+)?$/.test(s))
+        return `Please enter a decimal number, e.g. ${(1).toFixed(n)}`;
+      const dotIdx = s.indexOf(".");
+      const actualDp = dotIdx === -1 ? 0 : s.length - dotIdx - 1;
+      if (actualDp !== n)
+        return `Please give your answer to ${n} decimal place${n === 1 ? "" : "s"}, e.g. ${(1).toFixed(n)}`;
+    }
     if (format === "ratio" && !/^\d+(\s*:\s*\d+)+$/.test(s))
       return "Please enter your answer as a ratio, e.g. 1:2";
     if ((format === "percent" || format === "percentage") && !/^-?\d+(\.\d+)?%$/.test(s))
@@ -811,8 +821,10 @@ export function PreviewPanel({
 
         {preview.diagram_svg && (
           <div
-            dangerouslySetInnerHTML={{ __html: preview.diagram_svg }}
-            style={{ marginBottom: 12 }}
+            dangerouslySetInnerHTML={{
+              __html: preview.diagram_svg.replace("<svg ", '<svg style="width:100%;height:auto;display:block;" '),
+            }}
+            style={{ width: "100%", marginBottom: 12 }}
           />
         )}
       </div>
@@ -872,7 +884,7 @@ export function PreviewPanel({
       {completedSteps.map((cs, i) => (
         <div key={i} style={{ marginBottom: 10, paddingLeft: 8, borderLeft: "3px solid #ccc" }}>
           {cs.question && (
-            <div style={{ fontWeight: "bold" }}>
+            <div>
               <Latex>{safeLatex(cs.question)}</Latex>
             </div>
           )}
@@ -883,13 +895,19 @@ export function PreviewPanel({
       ))}
 
       {diagramSvg && (
-        <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-          <div dangerouslySetInnerHTML={{ __html: diagramSvg }} />
-        </div>
+        <div
+          dangerouslySetInnerHTML={{
+            __html: diagramSvg.replace(
+              "<svg ",
+              '<svg style="width:100%;height:auto;display:block;" '
+            ),
+          }}
+          style={{ width: "100%", marginBottom: 8 }}
+        />
       )}
 
       {stepQuestion && (
-        <div style={{ marginBottom: 12, fontWeight: "bold" }}>
+        <div style={{ marginBottom: 12 }}>
           <Latex>{stepQuestion}</Latex>
         </div>
       )}

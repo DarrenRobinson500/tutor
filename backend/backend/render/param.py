@@ -1,4 +1,5 @@
 import re as _re
+import math as _math
 from .format import *
 from math import gcd
 from fractions import Fraction as _Fraction
@@ -551,6 +552,10 @@ class ExprParameter(RandomParameter):
         try:
             node = ExpressionNode(self._expr, param_objects)
             result = node.evaluate()
+            # Preserve lists as-is (e.g. from gaussian_list())
+            if isinstance(result, list):
+                self.value = result
+                return
             # Convert sympy types to plain Python so the value is JSON-serialisable
             try:
                 f = float(result)
@@ -643,6 +648,12 @@ class CaseParameter(ExprParameter):
         'abs': abs, 'round': round, 'min': min, 'max': max,
         'int': int, 'float': float, 'str': str, 'len': len,
         'sum': sum,
+        'sin': _math.sin, 'cos': _math.cos, 'tan': _math.tan,
+        'asin': _math.asin, 'acos': _math.acos, 'atan': _math.atan, 'atan2': _math.atan2,
+        'sqrt': _math.sqrt, 'log': _math.log, 'log10': _math.log10,
+        'ceil': _math.ceil, 'floor': _math.floor,
+        'pi': _math.pi, 'e': _math.e,
+        'degrees': _math.degrees, 'radians': _math.radians,
     }
 
     def __init__(self, name, options):
@@ -657,6 +668,8 @@ class CaseParameter(ExprParameter):
 
     def resolve(self, param_objects):
         expr = self._expr
+        # Strip {{ }} wrappers so {{param_name}} → param_name (same normalisation as ExprParameter)
+        expr = _re.sub(r'\{\{\s*(.*?)\s*\}\}', r'\1', expr)
         # Normalise ^ → ** so exponentiation works (^ is XOR in Python)
         expr = expr.replace('^', '**')
 

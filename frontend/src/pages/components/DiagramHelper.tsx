@@ -13,9 +13,10 @@ const SHAPES: { id: DiagramType; label: string }[] = [
   { id: "Rect",         label: "Rect"          },
   { id: "Circle",       label: "Circle"        },
   { id: "Line",         label: "Line"          },
-  { id: "Prism",        label: "Prism"         },
-  { id: "Net",          label: "Net"           },
-  { id: "AlgebraTable", label: "AlgebraTable"  },
+  { id: "Prism",          label: "Prism"          },
+  { id: "Net",            label: "Net"            },
+  { id: "CompositeSolid", label: "CompositeSolid" },
+  { id: "AlgebraTable",   label: "AlgebraTable"   },
   { id: "DataTable",    label: "DataTable"     },
   { id: "Cartesian",    label: "Cartesian"     },
   { id: "NumberLine",   label: "NumberLine"    },
@@ -107,6 +108,21 @@ export function DiagramHelper({ onInsert }: Props) {
   const [netA,       setNetA]       = useState("{{ a }}");
   const [netB,       setNetB]       = useState("{{ b }}");
   const [netC,       setNetC]       = useState("{{ c }}");
+
+  // CompositeSolid
+  type CSKind = "rect_prism" | "half_cylinder" | "cylinder" | "cone";
+  const CS_KINDS: CSKind[] = ["rect_prism", "half_cylinder", "cylinder", "cone"];
+  const [csBaseW,   setCsBaseW]   = useState("{{ w }}");
+  const [csBaseH,   setCsBaseH]   = useState("{{ h }}");
+  const [csBaseD,   setCsBaseD]   = useState("{{ d }}");
+  const [csAddKind, setCsAddKind] = useState<CSKind>("half_cylinder");
+  const [csAddW,    setCsAddW]    = useState("{{ w }}");
+  const [csAddH,    setCsAddH]    = useState("{{ h2 }}");
+  const [csAddD,    setCsAddD]    = useState("{{ d }}");
+  const [csAddR,    setCsAddR]    = useState("{{ r }}");
+  const [csAddLen,  setCsAddLen]  = useState("{{ w }}");
+  const [csAddAxis, setCsAddAxis] = useState<"x"|"z">("x");
+  const [csAddOn,   setCsAddOn]   = useState<"top"|"front"|"right">("top");
 
   // AlgebraTable
   const [atXMin,  setAtXMin]  = useState("1");
@@ -314,6 +330,20 @@ export function DiagramHelper({ onInsert }: Props) {
         if (!fbLabel)    parts.push("label: false");
         if (fbLabelDen)  parts.push("label_den: true");
         return `FractionBar(${parts.join(", ")})`;
+      }
+      case "CompositeSolid": {
+        const base = `rect_prism(w:${csBaseW}, h:${csBaseH}, d:${csBaseD})`;
+        let add = "";
+        if (csAddKind === "rect_prism") {
+          add = `rect_prism(w:${csAddW}, h:${csAddH}, d:${csAddD}, on:${csAddOn})`;
+        } else if (csAddKind === "half_cylinder") {
+          add = `half_cylinder(r:${csAddR}, length:${csAddLen}, axis:${csAddAxis}, on:${csAddOn})`;
+        } else if (csAddKind === "cylinder") {
+          add = `cylinder(r:${csAddR}, h:${csAddH}, on:${csAddOn})`;
+        } else if (csAddKind === "cone") {
+          add = `cone(r:${csAddR}, h:${csAddH}, on:${csAddOn})`;
+        }
+        return `CompositeSolid(${base}, ${add})`;
       }
       default:
         return "";
@@ -625,6 +655,43 @@ export function DiagramHelper({ onInsert }: Props) {
             style={{ fontSize: 11, padding: "1px 6px" }}
             onClick={() => setFbLabelDen(v => !v)}
           >label_den</button>
+        </>}
+
+        {shape === "CompositeSolid" && <>
+          {lbl("Base — rect_prism:")}
+          <div style={{ width: "100%" }} />
+          {lbl("w:")} {inp(csBaseW, setCsBaseW, 70)}
+          {lbl("h:")} {inp(csBaseH, setCsBaseH, 70)}
+          {lbl("d:")} {inp(csBaseD, setCsBaseD, 70)}
+          <div style={{ width: "100%" }} />
+          {lbl("Add shape:")}
+          {CS_KINDS.map(k => (
+            <button key={k} className={sel(k, csAddKind)} style={{ fontSize: 11, padding: "1px 6px" }}
+              onClick={() => setCsAddKind(k)}>{k}</button>
+          ))}
+          <div style={{ width: "100%" }} />
+          {csAddKind === "rect_prism" && <>
+            {lbl("w:")} {inp(csAddW, setCsAddW, 70)}
+            {lbl("h:")} {inp(csAddH, setCsAddH, 70)}
+            {lbl("d:")} {inp(csAddD, setCsAddD, 70)}
+          </>}
+          {(csAddKind === "half_cylinder") && <>
+            {lbl("r:")} {inp(csAddR, setCsAddR, 70)}
+            {lbl("length:")} {inp(csAddLen, setCsAddLen, 70)}
+            {lbl("axis:")}
+            <button className={sel("x", csAddAxis)} style={{ fontSize: 11, padding: "1px 6px" }} onClick={() => setCsAddAxis("x")}>x</button>
+            <button className={sel("z", csAddAxis)} style={{ fontSize: 11, padding: "1px 6px" }} onClick={() => setCsAddAxis("z")}>z</button>
+          </>}
+          {(csAddKind === "cylinder" || csAddKind === "cone") && <>
+            {lbl("r:")} {inp(csAddR, setCsAddR, 70)}
+            {lbl("h:")} {inp(csAddH, setCsAddH, 70)}
+          </>}
+          <div style={{ width: "100%" }} />
+          {lbl("on:")}
+          {(["top","front","right"] as const).map(o => (
+            <button key={o} className={sel(o, csAddOn)} style={{ fontSize: 11, padding: "1px 6px" }}
+              onClick={() => setCsAddOn(o)}>{o}</button>
+          ))}
         </>}
 
       </div>

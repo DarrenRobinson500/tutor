@@ -33,13 +33,20 @@ def _escape_backslashes_in_dq_strings(text: str) -> str:
             ch = text[i]
             if ch == '\\' and i + 1 < n:
                 nxt = text[i + 1]
-                if nxt in ('"', '\\'):
-                    # Keep \" and \\ exactly as-is
+                if nxt in ('"', '\\', 'n', 'r'):
+                    # Keep standard YAML escape sequences as-is:
+                    #   \" → literal quote, \\ → literal backslash,
+                    #   \n → newline, \r → carriage return.
+                    # PyYAML uses \n/\r when dumping strings that contain real
+                    # newlines; doubling them would turn a newline into the
+                    # two-character literal string "\n", which KaTeX rejects.
                     out.append('\\')
                     out.append(nxt)
                     i += 2
                 else:
-                    # Single backslash before a regular char — escape it
+                    # Single backslash before any other char — this is a LaTeX
+                    # command (e.g. \frac, \alpha). Double it so YAML keeps it
+                    # as a literal backslash after parsing.
                     out.append('\\\\')
                     out.append(nxt)
                     i += 2
@@ -53,9 +60,18 @@ def _escape_backslashes_in_dq_strings(text: str) -> str:
     return ''.join(out)
 
 
+def _expand_inline_expr(text: str) -> str:
+    """Expand `name: expr: "..."` shorthand onto two lines before PyYAML sees it."""
+    pattern = re.compile(r'^(\s*)(\w+):\s+(expr:\s*.+)$', re.MULTILINE)
+    def repl(m):
+        indent, name, rest = m.group(1), m.group(2), m.group(3)
+        return f'{indent}{name}:\n{indent}  {rest}'
+    return pattern.sub(repl, text)
+
+
 def load_template_yaml(text: str) -> dict:
     """Parse template YAML, preserving LaTeX backslash commands in double-quoted strings."""
-    return _yaml.safe_load(_escape_backslashes_in_dq_strings(text)) or {}
+    return _yaml.safe_load(_escape_backslashes_in_dq_strings(_expand_inline_expr(text))) or {}
 
 def render_fraction_latex(value: str):
     if isinstance(value, str) and "/" in value:

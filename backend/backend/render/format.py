@@ -420,6 +420,24 @@ class ScientificNotationFormat(FormatType):
 
 
 @register_format_type
+class LowerFormat(FormatType):
+    """Converts a string value to lowercase: 'Run' → 'run'."""
+    name = "lower"
+
+    def format(self, value):
+        return str(value).lower()
+
+
+@register_format_type
+class CapitalizeFormat(FormatType):
+    """Capitalizes the first letter of a string: 'students' → 'Students'."""
+    name = "capitalize"
+
+    def format(self, value):
+        return str(value).capitalize()
+
+
+@register_format_type
 class ExprFormat(FormatType):
     """Formats an algebraic expression string for readable display.
 

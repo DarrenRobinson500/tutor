@@ -72,6 +72,19 @@ export default function ParentHomePage() {
     }
   }
 
+  function handleFindTutor(child: Child) {
+    if (!data) return;
+    const match = (child.year_level ?? "").match(/\d+/);
+    const yearGroup = match ? parseInt(match[0], 10) : undefined;
+    navigate(`/parents/${data.parent.id}/find-tutor`, {
+      state: {
+        childFirstName: child.first_name,
+        yearGroup,
+        parentHasDistributor: false,
+      },
+    });
+  }
+
   function onChildAdded(child: Child) {
     setData((prev) =>
       prev ? { ...prev, children: [...prev.children, child] } : prev
@@ -147,6 +160,7 @@ export default function ParentHomePage() {
                 child={child}
                 launching={launchingFor === child.id}
                 onLaunchAssessment={() => handleLaunchAssessment(child.id)}
+                onFindTutor={() => handleFindTutor(child)}
               />
             ))}
           </div>
@@ -174,10 +188,12 @@ function ChildCard({
   child,
   launching,
   onLaunchAssessment,
+  onFindTutor,
 }: {
   child: Child;
   launching: boolean;
   onLaunchAssessment: () => void;
+  onFindTutor: () => void;
 }) {
   const initials = `${child.first_name[0] ?? ""}${child.last_name[0] ?? ""}`.toUpperCase();
   const hasTests = child.test_count > 0;
@@ -222,7 +238,7 @@ function ChildCard({
         <button className="sm-btn-secondary" disabled>
           Assisted Assessment $20
         </button>
-        <button className="sm-btn-secondary" disabled>
+        <button className="sm-btn-secondary" onClick={onFindTutor}>
           Find Tutor
         </button>
         {hasTests && (

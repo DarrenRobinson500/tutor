@@ -39,6 +39,29 @@ def _inject_format_pipe(text, format_type):
         return "{{ " + expr + " | " + format_type + " }}"
     return EXPR_PATTERN.sub(repl, text)
 
+def _expand_inline_expr(yaml_text: str) -> str:
+    """
+    Expand the shorthand ``name: expr: "..."`` onto two lines before PyYAML sees it.
+
+    Converts:
+        q1_clean:     expr: "quartile(core_data, 1)"
+    to:
+        q1_clean:
+          expr: "quartile(core_data, 1)"
+
+    Only fires when ``expr:`` immediately follows a plain identifier key on the
+    same line, which is otherwise a YAML scanner error.
+    """
+    pattern = re.compile(r'^(\s*)(\w+):\s+(expr:\s*.+)$', re.MULTILINE)
+
+    def repl(m):
+        indent, name, rest = m.group(1), m.group(2), m.group(3)
+        child_indent = indent + '  '
+        return f'{indent}{name}:\n{child_indent}{rest}'
+
+    return pattern.sub(repl, yaml_text)
+
+
 def _quote_bare_expressions(yaml_text: str) -> str:
     """
     Auto-quote YAML scalar values that start with {{ so the YAML parser doesn't
@@ -88,7 +111,7 @@ def _quote_bare_expressions(yaml_text: str) -> str:
 
 class Render:
     def __init__(self, yaml_text):
-        self.yaml_text = _quote_bare_expressions(yaml_text)
+        self.yaml_text = _quote_bare_expressions(_expand_inline_expr(yaml_text))
         self.template = load_template_yaml(self.yaml_text)
 
         # Filled during rendering
@@ -266,13 +289,34 @@ def _resolve_answer_value(raw_val: str, preview_val: str, params: dict, answer_f
                 pass
         try:
             f = float(param_val)
+            if answer_format and answer_format in FORMAT_REGISTRY:
+                return FORMAT_REGISTRY[answer_format]().format(f)
             return str(int(f)) if f == int(f) else f"{f:g}"
         except (TypeError, ValueError):
             return str(param_val)
     # 2. Preview value (only when it doesn't contain LaTeX)
     if preview_val and "\\" not in preview_val.replace("\\$", ""):
+        if answer_format and answer_format in FORMAT_REGISTRY and answer_format not in _LATEX_FMTS:
+            try:
+                return FORMAT_REGISTRY[answer_format]().format(float(preview_val))
+            except (TypeError, ValueError):
+                pass
         return preview_val
     # 3. Raw fallback
+    if answer_format and answer_format in FORMAT_REGISTRY:
+        if answer_format in _LATEX_FMTS:
+            # LaTeX-producing formats must store a plain "n/d" string for frontend comparison
+            try:
+                from fractions import Fraction as _Frac
+                frac = _Frac(float(raw_val)).limit_denominator(10000)
+                return str(frac.numerator) if frac.denominator == 1 else f"{frac.numerator}/{frac.denominator}"
+            except (TypeError, ValueError):
+                pass
+        else:
+            try:
+                return FORMAT_REGISTRY[answer_format]().format(float(raw_val))
+            except (TypeError, ValueError):
+                pass
     return raw_val
 
 
@@ -283,7 +327,7 @@ def render_template_preview(parsed):
     Returns: {question, answers, solution, diagram_svg, diagram_code,
                substituted_yaml, params, errors}
     """
-    yaml_text = _yaml.dump(parsed, allow_unicode=True, width=float('inf'))
+    yaml_text = _yaml.dump(parsed, allow_unicode=True, width=float('inf'), sort_keys=False)
 
     validation = parsed.get("validation", {})
     if isinstance(validation, list):
@@ -634,7 +678,7 @@ def render_template_preview(parsed):
             if isinstance(raw_input, str) and raw_input.strip() in params:
                 param_name = raw_input.strip()
                 param_val = params.get(param_name)
-                answer_format = ans.get("answer_format")
+                answer_format = ans.get("answer_format") or _question_level_answer_format
                 if answer_format and answer_format in FORMAT_REGISTRY and answer_format not in _LATEX_ANSWER_FORMATS:
                     try:
                         text = FORMAT_REGISTRY[answer_format]().format(param_val)
@@ -682,8 +726,9 @@ def render_template_preview(parsed):
                     text = str(raw_input)
                 # Apply answer_format to the resolved numeric value so that e.g.
                 # `expr: {{ ratio }}` with `answer_format: ratio` stores "1:2" not "0.5".
+                # Fall back to the question-level format (e.g. decimal_1 on the question block).
                 # Skip LaTeX-producing formats — store plain fraction strings instead.
-                answer_format = ans.get("answer_format")
+                answer_format = ans.get("answer_format") or _question_level_answer_format
                 if answer_format and answer_format in FORMAT_REGISTRY and answer_format not in _LATEX_ANSWER_FORMATS:
                     try:
                         text = FORMAT_REGISTRY[answer_format]().format(float(text))
@@ -897,14 +942,35 @@ def render_template_preview(parsed):
                         raw_ans = formatted_ans
                 # Apply decimal/numeric format to the stored answer value so that
                 # e.g. answer_format: decimal_2 stores "9.55" not "9.55044".
-                if part_answer_format and part_answer_format in FORMAT_REGISTRY:
+                # LaTeX-producing formats (fraction, mixed_number, etc.) must store
+                # a plain "n/d" string so the frontend's text comparison works.
+                if part_answer_format and part_answer_format in FORMAT_REGISTRY and part_answer_format not in _LATEX_ANSWER_FORMATS:
                     try:
                         raw_ans = FORMAT_REGISTRY[part_answer_format]().format(float(raw_ans))
                     except Exception:
                         pass
+                elif part_answer_format in _LATEX_ANSWER_FORMATS:
+                    try:
+                        from fractions import Fraction as _Frac
+                        _frac = _Frac(float(raw_ans)).limit_denominator(10000)
+                        raw_ans = str(_frac.numerator) if _frac.denominator == 1 else f"{_frac.numerator}/{_frac.denominator}"
+                    except Exception:
+                        pass
+
+                # Per-part diagram overrides the top-level diagram for this step.
+                part_diagram_code = part.get("diagram", "")
+                if isinstance(part_diagram_code, str) and part_diagram_code.strip() and part_diagram_code.strip().lower() != "none":
+                    try:
+                        from ..diagram.engine import render_diagram_from_code as _rdc_part
+                        part_svg = _rdc_part(part_diagram_code)
+                    except Exception as _e:
+                        collected_errors.append(f"Part {i} diagram error: {_e}")
+                        part_svg = svg
+                else:
+                    part_svg = svg
 
                 step = {
-                    "svg": svg,
+                    "svg": part_svg,
                     "question": str(part.get("text", "")),
                     "answer": raw_ans,
                     "solution": str(part.get("solution", "")),
@@ -1016,10 +1082,15 @@ def render_template_preview(parsed):
     if _multiple_answers is not None:
         debug["multiple_answers"] = _multiple_answers
     if multi_step:
-        debug["multi_step_answers"] = [
-            {"question": s.get("question", ""), "answer": s.get("answer", "")}
-            for s in multi_step.get("steps", [])
-        ]
+        def _step_debug(s):
+            if s.get("multiple_answers"):
+                answers = [
+                    f'{a["label"]} = {a["value"]}' if a.get("label") else str(a["value"])
+                    for a in s["multiple_answers"]
+                ]
+                return {"question": s.get("question", ""), "answers": answers}
+            return {"question": s.get("question", ""), "answer": s.get("answer", "")}
+        debug["multi_step_answers"] = [_step_debug(s) for s in multi_step.get("steps", [])]
     substituted_yaml = _yaml.dump(debug, sort_keys=False, allow_unicode=True)
 
     # Inline knowledge block (knowledge: key in YAML) — appended after any {{ Knowledge() }} refs
