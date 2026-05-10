@@ -187,6 +187,7 @@ class AuthViewSet(viewsets.ViewSet):
 
         child_first = (d.get("child_first_name") or "").strip()
         child_last = (d.get("child_last_name") or "").strip()
+        child_email = (d.get("child_email") or "").strip()
         child_year = (d.get("child_year_level") or "").strip()
         child_school = (d.get("child_school_name") or "").strip()
         child_mobile = (d.get("child_mobile") or "").strip()
@@ -194,7 +195,7 @@ class AuthViewSet(viewsets.ViewSet):
         child_confirm = d.get("child_confirm_password", "")
 
         required = [parent_email, parent_password, parent_first, parent_last,
-                    parent_mobile, child_first, child_last, child_year, child_password]
+                    parent_mobile, child_first, child_last, child_email, child_year, child_password]
         if not all(required):
             return Response({"error": "Please fill in all required fields."}, status=400)
         if parent_password != parent_confirm:
@@ -203,6 +204,8 @@ class AuthViewSet(viewsets.ViewSet):
             return Response({"error": "Child's passwords do not match."}, status=400)
         if User.objects.filter(username=parent_email).exists():
             return Response({"error": "An account with this email already exists."}, status=400)
+        if User.objects.filter(username=child_email).exists():
+            return Response({"error": "An account with your child's email already exists."}, status=400)
 
         parent_user = User.objects.create(
             username=parent_email,
@@ -213,17 +216,9 @@ class AuthViewSet(viewsets.ViewSet):
             role="parent",
         )
 
-        # Build a unique username for the child account
-        base = f"student_{parent_user.id}_{child_first.lower()}"
-        child_username = base
-        counter = 1
-        while User.objects.filter(username=child_username).exists():
-            child_username = f"{base}_{counter}"
-            counter += 1
-
         child_user = User.objects.create(
-            username=child_username,
-            email=f"{child_username}@students.subjectmatter.app",
+            username=child_email,
+            email=child_email,
             password=make_password(child_password),
             first_name=child_first,
             last_name=child_last,
@@ -840,13 +835,18 @@ class QuestionViewSet(viewsets.ViewSet):
 
             from .template_utilities import get_translated_template
             render_template = get_translated_template(next_template, student)
-            preview = generate_values_and_question(render_template.id)
-            if preview["ok"]:
+            preview = None
+            for _attempt in range(3):
+                preview = generate_values_and_question(render_template.id)
+                if preview["ok"]:
+                    break
+                print(f"Attempt {_attempt + 1} failed to generate question:", preview.get("error", "")[:200])
+            if preview and preview["ok"]:
                 next_question = preview["preview"]
                 next_question["template_id"] = next_template_id  # English ID for session tracking
                 print(f"Successfully generated question with template_id: {next_template_id}")
             else:
-                print("Failed to generate question from template:", preview.get("error"))
+                print("Failed to generate question from template after 3 attempts:", preview.get("error", "")[:200] if preview else "")
                 next_question = None
                 next_template_id = None
         elif loop_complete:
@@ -4161,13 +4161,14 @@ def _skill_matches_year(skill, year_level: str) -> bool:
 
 
 def _get_next_template(session, skill_code: str, difficulty: str, exclude_skill_detail_ids=None):
-    """Find a validated template for the given Skill and difficulty, avoiding repeats.
+    """Find a validated English template for the given Skill and difficulty, avoiding repeats.
     skill_code identifies a Skill-level node (parent of skill_detail nodes)."""
     from .models import Template
     qs = Template.objects.filter(
         skill_detail__parent__code=skill_code,
         difficulty__iexact=difficulty,
         validated=True,
+        language='en',
     ).exclude(id__in=session.used_template_ids)
     if exclude_skill_detail_ids:
         qs = qs.exclude(skill_detail_id__in=exclude_skill_detail_ids)
@@ -4290,9 +4291,10 @@ def _advance_to_question_test_mode(session):
         skill = Skill.objects.filter(code=skill_code).first()
         skill_description = skill.description if skill else skill_code
 
-        # Try current difficulty first, then scan all difficulties for a fallback
-        for d in ([session.current_difficulty] +
-                  [x for x in DIFFICULTIES if x != session.current_difficulty]):
+        # Try current difficulty first, then only higher difficulties.
+        # Never fall back to a lower difficulty — that would undo earned promotions.
+        diff_index = DIFFICULTIES.index(session.current_difficulty)
+        for d in DIFFICULTIES[diff_index:]:
             template = _get_next_template(session, skill_code, d)
             if template:
                 if d != session.current_difficulty:
@@ -4303,7 +4305,7 @@ def _advance_to_question_test_mode(session):
                     payload['mode'] = 'test'
                     return payload
 
-        # No templates at any difficulty — skip skill
+        # No templates at this difficulty or above — skip skill
         TestSkillResult.objects.get_or_create(
             session=session, skill_code=skill_code,
             defaults={
@@ -4343,6 +4345,7 @@ def _advance_to_question_learning_mode(session):
                 skill_detail__parent__code=skill_code,
                 difficulty__iexact=session.current_difficulty,
                 validated=True,
+                language='en',
             ).values_list('id', flat=True))
 
             if not template_ids:
@@ -5060,13 +5063,13 @@ class TestViewSet(viewsets.ViewSet):
             advance_difficulty = False
             mastered = False
 
-            if session.correct_streak >= 3:
+            if session.correct_streak >= 1:
                 if session.current_difficulty == 'hard':
                     mastered = True
                     advance_skill = True
                 else:
                     advance_difficulty = True
-            elif session.incorrect_count >= 2:
+            elif session.incorrect_count >= 1:
                 advance_skill = True
 
             if advance_skill or advance_difficulty:
@@ -5835,4 +5838,404 @@ class AssessmentViewSet(viewsets.ViewSet):
                 incorrect=models.F('incorrect') + 1
             )
 
-        return Response({'ok': True})
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Payment flow views
+# ─────────────────────────────────────────────────────────────────────────────
+
+import stripe as _stripe
+from django.conf import settings as _dj_settings
+from datetime import date as _date, timedelta as _timedelta
+from rest_framework.decorators import permission_classes as _permission_classes
+from .models import (
+    SessionPayment, ParentPaymentProfile, ParentJob,
+    TutorProfile, DistributorProfile, DistributorParent,
+    ParentChild, TutorJob, AdminJob,
+)
+permission_classes = _permission_classes  # make available as bare name for decorators
+
+def _get_stripe():
+    _stripe.api_key = getattr(_dj_settings, 'STRIPE_SECRET_KEY', '')
+    return _stripe
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def payment_setup_intent(request):
+    """Create a Stripe SetupIntent so the frontend can collect card details."""
+    stripe = _get_stripe()
+    parent = request.user
+
+    profile, _ = ParentPaymentProfile.objects.get_or_create(parent=parent)
+
+    # Create or retrieve Stripe Customer
+    if not profile.stripe_customer_id:
+        customer = stripe.Customer.create(
+            email=parent.email,
+            name=parent.get_full_name(),
+            metadata={'user_id': parent.id},
+        )
+        profile.stripe_customer_id = customer['id']
+        profile.save(update_fields=['stripe_customer_id'])
+
+    setup_intent = stripe.SetupIntent.create(
+        customer=profile.stripe_customer_id,
+        payment_method_types=['card'],
+    )
+
+    return Response({
+        'client_secret': setup_intent['client_secret'],
+        'customer_id': profile.stripe_customer_id,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def payment_save_method(request):
+    """Save a confirmed PaymentMethod to the parent's Stripe Customer."""
+    stripe = _get_stripe()
+    payment_method_id = request.data.get('payment_method_id')
+    if not payment_method_id:
+        return Response({'error': 'payment_method_id required'}, status=400)
+
+    parent = request.user
+    profile, _ = ParentPaymentProfile.objects.get_or_create(parent=parent)
+
+    if not profile.stripe_customer_id:
+        return Response({'error': 'No Stripe customer found. Call setup-intent first.'}, status=400)
+
+    # Attach PM to customer
+    stripe.PaymentMethod.attach(payment_method_id, customer=profile.stripe_customer_id)
+
+    # Set as default
+    stripe.Customer.modify(
+        profile.stripe_customer_id,
+        invoice_settings={'default_payment_method': payment_method_id},
+    )
+
+    pm = stripe.PaymentMethod.retrieve(payment_method_id)
+    card = pm.get('card', {})
+
+    profile.stripe_pm_id = payment_method_id
+    profile.card_last4 = card.get('last4')
+    profile.card_brand = card.get('brand')
+    profile.setup_complete = True
+    profile.save(update_fields=['stripe_pm_id', 'card_last4', 'card_brand', 'setup_complete'])
+
+    return Response({
+        'success': True,
+        'card_last4': profile.card_last4,
+        'card_brand': profile.card_brand,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def payment_pending(request):
+    """Return all pending SessionPayments for the authenticated parent."""
+    parent = request.user
+    payments = SessionPayment.objects.filter(
+        parent=parent,
+        status='pending',
+    ).select_related('session', 'session__student', 'tutor')
+
+    profile = ParentPaymentProfile.objects.filter(parent=parent).first()
+    has_setup = bool(profile and profile.setup_complete)
+
+    card_info = None
+    if profile and profile.setup_complete:
+        card_info = {
+            'brand': profile.card_brand,
+            'last4': profile.card_last4,
+        }
+
+    return Response({
+        'payments': [p.to_dict() for p in payments],
+        'has_payment_setup': has_setup,
+        'card_info': card_info,
+    })
+
+
+def _run_charge(payment, profile):
+    """
+    Attempt a Stripe charge for payment using the saved PaymentMethod.
+    Returns (success: bool, error_code: str | None, message: str | None).
+    """
+    stripe = _get_stripe()
+    amount_cents = int(payment.total_amount * 100)
+
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=amount_cents,
+            currency='aud',
+            customer=profile.stripe_customer_id,
+            payment_method=profile.stripe_pm_id,
+            confirm=True,
+            off_session=True,
+            transfer_group=f'payment_{payment.id}',
+        )
+    except stripe.error.CardError as e:
+        return False, 'card_declined', str(e.user_message or e)
+    except Exception as e:
+        return False, 'stripe_error', str(e)
+
+    # Success — update payment record
+    from django.utils import timezone as _tz
+    now = _tz.now()
+    payment.status = 'paid'
+    payment.paid_at = now
+    payment.authorised_at = now
+    payment.expected_settlement_date = _date.today() + _timedelta(days=2)
+    payment.stripe_payment_intent_id = intent['id']
+    payment.stripe_customer_id = profile.stripe_customer_id
+    payment.save(update_fields=[
+        'status', 'paid_at', 'authorised_at',
+        'expected_settlement_date', 'stripe_payment_intent_id', 'stripe_customer_id',
+    ])
+
+    # Close open ParentJobs for this payment
+    ParentJob.objects.filter(payment=payment, completed_at__isnull=True).update(completed_at=now)
+
+    # Stripe Connect transfers (skip silently if no account ID configured)
+    tutor_profile = TutorProfile.objects.filter(tutor=payment.tutor).first()
+    if tutor_profile and tutor_profile.stripe_account_id:
+        tutor_cents = int(payment.tutor_amount * 100)
+        try:
+            stripe.Transfer.create(
+                amount=tutor_cents,
+                currency='aud',
+                destination=tutor_profile.stripe_account_id,
+                transfer_group=f'payment_{payment.id}',
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning('Tutor transfer failed: %s', e)
+
+    if payment.distributor:
+        dist_profile = DistributorProfile.objects.filter(user=payment.distributor).first()
+        if dist_profile and dist_profile.stripe_account_id and payment.distributor_amount > 0:
+            dist_cents = int(payment.distributor_amount * 100)
+            try:
+                stripe.Transfer.create(
+                    amount=dist_cents,
+                    currency='aud',
+                    destination=dist_profile.stripe_account_id,
+                    transfer_group=f'payment_{payment.id}',
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning('Distributor transfer failed: %s', e)
+
+    return True, None, None
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def payment_authorise(request, pk):
+    """Parent authorises payment: save rating, charge card via Stripe."""
+    from django.utils import timezone as _tz
+
+    try:
+        payment = SessionPayment.objects.select_related('session', 'session__student', 'tutor', 'parent').get(pk=pk)
+    except SessionPayment.DoesNotExist:
+        return Response({'error': 'Payment not found'}, status=404)
+
+    if payment.parent != request.user:
+        return Response({'error': 'Forbidden'}, status=403)
+
+    if payment.status != 'pending':
+        return Response({'error': f'Payment is already {payment.status}'}, status=400)
+
+    # Save optional rating
+    rating = request.data.get('rating')
+    comment = request.data.get('rating_comment', '')
+    if rating is not None:
+        payment.rating = int(rating)
+        payment.rating_comment = comment
+        payment.save(update_fields=['rating', 'rating_comment'])
+
+    # Check payment profile
+    try:
+        profile = ParentPaymentProfile.objects.get(parent=request.user, setup_complete=True)
+    except ParentPaymentProfile.DoesNotExist:
+        return Response({'error': 'No payment method on file. Please add a card first.'}, status=400)
+
+    success, error_code, message = _run_charge(payment, profile)
+
+    if success:
+        # Flag low ratings to admin
+        if payment.rating and payment.rating <= 2:
+            AdminJob.objects.create(job_type='low_session_rating', subject=payment.parent)
+
+        return Response({'success': True, 'payment': payment.to_dict()})
+
+    # Card declined — create failure jobs
+    _create_payment_failed_jobs(payment)
+    return Response({'success': False, 'error': error_code, 'message': message}, status=402)
+
+
+def _create_payment_failed_jobs(payment):
+    """Create the three jobs triggered by a payment failure."""
+    from django.utils import timezone as _tz
+    now = _tz.now()
+
+    ParentJob.objects.create(
+        parent=payment.parent,
+        payment=payment,
+        job_type='payment_failed',
+    )
+    TutorJob.objects.create(
+        tutor=payment.tutor,
+        student=payment.session.student,
+        job_type='payment_failed',
+        session=payment.session,
+        booking_ref=f'payment_{payment.id}_failed',
+        expires_at=now + _timedelta(days=30),
+    )
+    AdminJob.objects.create(job_type='payment_failed', subject=payment.parent)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def payment_retry(request, pk):
+    """Parent retries after a failed payment using an updated card."""
+    try:
+        payment = SessionPayment.objects.select_related('session', 'session__student', 'tutor', 'parent').get(pk=pk)
+    except SessionPayment.DoesNotExist:
+        return Response({'error': 'Payment not found'}, status=404)
+
+    if payment.parent != request.user:
+        return Response({'error': 'Forbidden'}, status=403)
+
+    if payment.status not in ('pending', 'failed'):
+        return Response({'error': f'Cannot retry payment with status {payment.status}'}, status=400)
+
+    # Update card if a new payment_method_id was supplied
+    payment_method_id = request.data.get('payment_method_id')
+    stripe = _get_stripe()
+
+    profile, _ = ParentPaymentProfile.objects.get_or_create(parent=request.user)
+
+    if payment_method_id:
+        if not profile.stripe_customer_id:
+            return Response({'error': 'No Stripe customer found'}, status=400)
+
+        stripe.PaymentMethod.attach(payment_method_id, customer=profile.stripe_customer_id)
+        stripe.Customer.modify(
+            profile.stripe_customer_id,
+            invoice_settings={'default_payment_method': payment_method_id},
+        )
+        pm = stripe.PaymentMethod.retrieve(payment_method_id)
+        card = pm.get('card', {})
+        profile.stripe_pm_id = payment_method_id
+        profile.card_last4 = card.get('last4')
+        profile.card_brand = card.get('brand')
+        profile.setup_complete = True
+        profile.save(update_fields=['stripe_pm_id', 'card_last4', 'card_brand', 'setup_complete'])
+
+    if not profile.setup_complete:
+        return Response({'error': 'No payment method on file'}, status=400)
+
+    # Reset to pending so authorise logic accepts it
+    payment.status = 'pending'
+    payment.save(update_fields=['status'])
+
+    success, error_code, message = _run_charge(payment, profile)
+
+    if success:
+        # Close all open jobs for this payment
+        from django.utils import timezone as _tz
+        now = _tz.now()
+        ParentJob.objects.filter(payment=payment, completed_at__isnull=True).update(completed_at=now)
+        return Response({'success': True, 'payment': payment.to_dict()})
+
+    _create_payment_failed_jobs(payment)
+    return Response({'success': False, 'error': error_code, 'message': message}, status=402)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def payment_detail(request, pk):
+    """GET /api/payments/:id/ — fetch a single SessionPayment."""
+    try:
+        payment = SessionPayment.objects.select_related('session', 'session__student', 'tutor', 'parent').get(pk=pk)
+    except SessionPayment.DoesNotExist:
+        return Response({'error': 'Not found'}, status=404)
+
+    if payment.parent != request.user and payment.tutor != request.user and getattr(request.user, 'role', '') != 'admin':
+        return Response({'error': 'Forbidden'}, status=403)
+
+    profile = ParentPaymentProfile.objects.filter(parent=payment.parent).first()
+    data = payment.to_dict()
+    if profile and profile.setup_complete:
+        data['card_info'] = {'brand': profile.card_brand, 'last4': profile.card_last4}
+    else:
+        data['card_info'] = None
+
+    return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def tutor_billing(request):
+    """GET /api/payments/tutor-billing/ — payment summary for the authenticated tutor."""
+    from decimal import Decimal
+    tutor = request.user
+    payments = SessionPayment.objects.filter(
+        tutor=tutor,
+    ).select_related('session', 'session__student', 'parent').order_by('-created_at')
+
+    import datetime as _dt
+    today = _dt.date.today()
+    month_start = today.replace(day=1)
+
+    pending, confirmed, failed = [], [], []
+    total_pending = Decimal('0.00')
+    total_confirmed_month = Decimal('0.00')
+    total_confirmed_all = Decimal('0.00')
+
+    for p in payments:
+        d = p.to_dict()
+        if p.status in ('pending', 'authorised', 'overdue_7', 'overdue_14'):
+            pending.append(d)
+            total_pending += p.tutor_amount
+        elif p.status == 'paid':
+            confirmed.append(d)
+            total_confirmed_all += p.tutor_amount
+            if p.paid_at and p.paid_at.date() >= month_start:
+                total_confirmed_month += p.tutor_amount
+        elif p.status == 'failed':
+            failed.append(d)
+
+    return Response({
+        'pending': pending,
+        'confirmed': confirmed,
+        'failed': failed,
+        'total_pending': str(total_pending),
+        'total_confirmed_this_month': str(total_confirmed_month),
+        'total_confirmed_all_time': str(total_confirmed_all),
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def parent_payment_history(request, pk):
+    """GET /api/parents/:id/payments/ — full payment history for a parent."""
+    if request.user.id != pk and getattr(request.user, 'role', '') != 'admin':
+        return Response({'error': 'Forbidden'}, status=403)
+
+    payments = SessionPayment.objects.filter(
+        parent_id=pk,
+    ).select_related('session', 'session__student', 'tutor').order_by('-created_at')
+
+    pending, paid, failed = [], [], []
+    for p in payments:
+        d = p.to_dict()
+        if p.status in ('pending', 'authorised', 'overdue_7', 'overdue_14'):
+            pending.append(d)
+        elif p.status == 'paid':
+            paid.append(d)
+        else:
+            failed.append(d)
+
+    return Response({'pending': pending, 'paid': paid, 'failed': failed})

@@ -19,11 +19,16 @@ _CELL_H    = 6.5        # data row height at viz_scale = 1.0
 _PAD_SCALE = 1.0        # vertical padding inside a cell, in multiples of font_size
 
 
+_C_HL       = "#dbeafe"   # highlight fill (light blue)
+_C_HL_LABEL = "#bfdbfe"   # slightly darker for label-column cells in a highlighted row
+
+
 @dataclass
 class DataTableDiagram:
     headers:   List[str]       = field(default_factory=list)
     rows:      List[List[str]] = field(default_factory=list)
     label_col: bool            = False
+    highlight: List[str]       = field(default_factory=list)  # e.g. ["row_1", "row_2"]
 
 
 # ── Parsing ───────────────────────────────────────────────────────────────────
@@ -33,7 +38,9 @@ def _split_csv(text: str) -> List[str]:
     current: List[str] = []
     in_quote = False
     quote_char = ''
-    for ch in text:
+    i = 0
+    while i < len(text):
+        ch = text[i]
         if in_quote:
             if ch == quote_char:
                 in_quote = False
@@ -43,12 +50,29 @@ def _split_csv(text: str) -> List[str]:
             in_quote = True
             quote_char = ch
         elif ch == ',':
-            items.append(''.join(current).strip())
-            current = []
+            # Treat as a thousands separator (not a cell delimiter) when:
+            #   - the character before the comma is a digit, AND
+            #   - the next exactly 3 characters are all digits, AND
+            #   - the character after those 3 digits is a non-digit (or end of string)
+            # This correctly handles $40,000 and $1,000,000 inside cell values.
+            before_digit = bool(current) and current[-1].isdigit()
+            after3 = text[i + 1 : i + 4]
+            after_is_thousands = (
+                before_digit
+                and len(after3) == 3
+                and after3.isdigit()
+                and (i + 4 >= len(text) or not text[i + 4].isdigit())
+            )
+            if after_is_thousands:
+                current.append(ch)
+            else:
+                items.append(''.join(current).strip())
+                current = []
         else:
             current.append(ch)
+        i += 1
     items.append(''.join(current).strip())
-    return [i for i in items if i is not None]
+    return [item for item in items if item is not None]
 
 
 def parse(line: str) -> Optional[DataTableDiagram]:
@@ -76,7 +100,13 @@ def parse(line: str) -> Optional[DataTableDiagram]:
     lc_m = re.search(r'\blabel_col:\s*(true|false)', line)
     label_col = bool(lc_m and lc_m.group(1) == 'true')
 
-    return DataTableDiagram(headers=headers, rows=rows, label_col=label_col)
+    hl_m = re.search(r'\bhighlight:\s*\[([^\]]*)\]', line)
+    if hl_m:
+        highlight = [s.strip().strip('"\'') for s in hl_m.group(1).split(',') if s.strip()]
+    else:
+        highlight = []
+
+    return DataTableDiagram(headers=headers, rows=rows, label_col=label_col, highlight=highlight)
 
 
 # ── Text helpers ──────────────────────────────────────────────────────────────
@@ -213,6 +243,13 @@ def render(d: DataTableDiagram, viz_scale: float = 1.0) -> str:
     STROKE      = "#888888"
     SW          = 0.15
 
+    # Build set of highlighted data row indices (1-indexed; 0 = header in the loop)
+    hl_rows: set = set()
+    for tok in d.highlight:
+        m = re.match(r'^row_(\d+)$', tok.strip())
+        if m:
+            hl_rows.add(int(m.group(1)))
+
     def col_x(col_idx: int) -> float:
         return x0 if col_idx == 0 else x0 + label_w + (col_idx - 1) * data_w
 
@@ -237,8 +274,17 @@ def render(d: DataTableDiagram, viz_scale: float = 1.0) -> str:
             cy  = row_y(row_idx)
             ch  = row_height(row_idx)
             is_first_col = col_idx == 0
+            is_hl_row = (not is_header_row) and (row_idx in hl_rows)
+
+            if is_hl_row:
+                # Highlighted row: slightly deeper shade on the label column for contrast
+                fill = _C_HL_LABEL if (is_first_col and d.label_col) else _C_HL
+            elif is_header_row or (is_first_col and d.label_col):
+                fill = FILL_HEADER
+            else:
+                fill = FILL_NORMAL
+
             shaded = is_header_row or (is_first_col and d.label_col)
-            fill   = FILL_HEADER if shaded else FILL_NORMAL
 
             out.append(
                 f'<rect x="{cx:.3f}" y="{cy:.3f}" '
@@ -249,6 +295,8 @@ def render(d: DataTableDiagram, viz_scale: float = 1.0) -> str:
             text = d.headers[col_idx] if is_header_row else (
                 d.rows[row_idx - 1][col_idx] if col_idx < len(d.rows[row_idx - 1]) else ''
             )
+            # SVG text is not processed by KaTeX, so strip LaTeX escapes.
+            text = text.replace('\\$', '$')
 
             if not text:
                 continue

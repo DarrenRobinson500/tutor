@@ -20,6 +20,7 @@ export default function ParentRegisterPage() {
   // Child fields
   const [childFirst, setChildFirst] = useState("");
   const [childLast, setChildLast] = useState("");
+  const [childEmail, setChildEmail] = useState("");
   const [childYear, setChildYear] = useState("");
   const [childSchool, setChildSchool] = useState("");
   const [childMobile, setChildMobile] = useState("");
@@ -36,6 +37,7 @@ export default function ParentRegisterPage() {
     if (!parentPassword) return "Please choose a password.";
     if (parentPassword !== parentConfirm) return "Passwords do not match.";
     if (!childFirst.trim() || !childLast.trim()) return "Please enter your child's full name.";
+    if (!childEmail.trim()) return "Please enter your child's email address.";
     if (!childYear) return "Please select your child's year level.";
     if (!childPassword) return "Please choose a password for your child.";
     if (childPassword !== childConfirm) return "Child's passwords do not match.";
@@ -67,6 +69,7 @@ export default function ParentRegisterPage() {
           parent_mobile: parentMobile.trim(),
           child_first_name: childFirst.trim(),
           child_last_name: childLast.trim(),
+          child_email: childEmail.trim(),
           child_year_level: childYear,
           child_school_name: childSchool.trim(),
           child_mobile: childMobile.trim(),
@@ -217,6 +220,16 @@ export default function ParentRegisterPage() {
                     required
                   />
                 </div>
+              </div>
+
+              <div className="sm-form-group">
+                <label htmlFor="c-email">Child's email address</label>
+                <input
+                  id="c-email" type="email" className="sm-input"
+                  placeholder="child@example.com"
+                  value={childEmail} onChange={(e) => setChildEmail(e.target.value)}
+                  required autoComplete="off"
+                />
               </div>
 
               <div className="sm-form-group">

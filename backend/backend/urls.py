@@ -34,6 +34,16 @@ urlpatterns = [
     path("auth/jwt/login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("auth/jwt/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("docs/", editor_docs, name="editor_docs"),
+
+    # Payment flow
+    path("api/payments/setup-intent/",        payment_setup_intent,    name="payment_setup_intent"),
+    path("api/payments/save-payment-method/", payment_save_method,     name="payment_save_method"),
+    path("api/payments/pending/",             payment_pending,         name="payment_pending"),
+    path("api/payments/tutor-billing/",       tutor_billing,           name="tutor_billing"),
+    path("api/payments/<int:pk>/",            payment_detail,          name="payment_detail"),
+    path("api/payments/<int:pk>/authorise/",  payment_authorise,       name="payment_authorise"),
+    path("api/payments/<int:pk>/retry/",      payment_retry,           name="payment_retry"),
+    path("api/parents/<int:pk>/payments/",    parent_payment_history,  name="parent_payment_history"),
 ]
 
 urlpatterns += router.urls

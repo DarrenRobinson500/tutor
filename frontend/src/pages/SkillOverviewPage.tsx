@@ -63,6 +63,7 @@ export function SkillOverviewPage() {
   const [creatingSlot, setCreatingSlot] = useState<string | null>(null); // "grade:diff:detailId"
   const [creatingEmptySlot, setCreatingEmptySlot] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<TemplateSummary | null>(null);
   const [shiftingGrade, setShiftingGrade] = useState<string | null>(null);
 
   useEffect(() => {
@@ -180,9 +181,15 @@ export function SkillOverviewPage() {
     }
   };
 
-  const deleteTemplate = async (t: TemplateSummary, e: React.MouseEvent) => {
+  const deleteTemplate = (t: TemplateSummary, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm(`Delete "${t.skill_detail || t.name}"? This cannot be undone.`)) return;
+    setPendingDelete(t);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    const t = pendingDelete;
+    setPendingDelete(null);
     setDeletingId(t.id);
     await apiFetch(`/api/templates/${t.id}/`, { method: "DELETE" });
     setTemplates(prev => prev.filter(x => x.id !== t.id));
@@ -504,6 +511,29 @@ export function SkillOverviewPage() {
             </div>
           )}
         </div>
+
+        {/* ── Delete Template Confirm Modal ─────────────────── */}
+        {pendingDelete && (
+          <div className="modal show d-block" style={{ background: "rgba(0,0,0,0.4)" }} onClick={() => setPendingDelete(null)}>
+            <div className="modal-dialog modal-dialog-centered" onClick={e => e.stopPropagation()}>
+              <div className="modal-content">
+                <div className="modal-header border-0 pb-0">
+                  <h5 className="modal-title">Delete template?</h5>
+                  <button className="btn-close" onClick={() => setPendingDelete(null)} />
+                </div>
+                <div className="modal-body pt-2">
+                  <p className="mb-0">
+                    <strong>{pendingDelete.skill_detail || pendingDelete.name}</strong> will be permanently deleted. This cannot be undone.
+                  </p>
+                </div>
+                <div className="modal-footer border-0">
+                  <button className="btn btn-secondary" onClick={() => setPendingDelete(null)}>Cancel</button>
+                  <button className="btn btn-danger" onClick={confirmDelete}>Delete</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Link Knowledge Modal ───────────────────────────── */}
         {showLinkModal && (

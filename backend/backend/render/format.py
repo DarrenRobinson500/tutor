@@ -321,7 +321,7 @@ class RatioFormat(FormatType):
 @register_format_type
 class SimplifiedRatioFormat(FormatType):
     """Simplifies a ratio string: '4:8' → '1:2', '6:9' → '2:3'."""
-    name = "simplified"
+    name = "simplified_ratio"
 
     def format(self, value):
         from math import gcd
@@ -476,3 +476,48 @@ class ExprFormat(FormatType):
         # Tidy up any double spaces introduced
         v = re.sub(r'  +', ' ', v).strip()
         return v
+
+
+@register_format_type
+class SimplifiedFormat(FormatType):
+    """Algebraically simplifies a math or LaTeX expression and returns a student-typeable string.
+
+    Accepts both plain math notation and LaTeX (\\dfrac, \\times, \\div, etc.).
+    The default variable is 'x'; pass var= to change it.
+
+    Examples:
+      {{ question | simplified }}
+        where question = '\\dfrac{ 3x }{ 7 } \\times \\dfrac{ 4x }{ 2 }'  →  '6x^2/7'
+      {{ question | simplified }}
+        where question = '\\dfrac{ 3x }{ 7 } \\div \\dfrac{ 4x }{ 2 }'    →  '3/14'
+      {{ expr | simplified(var=t) }}  for expressions in t
+    """
+
+    name = "simplified"
+
+    def format(self, value):
+        from .context import _simplify_expr
+        var = self.options.get("var", "x")
+        return _simplify_expr(str(value), var=var)
+
+
+@register_format_type
+class FactorisedFormat(FormatType):
+    """Fully factorises a math expression and returns a student-typeable string.
+
+    Accepts plain math notation or LaTeX input.
+    The default variable is 'x'; pass var= to change it.
+
+    Examples:
+      {{ question | factorised }}
+        where question = '15*x + -6'  →  '3(5x - 2)'
+        where question = 'x^2 - 5x + 6'  →  '(x - 2)(x - 3)'
+      {{ expr | factorised(var=t) }}  for expressions in t
+    """
+
+    name = "factorised"
+
+    def format(self, value):
+        from .context import _factorise_expr
+        var = self.options.get("var", "x")
+        return _factorise_expr(str(value), var=var)

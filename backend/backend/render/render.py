@@ -133,34 +133,62 @@ class Render:
         param_specs = self.template.get("parameters", {})
         for name, spec in param_specs.items():
             self.param_objects[name] = RandomParameter.from_yaml(name, spec)
-        # Second pass: resolve derived (expr) parameters in dependency order.
-        # YAML loaders may not preserve insertion order, so we do a topological
-        # sort to ensure each ExprParameter is resolved after its dependencies.
-        expr_names = [n for n, p in self.param_objects.items() if isinstance(p, ExprParameter)]
+
+        # Build a unified set of "deferred" params: ExprParameters (always deferred) and
+        # any param whose bounds are variable references (e.g. DollarParameter with
+        # min: price_min).  Both kinds need post-creation resolution and must participate
+        # in the same topological sort so that an ExprParameter like `D = principal * r`
+        # is resolved AFTER `principal` has been re-generated with its real value.
         all_names = set(self.param_objects)
-        # Build dependency map: which other params does each expr reference?
+        deferred = {
+            name: p for name, p in self.param_objects.items()
+            if isinstance(p, ExprParameter)
+            or (callable(getattr(p, '_has_var_refs', None)) and p._has_var_refs())
+        }
+
+        # Build dependency map for each deferred param.
         deps = {}
-        for n in expr_names:
-            expr = self.param_objects[n]._expr
-            deps[n] = {p for p in all_names if p != n and re.search(rf'\b{re.escape(p)}\b', expr)}
-        # Kahn's topological sort
-        in_degree = {n: len(deps[n] & set(expr_names)) for n in expr_names}
-        queue = [n for n in expr_names if in_degree[n] == 0]
+        for name, p in deferred.items():
+            if isinstance(p, ExprParameter):
+                expr = p._expr
+                deps[name] = {n for n in all_names if n != name and re.search(rf'\b{re.escape(n)}\b', expr)}
+            else:
+                # Deferred-generate param: dependencies are the string var-ref option values.
+                param_deps = set()
+                for v in p.options.values():
+                    if isinstance(v, str) and v in all_names:
+                        try:
+                            float(v)
+                        except ValueError:
+                            param_deps.add(v)
+                deps[name] = param_deps
+
+        # Kahn's topological sort over all deferred params.
+        deferred_names = list(deferred)
+        in_degree = {n: len(deps[n] & set(deferred_names)) for n in deferred_names}
+        queue = [n for n in deferred_names if in_degree[n] == 0]
         ordered = []
         while queue:
             node = queue.pop(0)
             ordered.append(node)
-            for other in expr_names:
+            for other in deferred_names:
                 if node in deps[other]:
                     in_degree[other] -= 1
                     if in_degree[other] == 0:
                         queue.append(other)
-        # Append any remaining (circular deps — will raise naturally on resolve)
-        for n in expr_names:
+        # Append any remaining (circular deps — will raise naturally on resolve).
+        for n in deferred_names:
             if n not in ordered:
                 ordered.append(n)
+
+        # Resolve/generate each deferred param in dependency order.
         for name in ordered:
-            self.param_objects[name].resolve(self.param_objects)
+            p = deferred[name]
+            if isinstance(p, ExprParameter):
+                p.resolve(self.param_objects)
+            else:
+                ctx = {n: obj.value for n, obj in self.param_objects.items()}
+                p.value = p.generate(ctx)
 
     def _substitute_expressions(self):
         # Deep copy the template for two different outputs
@@ -248,7 +276,7 @@ def _evaluate_rule(expr, params):
                 numeric_params[k] = v
         else:
             numeric_params[k] = v
-    from .expr import _LIST_CONTEXT, _STRING_CONTEXT
+    from .context import LIST_CONTEXT as _LIST_CONTEXT, STRING_CONTEXT as _STRING_CONTEXT
     ctx = {"__builtins__": {}, "gcd": gcd, "denominator": denominator, "numerator": numerator}
     ctx.update(_LIST_CONTEXT)
     ctx.update(_STRING_CONTEXT)
@@ -343,7 +371,15 @@ def render_template_preview(parsed):
 
     for attempt in range(MAX_ATTEMPTS):
         renderer = Render(yaml_text)
-        renderer.render()
+        try:
+            renderer.render()
+        except (ValueError, ZeroDivisionError, ArithmeticError) as e:
+            # A derived parameter expression failed (e.g. division by zero before
+            # validation rules could filter the bad roll). Treat it as a failed
+            # attempt and retry — the same way a failed validation rule does.
+            last_error = str(e)
+            collected_errors.append(last_error)
+            continue
 
         params = {name: p.value for name, p in renderer.param_objects.items()}
 
@@ -373,24 +409,24 @@ def render_template_preview(parsed):
     raw_sub = renderer.substituted_yaml or {}
     params = {name: p.value for name, p in renderer.param_objects.items()}
 
-    # Extract question and solution from formatted preview
+    # Extract question, solution, and post_answer from the formatted preview.
+    # Solution and post_answer may be nested inside the question: block (modern format)
+    # or at the top level (legacy format). Check both, preferring the question block.
     question_block = preview.get("question", {})
     if isinstance(question_block, dict):
         question_text = question_block.get("text", "")
     else:
         question_text = str(question_block) if question_block else ""
 
-    solution_block = preview.get("solution", {})
-    if isinstance(solution_block, dict):
-        solution_text = solution_block.get("text", "")
-    else:
-        solution_text = str(solution_block) if solution_block else ""
+    def _extract_block(key, default=""):
+        val = (question_block.get(key) if isinstance(question_block, dict) else None) \
+              or preview.get(key, default)
+        if isinstance(val, dict):
+            return val.get("text", "")
+        return str(val) if val else ""
 
-    post_answer_block = preview.get("post_answer", "")
-    if isinstance(post_answer_block, dict):
-        post_answer_text = post_answer_block.get("text", "")
-    else:
-        post_answer_text = str(post_answer_block) if post_answer_block else ""
+    solution_text = _extract_block("solution")
+    post_answer_text = _extract_block("post_answer")
 
     # Resolve {{ Knowledge("title") }} sentinels: strip from text, look up DB items
     _knowledge_refs = getattr(renderer, '_knowledge_refs', [])
@@ -477,6 +513,11 @@ def render_template_preview(parsed):
             if tol2 is not None:
                 try:
                     entry["tolerance"] = float(tol2)
+                except (TypeError, ValueError):
+                    pass
+            if item.get("width") is not None:
+                try:
+                    entry["width"] = int(item["width"])
                 except (TypeError, ValueError):
                     pass
             resolved.append(entry)
@@ -1076,7 +1117,9 @@ def render_template_preview(parsed):
         "parameters": display_params,
         "question": question_text,
         "solution": solution_text,
-        "answers": _display_answers(raw_answers),
+        "answers": [{"input": a.get("text", ""), "correct": a.get("correct", True)}
+                    for a in deduped_answers if isinstance(a, dict) and "text" in a]
+                   or _display_answers(raw_answers),
         "diagram": preview.get("diagram", {}),
     }
     if _multiple_answers is not None:

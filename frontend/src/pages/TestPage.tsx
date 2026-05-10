@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { PreviewPanel } from "./components/PreviewPanel";
-import { Calculator } from "./components/Calculator";
+import { DraggableCalculator } from "./components/Calculator";
 import { apiFetch } from "../utils/apiFetch";
 import { useYears } from "../utils/useYears";
 import type { PreviewResponse, StudentRecordResponse } from "../types/PreviewResponse";
@@ -310,6 +310,7 @@ export function TestPage() {
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [testType, setTestType] = useState(testTypeParam);
   const [mode, setMode] = useState(modeParam);
+  const [studentFirstName, setStudentFirstName] = useState("");
   const [question, setQuestion] = useState<TestQuestion | null>(null);
   const [skillProgress, setSkillProgress] = useState<SkillProgress[]>([]);
   const [status, setStatus] = useState<"loading" | "active" | "complete" | "error">("loading");
@@ -328,6 +329,13 @@ export function TestPage() {
 
   useEffect(() => {
     startTest();
+    apiFetch(`/api/students/${studentId}/`)
+      .then(r => r.json())
+      .then(d => {
+        const name = d.first_name || d.user?.first_name;
+        if (name) setStudentFirstName(name);
+      })
+      .catch(() => {});
   }, []);
 
   // Close metadata panel when question changes
@@ -515,14 +523,25 @@ export function TestPage() {
           )}
           <div className="d-flex gap-2">
             {sessionId && !isLearning && (
-              <a
-                href={`/api/tests/${sessionId}/report/`}
+              <button
                 className="btn btn-primary"
-                target="_blank"
-                rel="noreferrer"
+                onClick={async () => {
+                  const res = await apiFetch(`/api/tests/${sessionId}/report/`);
+                  if (!res.ok) { alert("Failed to generate report"); return; }
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  const now = new Date();
+                  const dateStr = `${now.getDate()} ${now.toLocaleString("en-AU", { month: "long" })}`;
+                  const name = studentFirstName || "Student";
+                  a.download = `${name}'s report ${dateStr}.pdf`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
               >
                 Download PDF Report
-              </a>
+              </button>
             )}
             <button className="btn btn-outline-secondary" onClick={() => navigate(`/students/${studentId}`)}>
               Back to home
@@ -594,19 +613,6 @@ export function TestPage() {
           />
         </div>
 
-        {/* Streak indicators */}
-        <div className="d-flex gap-1 mb-3">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              style={{
-                width: 12, height: 12, borderRadius: "50%",
-                background: i < question.correct_streak ? "#28a745" : "#dee2e6",
-              }}
-            />
-          ))}
-        </div>
-
         {/* Question */}
         <PreviewPanel
           mode="student"
@@ -614,6 +620,7 @@ export function TestPage() {
           studentId={Number(studentId)}
           preview={preview}
           onStudentNext={handleAnswer}
+          disableOnWrong={mode !== "learning"}
         />
 
         {/* Calculator toggle */}
@@ -628,9 +635,7 @@ export function TestPage() {
 
         {/* Floating calculator */}
         {showCalculator && (
-          <div style={{ position: "fixed", right: 24, top: 80, zIndex: 1000, width: 286, transform: "scale(0.82)", transformOrigin: "top right" }}>
-            <Calculator />
-          </div>
+          <DraggableCalculator onClose={() => setShowCalculator(false)} />
         )}
 
         {/* Tutor tools */}

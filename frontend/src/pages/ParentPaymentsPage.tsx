@@ -1,124 +1,188 @@
 import { useEffect, useState } from "react";
-import { Layout } from "./components/Layout";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { apiFetch } from "../utils/apiFetch";
 
 interface PaymentRow {
   id: number;
-  date_tuition: string | null;
-  student_name: string;
+  session_date: string | null;
+  child_name: string;
   tutor_name: string;
-  amount_paid: string;
-  focus_area: string;
-}
-
-interface MonthBlock {
-  label: string;
-  payments: PaymentRow[];
-  total: string;
+  total_amount: string;
+  tutor_amount: string;
+  platform_amount: string;
+  distributor_amount: string;
+  status: string;
+  paid_at: string | null;
+  expected_settlement_date: string | null;
 }
 
 interface PaymentsData {
-  current_month: MonthBlock;
-  last_month: MonthBlock;
-  older: { payments: PaymentRow[]; total: string };
+  pending: PaymentRow[];
+  paid: PaymentRow[];
+  failed: PaymentRow[];
 }
 
-function fmt(date: string | null) {
-  if (!date) return "—";
-  return new Date(date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+function currency(v: string | number) {
+  return `$${parseFloat(String(v)).toFixed(2)}`;
 }
 
-function currency(val: string) {
-  return `$${parseFloat(val).toFixed(2)}`;
+function fmtDate(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function PaymentTable({ payments }: { payments: PaymentRow[] }) {
-  if (payments.length === 0) {
-    return <p className="text-muted" style={{ fontSize: 13 }}>No payments this period.</p>;
-  }
+function StatusBadge({ status }: { status: string }) {
+  const cfg: Record<string, { bg: string; color: string; label: string }> = {
+    pending:    { bg: "#FFF8E1", color: "var(--sm-amber, #FFCA3A)",              label: "Pending" },
+    paid:       { bg: "var(--sm-success-bg, #E8F5E9)", color: "var(--sm-success, #2E7D32)", label: "Paid" },
+    failed:     { bg: "var(--sm-error-bg, #FFEBEE)",   color: "var(--sm-error, #C0392B)",   label: "Failed" },
+    overdue_7:  { bg: "#FFF3E0", color: "#E65100",                               label: "Overdue" },
+    overdue_14: { bg: "var(--sm-error-bg, #FFEBEE)",   color: "var(--sm-error, #C0392B)",   label: "Overdue" },
+  };
+  const c = cfg[status] || { bg: "#eee", color: "#333", label: status };
   return (
-    <table className="table table-sm table-hover" style={{ fontSize: 13 }}>
-      <thead className="table-light">
-        <tr>
-          <th>Date</th>
-          <th>Student</th>
-          <th>Tutor</th>
-          <th>Focus Area</th>
-          <th className="text-end">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        {payments.map(p => (
-          <tr key={p.id}>
-            <td>{fmt(p.date_tuition)}</td>
-            <td>{p.student_name}</td>
-            <td>{p.tutor_name}</td>
-            <td className="text-muted">{p.focus_area || "—"}</td>
-            <td className="text-end">{currency(p.amount_paid)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <span style={{
+      background: c.bg, color: c.color,
+      borderRadius: "9999px", padding: "2px 10px",
+      fontSize: "0.75rem", fontWeight: 600,
+    }}>
+      {c.label}
+    </span>
   );
 }
 
-function MonthSection({ title, label, block }: { title: string; label?: string; block: { payments: PaymentRow[]; total: string } }) {
+function PaymentTable({
+  rows,
+  showPayBtn,
+  showRetryBtn,
+  onAction,
+}: {
+  rows: PaymentRow[];
+  showPayBtn?: boolean;
+  showRetryBtn?: boolean;
+  onAction?: (id: number) => void;
+}) {
+  if (rows.length === 0) {
+    return <p style={{ color: "var(--sm-text-muted, #8A7F74)", fontSize: 13 }}>None.</p>;
+  }
   return (
-    <div className="mb-4">
-      <div className="d-flex justify-content-between align-items-baseline mb-2">
-        <h5 className="mb-0">{title}{label ? ` — ${label}` : ""}</h5>
-        <span className="fw-semibold text-success fs-6">{currency(block.total)}</span>
-      </div>
-      <PaymentTable payments={block.payments} />
+    <div style={{ overflowX: "auto", borderRadius: 12, border: "1px solid var(--sm-border, #E8E0D6)", boxShadow: "0 2px 8px rgba(0,0,0,.06)", marginBottom: "1rem" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+        <thead>
+          <tr style={{ background: "#fff", borderBottom: "1px solid var(--sm-border, #E8E0D6)" }}>
+            {["Date", "Child", "Tutor", "Amount", "Status", ""].map((h) => (
+              <th key={h} style={{ padding: "0.6rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--sm-text-muted, #8A7F74)" }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((p, i) => (
+            <tr key={p.id} style={{ background: i % 2 === 0 ? "var(--sm-bg, #FFFBF5)" : "#fff", borderBottom: "1px solid var(--sm-border, #E8E0D6)" }}>
+              <td style={{ padding: "0.65rem 1rem" }}>{fmtDate(p.session_date)}</td>
+              <td style={{ padding: "0.65rem 1rem" }}>{p.child_name}</td>
+              <td style={{ padding: "0.65rem 1rem" }}>{p.tutor_name}</td>
+              <td style={{ padding: "0.65rem 1rem", fontWeight: 600 }}>{currency(p.total_amount)}</td>
+              <td style={{ padding: "0.65rem 1rem" }}><StatusBadge status={p.status} /></td>
+              <td style={{ padding: "0.65rem 1rem" }}>
+                {showPayBtn && onAction && (
+                  <button className="sm-btn-primary" style={{ fontSize: 13, padding: "4px 14px" }} onClick={() => onAction(p.id)}>
+                    Pay now
+                  </button>
+                )}
+                {showRetryBtn && onAction && (
+                  <button className="sm-btn-secondary" style={{ fontSize: 13, padding: "4px 14px" }} onClick={() => onAction(p.id)}>
+                    Retry
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 export function ParentPaymentsPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [data, setData] = useState<PaymentsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showOlder, setShowOlder] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    apiFetch("/api/auth/parent_payments/")
-      .then(r => r.json())
+    apiFetch(`/api/parents/${id}/payments/`)
+      .then((r) => {
+        if (!r.ok) throw new Error("Could not load payment history");
+        return r.json();
+      })
       .then(setData)
-      .catch(() => setData(null))
+      .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <img src="/subjectmatter_logo.svg" alt="" style={{ height: 48 }} />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div style={{ padding: "3rem", textAlign: "center", fontFamily: "Inter, system-ui, sans-serif" }}>
+        <p style={{ color: "var(--sm-error, #C0392B)" }}>{error || "Something went wrong."}</p>
+        <Link to="/" style={{ color: "var(--sm-orange, #FF8C42)" }}>Go home</Link>
+      </div>
+    );
+  }
 
   return (
-    <Layout>
-      <div className="container mt-4" style={{ maxWidth: 800 }}>
-        <h3 className="mb-4">Payments</h3>
+    <div style={{ minHeight: "100vh", background: "var(--sm-bg, #FFFBF5)", fontFamily: "Inter, system-ui, sans-serif" }}>
+      <nav style={{ display: "flex", alignItems: "center", gap: "1.5rem", padding: "0 2rem", height: 60, background: "#fff", borderBottom: "1px solid var(--sm-border, #E8E0D6)" }}>
+        <Link to="/">
+          <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" style={{ height: 28 }} />
+        </Link>
+        <span style={{ fontWeight: 600 }}>Payments</span>
+      </nav>
 
-        {loading && <p className="text-muted">Loading…</p>}
+      <main style={{ maxWidth: 900, margin: "0 auto", padding: "2rem 1.5rem" }}>
 
-        {!loading && !data && (
-          <p className="text-danger">Failed to load payments.</p>
+        {/* Pending */}
+        <section style={{ marginBottom: "2.5rem" }}>
+          <h2 style={{ fontFamily: "var(--font-display, Lora, serif)", fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.75rem" }}>
+            Awaiting payment
+          </h2>
+          <PaymentTable
+            rows={data.pending}
+            showPayBtn
+            onAction={(id) => navigate(`/payments/${id}/authorise`)}
+          />
+        </section>
+
+        {/* Paid */}
+        <section style={{ marginBottom: "2.5rem" }}>
+          <h2 style={{ fontFamily: "var(--font-display, Lora, serif)", fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.75rem" }}>
+            Payment history
+          </h2>
+          <PaymentTable rows={data.paid} />
+        </section>
+
+        {/* Failed */}
+        {data.failed.length > 0 && (
+          <section style={{ marginBottom: "2.5rem" }}>
+            <h2 style={{ fontFamily: "var(--font-display, Lora, serif)", fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.75rem" }}>
+              Failed payments
+            </h2>
+            <PaymentTable
+              rows={data.failed}
+              showRetryBtn
+              onAction={(id) => navigate(`/payments/${id}/retry`)}
+            />
+          </section>
         )}
-
-        {data && (
-          <>
-            <MonthSection title="This Month" label={data.current_month.label} block={data.current_month} />
-            <MonthSection title="Last Month" label={data.last_month.label} block={data.last_month} />
-
-            {data.older.payments.length > 0 && (
-              <div className="mb-4">
-                <button
-                  className="btn btn-sm btn-outline-secondary mb-2"
-                  onClick={() => setShowOlder(v => !v)}
-                >
-                  {showOlder ? "Hide older payments" : `Show older payments (${data.older.payments.length})`}
-                </button>
-                {showOlder && (
-                  <MonthSection title="Older" block={data.older} />
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </Layout>
+      </main>
+    </div>
   );
 }

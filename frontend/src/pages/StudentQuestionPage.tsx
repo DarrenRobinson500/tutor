@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Layout } from "./components/Layout";
 import { apiFetch } from "../utils/apiFetch";
 import { PreviewPanel } from "./components/PreviewPanel";
-import { Calculator } from "./components/Calculator";
+import { DraggableCalculator } from "./components/Calculator";
 import type { PreviewResponse } from "../types/PreviewResponse";
 import type { StudentRecordResponse } from "../types/PreviewResponse";
 
@@ -19,6 +19,7 @@ export function StudentQuestionPage() {
   const [seenTemplateIds, setSeenTemplateIds] = useState<number[]>([]);
   const [sessionTemplateIds, setSessionTemplateIds] = useState<number[]>([]);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadInitial() {
@@ -55,10 +56,25 @@ export function StudentQuestionPage() {
     loadInitial();
   }, [studentId, skillId]);
 
-  if (loading || !current) {
+  if (loading) {
     return (
       <Layout>
         <div className="container mt-4">Loading question…</div>
+      </Layout>
+    );
+  }
+
+  if (loadError || !current) {
+    return (
+      <Layout>
+        <div className="container mt-4">
+          <div className="alert alert-warning">
+            {loadError ?? "Unable to load the next question. Please try again."}
+          </div>
+          <button className="btn btn-primary" onClick={() => navigate(-1)}>
+            Go back
+          </button>
+        </div>
       </Layout>
     );
   }
@@ -85,29 +101,32 @@ export function StudentQuestionPage() {
                     navigate(`/students/${studentId}`);
                     return;
                   }
+                  if (!result.next_question) {
+                    setLoadError("Unable to load the next question. Please go back and try again.");
+                    return;
+                  }
                   const nextId = result.template_id;
                   if (nextId) {
                     setSeenTemplateIds(prev => [...prev, nextId]);
                   }
+                  setLoadError(null);
                   setTemplateId(nextId ?? undefined);
                   setCurrent(result.next_question);
                   setMastery(result.mastery);
                   setCompetence(result.competence_label);
                 }}
+                extraInputActions={
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    onClick={() => setShowCalculator(v => !v)}
+                  >
+                    {showCalculator ? "Hide calculator" : "Show calculator"}
+                  </button>
+                }
               />
-              <div className="mt-3">
-                <button
-                  className="btn btn-outline-secondary btn-sm"
-                  onClick={() => setShowCalculator(v => !v)}
-                >
-                  {showCalculator ? "Hide calculator" : "Show calculator"}
-                </button>
-              </div>
 
               {showCalculator && (
-                <div style={{ position: "fixed", right: 24, top: 80, zIndex: 1000, width: 286, transform: "scale(0.82)", transformOrigin: "top right" }}>
-                  <Calculator onClose={() => setShowCalculator(false)} />
-                </div>
+                <DraggableCalculator onClose={() => setShowCalculator(false)} />
               )}
             </div>
           </div>

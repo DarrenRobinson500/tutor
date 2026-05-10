@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 DIAGRAM_TYPE = "Cartesian"
+SUPPORTS_VIZ_SCALE = True
 
 
 @dataclass
@@ -162,7 +163,7 @@ def _fmt_tick(n: float) -> str:
     return str(int(rounded)) if rounded == int(rounded) else str(rounded)
 
 
-def render(d: CartesianDiagram) -> str:
+def render(d: CartesianDiagram, viz_scale: float = 1.0) -> str:
     # square: true expands the x range to fill the full d.w × d.h area (legacy behaviour).
     # Default: enforce equal scale by computing plot width from the data ranges so that
     # 1 unit on the x-axis has the same physical length as 1 unit on the y-axis.
@@ -195,11 +196,17 @@ def render(d: CartesianDiagram) -> str:
     axis_y = max(T, min(B, to_svg_y(0)))
     axis_x = max(L, min(R, to_svg_x(0)))
 
-    sw = 0.2
-    tick_len = 0.8
-    font_size = 1.8
-    x_step = _nice_step((xmax - xmin) / 8)
-    y_step = _nice_step((d.ymax - d.ymin) / 6)
+    # Visual elements scale with viz_scale so they hold a consistent apparent size
+    # regardless of how the viewBox is zoomed.  Geometry (L, R, T, B, data coords)
+    # is never scaled.
+    sw        = 0.2  * viz_scale
+    tick_len  = 0.8  * viz_scale
+    font_size = 1.8  * viz_scale
+    # Use the same step on both axes so grid cells are visually square.
+    # Take the coarser of the two independently-ideal steps.
+    _x_step = _nice_step((xmax - xmin) / 8)
+    _y_step = _nice_step((d.ymax - d.ymin) / 6)
+    x_step = y_step = max(_x_step, _y_step)
 
     x_grid_start = math.ceil(xmin / x_step) * x_step
     y_grid_start = math.ceil(d.ymin / y_step) * y_step
@@ -253,15 +260,15 @@ def render(d: CartesianDiagram) -> str:
     out.append(f'<line x1="{axis_x:.3f}" y1="{T}" x2="{axis_x:.3f}" y2="{B}" stroke="black" stroke-width="{ax_sw}"/>')
 
     # Arrowheads
-    aw, ah = 0.7, 1.2
+    aw, ah = 0.7 * viz_scale, 1.2 * viz_scale
     out.append(f'<polygon points="{R},{axis_y:.3f} {R-ah},{axis_y-aw/2:.3f} {R-ah},{axis_y+aw/2:.3f}" fill="black"/>')
     out.append(f'<polygon points="{axis_x:.3f},{T} {axis_x-aw/2:.3f},{T+ah} {axis_x+aw/2:.3f},{T+ah}" fill="black"/>')
 
     # Axis labels (suppressed when a descriptive or tick label is provided)
     if not d.x_label and not d.x_tick_labels:
-        out.append(f'<text x="{R+0.3}" y="{axis_y + font_size*0.4:.3f}" font-size="{font_size}" font-family="system-ui, -apple-system, sans-serif" font-style="italic" fill="black">x</text>')
+        out.append(f'<text x="{R + 0.3 * viz_scale:.3f}" y="{axis_y + font_size*0.4:.3f}" font-size="{font_size}" font-family="system-ui, -apple-system, sans-serif" font-style="italic" fill="black">x</text>')
     if not d.y_label:
-        out.append(f'<text x="{axis_x - font_size*0.3:.3f}" y="{T-0.5}" text-anchor="middle" font-size="{font_size}" font-family="system-ui, -apple-system, sans-serif" font-style="italic" fill="black">y</text>')
+        out.append(f'<text x="{axis_x - font_size*0.3:.3f}" y="{T - 0.5 * viz_scale:.3f}" text-anchor="middle" font-size="{font_size}" font-family="system-ui, -apple-system, sans-serif" font-style="italic" fill="black">y</text>')
 
     # Tick marks & labels
     label_offset = tick_len + font_size * 0.85
@@ -269,7 +276,7 @@ def render(d: CartesianDiagram) -> str:
     # Optional descriptive labels
     if d.y_label:
         out.append(
-            f'<text x="{axis_x - 4.6:.3f}" y="{T - 1.8:.3f}" '
+            f'<text x="{axis_x - 4.6 * viz_scale:.3f}" y="{T - 1.8 * viz_scale:.3f}" '
             f'text-anchor="start" font-size="{font_size}" font-family="system-ui, -apple-system, sans-serif" fill="#333">'
             f'{d.y_label}</text>'
         )
@@ -413,21 +420,21 @@ def render(d: CartesianDiagram) -> str:
         )
 
     # Named points: blue filled dot + label
-    dot_r = 0.9
+    dot_r    = 0.9 * viz_scale
     label_fs = font_size * 0.95
     for (px, py, label) in d.points:
         sx = to_svg_x(px)
         sy = to_svg_y(py)
         out.append(
-            f'<circle cx="{sx:.3f}" cy="{sy:.3f}" r="{dot_r}" '
-            f'fill="#16a34a" stroke="white" stroke-width="0.3" clip-path="url(#{clip_id})"/>'
+            f'<circle cx="{sx:.3f}" cy="{sy:.3f}" r="{dot_r:.3f}" '
+            f'fill="#16a34a" stroke="white" stroke-width="{0.3 * viz_scale:.3f}" clip-path="url(#{clip_id})"/>'
         )
         if label:
             # Offset label so it doesn't overlap the dot — nudge up-right
-            lx = sx + dot_r + 0.5
-            ly = sy - dot_r - 0.3
+            lx = sx + dot_r + 0.5 * viz_scale
+            ly = sy - dot_r - 0.3 * viz_scale
             out.append(
-                f'<text x="{lx:.3f}" y="{ly:.3f}" font-size="{label_fs}" '
+                f'<text x="{lx:.3f}" y="{ly:.3f}" font-size="{label_fs:.3f}" '
                 f'font-family="system-ui, -apple-system, sans-serif" '
                 f'fill="#16a34a" font-weight="bold">{label}</text>'
             )

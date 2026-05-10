@@ -585,6 +585,7 @@ class BookingAdhoc(models.Model):
 class ParentChild(models.Model):
     parent = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="children")
     child = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="parents")
+    sessions_paused = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ("parent", "child")
@@ -689,6 +690,9 @@ class TutorProfile(models.Model):
     # Availability
     looking_for_students = models.BooleanField(default=True)
     edit_syllabus = models.BooleanField(default=False)
+
+    # Stripe Connect
+    stripe_account_id = models.CharField(max_length=200, blank=True, null=True)
 
     def __str__(self): return f"{self.tutor}"
 
@@ -945,6 +949,9 @@ class TutorJob(models.Model):
         ('review_focus_area', 'Review Focus Area'),
         ('review_available_hours', 'Review My Available Hours'),
         ('setup_weekly_session', 'Set Up Weekly Session'),
+        ('payment_failed', 'Payment Failed'),
+        ('payment_overdue_7', 'Payment Overdue — 7 Days'),
+        ('payment_overdue_14', 'Payment Overdue — 14 Days — Sessions Paused'),
     ]
     tutor = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tutor_jobs')
     student = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='student_jobs')
@@ -973,6 +980,10 @@ class AdminJob(models.Model):
     JOB_TYPES = [
         ('approve_distributor', 'Approve Distributor'),
         ('approve_tutor', 'Approve Tutor'),
+        ('payment_failed', 'Payment Failed'),
+        ('payment_overdue_7', 'Payment Overdue — 7 Days'),
+        ('payment_overdue_14', 'Payment Overdue — 14 Days'),
+        ('low_session_rating', 'Low Session Rating'),
     ]
     job_type = models.CharField(max_length=50, choices=JOB_TYPES)
     subject = models.ForeignKey(
@@ -1496,6 +1507,7 @@ class DistributorProfile(models.Model):
     referral_code = models.CharField(max_length=16, unique=True, blank=True)
     approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    stripe_account_id = models.CharField(max_length=200, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if not self.referral_code:
@@ -1792,3 +1804,123 @@ class AssessmentToken(models.Model):
 
     def __str__(self):
         return f"AssessmentToken({self.student}, expires {self.expires_at})"
+
+
+# ── Payment flow ──────────────────────────────────────────────────────────────
+
+class SessionPayment(models.Model):
+    """Stripe-integrated payment for a completed tutoring session."""
+    STATUS_CHOICES = [
+        ('pending',     'Pending'),
+        ('authorised',  'Authorised'),
+        ('paid',        'Paid'),
+        ('failed',      'Failed'),
+        ('overdue_7',   'Overdue 7d'),
+        ('overdue_14',  'Overdue 14d'),
+    ]
+
+    session      = models.OneToOneField('TutoringSession', on_delete=models.CASCADE, related_name='session_payment')
+    parent       = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='session_payments_as_parent')
+    tutor        = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='session_payments_as_tutor')
+    distributor  = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='session_payments_as_distributor')
+
+    tutor_amount        = models.DecimalField(max_digits=8, decimal_places=2)
+    platform_amount     = models.DecimalField(max_digits=8, decimal_places=2, default=6.50)
+    distributor_amount  = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
+    total_amount        = models.DecimalField(max_digits=8, decimal_places=2)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    stripe_payment_intent_id = models.CharField(max_length=200, blank=True, null=True)
+    stripe_customer_id       = models.CharField(max_length=200, blank=True, null=True)
+
+    created_at               = models.DateTimeField(auto_now_add=True)
+    authorised_at            = models.DateTimeField(null=True, blank=True)
+    paid_at                  = models.DateTimeField(null=True, blank=True)
+    expected_settlement_date = models.DateField(null=True, blank=True)
+
+    rating         = models.IntegerField(null=True, blank=True)
+    rating_comment = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"SessionPayment #{self.id} — {self.parent} — ${self.total_amount} — {self.status}"
+
+    def _focus_areas(self):
+        """Return focus area descriptions from the linked BookingOutcome, if any."""
+        try:
+            outcome = BookingOutcome.objects.filter(
+                tutor=self.tutor,
+                student=self.session.student,
+            ).order_by('-date').first()
+            if outcome:
+                return [s.description for s in outcome.focus_areas.all()]
+        except Exception:
+            pass
+        return []
+
+    def _parent_message(self):
+        try:
+            outcome = BookingOutcome.objects.filter(
+                tutor=self.tutor,
+                student=self.session.student,
+            ).order_by('-date').first()
+            return outcome.parent_message if outcome else ""
+        except Exception:
+            return ""
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'status': self.status,
+            'tutor_amount': str(self.tutor_amount),
+            'platform_amount': str(self.platform_amount),
+            'distributor_amount': str(self.distributor_amount),
+            'total_amount': str(self.total_amount),
+            'tutor_name': self.tutor.get_full_name(),
+            'tutor_id': self.tutor.id,
+            'parent_id': self.parent.id,
+            'session_id': self.session.id,
+            'session_date': self.session.created_at.date().isoformat(),
+            'child_name': self.session.student.first_name,
+            'focus_areas': self._focus_areas(),
+            'parent_message': self._parent_message(),
+            'rating': self.rating,
+            'created_at': self.created_at.isoformat(),
+            'paid_at': self.paid_at.isoformat() if self.paid_at else None,
+            'expected_settlement_date': self.expected_settlement_date.isoformat() if self.expected_settlement_date else None,
+        }
+
+
+class ParentPaymentProfile(models.Model):
+    """Stores the parent's Stripe customer ID and saved payment method."""
+    parent             = models.OneToOneField(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payment_profile')
+    stripe_customer_id = models.CharField(max_length=200, blank=True, null=True)
+    stripe_pm_id       = models.CharField(max_length=200, blank=True, null=True)
+    card_last4         = models.CharField(max_length=4, blank=True, null=True)
+    card_brand         = models.CharField(max_length=20, blank=True, null=True)
+    setup_complete     = models.BooleanField(default=False)
+    created_at         = models.DateTimeField(auto_now_add=True)
+    updated_at         = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"PaymentProfile — {self.parent} — {'setup' if self.setup_complete else 'not setup'}"
+
+
+class ParentJob(models.Model):
+    JOB_TYPES = [
+        ('payment_due',      'Payment Due'),
+        ('payment_failed',   'Payment Failed — Update Card'),
+        ('payment_overdue_7',  'Payment Overdue — 7 Days'),
+        ('payment_overdue_14', 'Payment Overdue — Sessions Paused'),
+    ]
+    parent       = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='parent_jobs')
+    payment      = models.ForeignKey(SessionPayment, on_delete=models.CASCADE, related_name='parent_jobs')
+    job_type     = models.CharField(max_length=50, choices=JOB_TYPES)
+    created_at   = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['created_at']

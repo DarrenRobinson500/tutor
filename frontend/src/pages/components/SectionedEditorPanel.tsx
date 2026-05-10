@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Editor from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
+import type * as monacoTypes from "monaco-editor";
 import { apiFetch } from "../../utils/apiFetch";
 import { ParameterHelper } from "./ParameterHelper";
 import { DiagramHelper } from "./DiagramHelper";
@@ -210,13 +210,14 @@ async function saveToBackend(templateId: string | number | null, content: string
 }
 
 function applyDecorations(
-  editor: monaco.editor.IStandaloneCodeEditor,
-  collection: monaco.editor.IEditorDecorationsCollection
+  monaco: typeof monacoTypes,
+  editor: monacoTypes.editor.IStandaloneCodeEditor,
+  collection: monacoTypes.editor.IEditorDecorationsCollection
 ) {
   const model = editor.getModel();
   if (!model) return;
   const text = model.getValue();
-  const decorations: monaco.editor.IModelDeltaDecoration[] = [];
+  const decorations: monacoTypes.editor.IModelDeltaDecoration[] = [];
   const regex = /\{\{.*?\}\}/g;
   let match;
   while ((match = regex.exec(text)) !== null) {
@@ -322,14 +323,15 @@ function SectionEditor({
   collapsed: boolean;
   onToggle: () => void;
   onChange: (key: string, val: string) => void;
-  onRegisterEditor: (editor: monaco.editor.IStandaloneCodeEditor) => void;
+  onRegisterEditor: (editor: monacoTypes.editor.IStandaloneCodeEditor) => void;
   onFocusNext: () => void;
   onFocusPrev: () => void;
   outerRef: (el: HTMLDivElement | null) => void;
   headerAction?: React.ReactNode;
 }) {
-  const editorInstanceRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-  const decorationsRef = useRef<monaco.editor.IEditorDecorationsCollection | null>(null);
+  const editorInstanceRef = useRef<monacoTypes.editor.IStandaloneCodeEditor | null>(null);
+  const decorationsRef = useRef<monacoTypes.editor.IEditorDecorationsCollection | null>(null);
+  const monacoRef = useRef<typeof monacoTypes | null>(null);
   const [editorHeight, setEditorHeight] = useState(MIN_EDITOR_HEIGHT);
 
   // Keep refs current so onKeyDown always calls the latest callbacks
@@ -339,8 +341,8 @@ function SectionEditor({
   useEffect(() => { onFocusPrevRef.current = onFocusPrev; }, [onFocusPrev]);
 
   useEffect(() => {
-    if (editorInstanceRef.current && decorationsRef.current) {
-      applyDecorations(editorInstanceRef.current, decorationsRef.current);
+    if (editorInstanceRef.current && decorationsRef.current && monacoRef.current) {
+      applyDecorations(monacoRef.current, editorInstanceRef.current, decorationsRef.current);
     }
   }, [value]);
 
@@ -384,10 +386,11 @@ function SectionEditor({
             value={value}
             onChange={(v) => onChange(sectionKey, v ?? "")}
             theme="vs-dark"
-            onMount={(editor) => {
+            onMount={(editor, monaco) => {
               editorInstanceRef.current = editor;
+              monacoRef.current = monaco as unknown as typeof monacoTypes;
               decorationsRef.current = editor.createDecorationsCollection([]);
-              applyDecorations(editor, decorationsRef.current);
+              applyDecorations(monacoRef.current, editor, decorationsRef.current);
               onRegisterEditor(editor);
 
               const updateHeight = () => {
@@ -469,7 +472,7 @@ export function SectionedEditorPanel({
   const extraKeysRef = useRef<string[]>([]);
   const backendTimeoutRef = useRef<number | null>(null);
   const templateIdRef = useRef<string | number | null>(templateId);
-  const editorInstancesRef = useRef<Map<string, monaco.editor.IStandaloneCodeEditor>>(new Map());
+  const editorInstancesRef = useRef<Map<string, monacoTypes.editor.IStandaloneCodeEditor>>(new Map());
   const sectionDivRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const collapsedRef = useRef<Record<string, boolean>>({});
   const pendingFocusRef = useRef<string | null>(null);

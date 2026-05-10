@@ -23,6 +23,7 @@ export interface KnowledgeItem {
 export interface MultipleAnswerEntry {
   value: string;
   label?: string;
+  width?: number;
 }
 
 export interface InlineKnowledge {

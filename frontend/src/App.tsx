@@ -67,6 +67,10 @@ import { PostTuitionListPage } from "./pages/PostTuitionListPage";
 import { TutorPaymentsPage } from "./pages/TutorPaymentsPage";
 import { ParentPaymentsPage } from "./pages/ParentPaymentsPage";
 import { AdminPaymentsPage } from "./pages/AdminPaymentsPage";
+import { PaymentAuthorisePage } from "./pages/PaymentAuthorisePage";
+import { PaymentReceiptPage } from "./pages/PaymentReceiptPage";
+import { PaymentRetryPage } from "./pages/PaymentRetryPage";
+import { TutorBillingPage } from "./pages/TutorBillingPage";
 import { TELanguagesPage } from "./pages/TELanguagesPage";
 import { apiFetch } from "./utils/apiFetch";
 import { usePreferenceStore } from "./utils/pref";
@@ -154,6 +158,11 @@ function App() {
         <Route path="/parents/:id/payments" element={<ProtectedRoute><ParentPaymentsPage /></ProtectedRoute>} />
         <Route path="/parents/:id/find-tutor" element={<ProtectedRoute><RequestTutorPage /></ProtectedRoute>} />
 
+        {/* PROTECTED — payment flow */}
+        <Route path="/payments/:id/authorise" element={<ProtectedRoute><PaymentAuthorisePage /></ProtectedRoute>} />
+        <Route path="/payments/:id/receipt" element={<ProtectedRoute><PaymentReceiptPage /></ProtectedRoute>} />
+        <Route path="/payments/:id/retry" element={<ProtectedRoute><PaymentRetryPage /></ProtectedRoute>} />
+
         {/* PROTECTED — other */}
         <Route path="/templates" element={<ProtectedRoute><TemplateListPage /></ProtectedRoute>} />
         <Route path="/templates/new" element={<ProtectedRoute><NewTemplatePage /></ProtectedRoute>} />
@@ -186,6 +195,7 @@ function App() {
         <Route path="/tutors/:id/post-tuition" element={<ProtectedRoute><PostTuitionListPage /></ProtectedRoute>} />
         <Route path="/tutors/:id/post-tuition/review" element={<ProtectedRoute><PostTuitionPage /></ProtectedRoute>} />
         <Route path="/tutors/:id/payments" element={<ProtectedRoute><TutorPaymentsPage /></ProtectedRoute>} />
+        <Route path="/tutors/:id/billing" element={<ProtectedRoute><TutorBillingPage /></ProtectedRoute>} />
 
         <Route path="/admin/payments" element={<ProtectedRoute><AdminPaymentsPage /></ProtectedRoute>} />
         <Route path="/admin/students" element={<ProtectedRoute><StudentListPage /></ProtectedRoute>} />

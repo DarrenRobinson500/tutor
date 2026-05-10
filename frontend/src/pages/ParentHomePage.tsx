@@ -25,6 +25,52 @@ interface ParentData {
   children: Child[];
 }
 
+interface PendingPayment {
+  id: number;
+  tutor_name: string;
+  child_name: string;
+  session_date: string;
+  total_amount: string;
+}
+
+function PendingPaymentBanner({ payments, onPay }: { payments: PendingPayment[]; onPay: (id: number) => void }) {
+  if (payments.length === 0) return null;
+  return (
+    <div style={{ marginBottom: "1.5rem" }}>
+      {payments.map((p) => (
+        <div
+          key={p.id}
+          style={{
+            background: "var(--sm-bg-warm, #FFF8F0)",
+            borderLeft: "4px solid var(--sm-orange, #FF8C42)",
+            borderRadius: "0 var(--radius-xl, 16px) var(--radius-xl, 16px) 0",
+            padding: "1rem 1.25rem",
+            marginBottom: "0.75rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "1rem",
+            flexWrap: "wrap",
+            boxShadow: "var(--shadow-card, 0 2px 8px rgba(0,0,0,.06))",
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 600, fontSize: "0.95rem", marginBottom: "0.2rem" }}>
+              Payment due — session with {p.tutor_name}
+            </div>
+            <div style={{ fontSize: "0.82rem", color: "var(--sm-text-muted, #8A7F74)" }}>
+              {p.child_name} · {new Date(p.session_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })}
+            </div>
+          </div>
+          <button className="sm-btn-primary" onClick={() => onPay(p.id)} style={{ whiteSpace: "nowrap" }}>
+            Pay ${parseFloat(p.total_amount).toFixed(2)}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ParentHomePage() {
   const navigate = useNavigate();
   const [data, setData] = useState<ParentData | null>(null);
@@ -32,6 +78,7 @@ export default function ParentHomePage() {
   const [error, setError] = useState("");
   const [showAddChild, setShowAddChild] = useState(false);
   const [launchingFor, setLaunchingFor] = useState<number | null>(null);
+  const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
 
   useEffect(() => {
     apiFetch("/api/auth/parent_home/")
@@ -44,6 +91,11 @@ export default function ParentHomePage() {
         setError("Unable to load dashboard. Please try signing in again.");
       })
       .finally(() => setLoading(false));
+
+    apiFetch("/api/payments/pending/")
+      .then((r) => r.ok ? r.json() : { payments: [] })
+      .then((d) => setPendingPayments(d.payments || []))
+      .catch(() => {});
   }, []);
 
   function handleLogout() {
@@ -142,6 +194,12 @@ export default function ParentHomePage() {
 
       {/* ── Body ─────────────────────────────────── */}
       <main className="ph-body">
+
+        {/* Pending payment banner */}
+        <PendingPaymentBanner
+          payments={pendingPayments}
+          onPay={(id) => navigate(`/payments/${id}/authorise`)}
+        />
 
         {/* Children section */}
         <div className="ph-section-heading">

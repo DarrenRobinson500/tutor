@@ -1,0 +1,118 @@
+.tb-page {
+  min-height: 100vh;
+  background: var(--sm-bg, #FFFBF5);
+  font-family: var(--font-body, Inter, system-ui, sans-serif);
+}
+
+.tb-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0 2rem;
+  height: 60px;
+  background: #fff;
+  border-bottom: 1px solid var(--sm-border, #E8E0D6);
+}
+
+.tb-nav-logo img { height: 28px; }
+.tb-nav-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--sm-text, #2D2D2D);
+}
+
+.tb-main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.tb-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.tb-summary-card {
+  background: #fff;
+  border: 1px solid var(--sm-border, #E8E0D6);
+  border-radius: var(--radius-xl, 16px);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-card, 0 2px 8px rgba(0,0,0,.06));
+}
+
+.tb-summary-amount {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 0.35rem;
+}
+
+.tb-summary-label {
+  font-size: 0.8rem;
+  color: var(--sm-text-muted, #8A7F74);
+  font-weight: 500;
+}
+
+.tb-section {
+  margin-bottom: 2.5rem;
+}
+
+.tb-section-title {
+  font-family: var(--font-display, Lora, serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--sm-text, #2D2D2D);
+  margin: 0 0 0.75rem;
+}
+
+.tb-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-xl, 16px);
+  border: 1px solid var(--sm-border, #E8E0D6);
+  box-shadow: var(--shadow-card, 0 2px 8px rgba(0,0,0,.06));
+}
+
+.tb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tb-table thead tr {
+  background: var(--sm-surface, #fff);
+  border-bottom: 1px solid var(--sm-border, #E8E0D6);
+}
+
+.tb-table th {
+  padding: 0.65rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sm-text-muted, #8A7F74);
+}
+
+.tb-table td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--sm-border, #E8E0D6);
+  color: var(--sm-text, #2D2D2D);
+}
+
+.tb-table tr:last-child td { border-bottom: none; }
+
+.tb-loading,
+.tb-error {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .tb-summary-strip { grid-template-columns: 1fr; }
+}

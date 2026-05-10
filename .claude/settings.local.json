@@ -22,7 +22,15 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\backend\\\\backend\\\\diagram\" -Filter \"*.py\")",
       "Bash(Select-Object -ExpandProperty Name)",
       "Bash(.venv/Scripts/pip install *)",
-      "Bash(.venv/Scripts/python -m pytest backend/diagram/test_tree_diagram.py -v)"
+      "Bash(.venv/Scripts/python -m pytest backend/diagram/test_tree_diagram.py -v)",
+      "Bash(npm install *)",
+      "Bash(npm view *)",
+      "Bash(npm list *)",
+      "PowerShell(Test-Path \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\frontend\\\\node_modules\"; \\(Get-ChildItem \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\frontend\" -Directory | Select-Object Name\\))",
+      "PowerShell(npm show *)",
+      "Bash(pip install *)",
+      "Bash(Remove-Item *)",
+      "Bash(simplified '}} *)"
     ]
   }
 }

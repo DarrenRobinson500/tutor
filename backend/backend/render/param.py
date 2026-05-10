@@ -3,11 +3,33 @@ import math as _math
 from .format import *
 from math import gcd
 from fractions import Fraction as _Fraction
+from .context import MATH_CONTEXT
 
 _NAMES = [
     "Emma", "Olivia", "Ava", "Isabella", "Sophia",
     "Liam", "Noah", "Oliver", "Elijah", "James",
 ]
+
+
+def _resolve_opt(key, val, context, param_name, cast=int):
+    """Resolve a min/max/step option that may be a variable reference or a literal.
+
+    If val is a string that isn't a valid number, look it up in context (the dict of
+    already-generated parameter values).  Raises ValueError with a clear message if the
+    name isn't found.
+    """
+    if isinstance(val, str):
+        resolved = context.get(val)
+        if resolved is not None:
+            return cast(resolved)
+        try:
+            return cast(val)
+        except (ValueError, TypeError):
+            raise ValueError(
+                f"Parameter '{param_name}': cannot resolve '{key}' — "
+                f"'{val}' is not a number and was not found in context"
+            )
+    return cast(val) if val is not None else None
 
 class RandomParameter:
     def __init__(self, name, type_name, options):
@@ -135,9 +157,28 @@ class RangeParameter(RandomParameter):
     }
 
     def __init__(self, name, options):
-        super().__init__(name, "range", options)
-        if options.get("brackets_when_negative"):
+        # Bypass super().__init__ (which eagerly calls generate({})) when any of
+        # min/max/step are variable references that haven't been resolved yet.
+        self.name = name
+        self.type_name = "range"
+        self.options = options or {}
+        if (options or {}).get("brackets_when_negative"):
             self.default_format_type = "brackets"
+        if self._has_var_refs():
+            self.value = 0  # placeholder; re-generated in render.py after ExprParameters resolve
+        else:
+            self.value = self.generate({})
+
+    def _has_var_refs(self):
+        """Return True if any of min/max/step is a string variable name (not a literal number)."""
+        for key in ("min", "max", "step"):
+            v = self.options.get(key)
+            if isinstance(v, str):
+                try:
+                    float(v)
+                except ValueError:
+                    return True
+        return False
 
     @staticmethod
     def _round_2_sig_figs(n):
@@ -156,9 +197,9 @@ class RangeParameter(RandomParameter):
             lo, hi = self.SIZE_MAP[size]
             value = random.randint(lo, hi)
         else:
-            lo = int(self.options["min"])
-            hi = int(self.options["max"])
-            step = int(self.options.get("step", 1))
+            lo   = _resolve_opt("min",  self.options["min"],           context, self.name)
+            hi   = _resolve_opt("max",  self.options["max"],           context, self.name)
+            step = _resolve_opt("step", self.options.get("step", 1),  context, self.name)
             if step > 1:
                 steps = list(range(lo, hi + 1, step))
                 value = random.choice(steps)
@@ -323,7 +364,24 @@ class DollarParameter(RandomParameter):
     default_format_type = "dollar"
 
     def __init__(self, name, options):
-        super().__init__(name, "dollar", options)
+        # Bypass super().__init__ when any of min/max/step are variable references.
+        self.name = name
+        self.type_name = "dollar"
+        self.options = options or {}
+        if self._has_var_refs():
+            self.value = 0  # placeholder; re-generated in render.py after ExprParameters resolve
+        else:
+            self.value = self.generate({})
+
+    def _has_var_refs(self):
+        for key in ("min", "max", "step"):
+            v = self.options.get(key)
+            if isinstance(v, str):
+                try:
+                    float(v)
+                except ValueError:
+                    return True
+        return False
 
     def generate(self, context):
         size = self.options.get("size")
@@ -331,37 +389,37 @@ class DollarParameter(RandomParameter):
         if size == "small":
             # Whole dollars only, $3–$8
             dollars = random.randint(
-                int(self.options.get("min", 3)),
-                int(self.options.get("max", 8)),
+                _resolve_opt("min", self.options.get("min", 3), context, self.name),
+                _resolve_opt("max", self.options.get("max", 8), context, self.name),
             )
             return f"{dollars}/1"
 
         if size == "large":
             # 2 significant figures, multiples of $10 from $10–$1000
-            step = int(self.options.get("step", 10))
-            lo = int(self.options.get("min", 10)) // step
-            hi = int(self.options.get("max", 1000)) // step
+            step = _resolve_opt("step", self.options.get("step", 10), context, self.name)
+            lo = _resolve_opt("min", self.options.get("min", 10), context, self.name) // step
+            hi = _resolve_opt("max", self.options.get("max", 1000), context, self.name) // step
             dollars = random.randint(lo, hi) * step
             return f"{dollars}/1"
 
         # If step is specified, generate a whole-dollar multiple of step
         if "step" in self.options:
-            step = int(self.options["step"])
-            lo = int(self.options.get("min", 0)) // step
-            hi = int(self.options.get("max", 100)) // step
+            step = _resolve_opt("step", self.options["step"], context, self.name)
+            lo = _resolve_opt("min", self.options.get("min", 0), context, self.name) // step
+            hi = _resolve_opt("max", self.options.get("max", 100), context, self.name) // step
             dollars = random.randint(lo, hi) * step
             return f"{dollars}/1"
 
         # Default: whole dollars, $3–$10 (use cents: true for dollars-and-cents)
         if self.options.get("cents"):
-            min_cents = int(float(self.options.get("min", 3)) * 100)
-            max_cents = int(float(self.options.get("max", 10)) * 100)
+            min_cents = int(_resolve_opt("min", self.options.get("min", 3), context, self.name, cast=float) * 100)
+            max_cents = int(_resolve_opt("max", self.options.get("max", 10), context, self.name, cast=float) * 100)
             cents = random.randint(min_cents, max_cents)
             f = _Fraction(cents, 100)
             return f"{f.numerator}/{f.denominator}"
         dollars = random.randint(
-            int(self.options.get("min", 3)),
-            int(self.options.get("max", 10)),
+            _resolve_opt("min", self.options.get("min", 3), context, self.name),
+            _resolve_opt("max", self.options.get("max", 10), context, self.name),
         )
         return f"{dollars}/1"
 
@@ -582,6 +640,10 @@ class BoolParameter(ExprParameter):
         type: bool
         expr: "a ^ 2 + b ^ 2 = c ^ 2"
 
+    Random boolean (no expr — randomly True or False each generation):
+      is_direct:
+        type: bool
+
     Shorthand (bare string containing a single = comparison):
       right_angle: a ^ 2 + b ^ 2 = c ^ 2
 
@@ -594,6 +656,11 @@ class BoolParameter(ExprParameter):
     _EQ_RE = _re.compile(r'(?<![!<>=])=(?!=)')
 
     def resolve(self, param_objects):
+        # No expr supplied → random True/False
+        if "expr" not in self.options:
+            self.value = random.randint(0, 1)
+            return
+
         from fractions import Fraction as _Frac
 
         expr = self._expr
@@ -644,17 +711,7 @@ class CaseParameter(ExprParameter):
     A clear error is raised if a dependency has not yet been computed.
     """
 
-    _SAFE_BUILTINS = {
-        'abs': abs, 'round': round, 'min': min, 'max': max,
-        'int': int, 'float': float, 'str': str, 'len': len,
-        'sum': sum,
-        'sin': _math.sin, 'cos': _math.cos, 'tan': _math.tan,
-        'asin': _math.asin, 'acos': _math.acos, 'atan': _math.atan, 'atan2': _math.atan2,
-        'sqrt': _math.sqrt, 'log': _math.log, 'log10': _math.log10,
-        'ceil': _math.ceil, 'floor': _math.floor,
-        'pi': _math.pi, 'e': _math.e,
-        'degrees': _math.degrees, 'radians': _math.radians,
-    }
+    _SAFE_BUILTINS = MATH_CONTEXT
 
     def __init__(self, name, options):
         # Bypass ExprParameter.__init__ — keep the raw expression intact for eval()
@@ -676,12 +733,26 @@ class CaseParameter(ExprParameter):
         # Build evaluation context from already-resolved params only.
         # Params with value=None haven't been resolved yet — omit them so
         # a NameError gives us a precise "not yet computed" message.
+        # Convert string-stored numeric values (e.g. PercentParameter stores "0.2",
+        # DollarParameter stores "30000/1") to Python numbers so arithmetic works.
+        # Non-numeric strings (e.g. model_type = 'appreciation') are kept as-is.
+        def _to_num(v):
+            if isinstance(v, (int, float)) or isinstance(v, list):
+                return v
+            if isinstance(v, str):
+                try:
+                    from fractions import Fraction as _Frac
+                    return float(_Frac(v)) if '/' in v else float(v)
+                except (ValueError, ZeroDivisionError):
+                    return v
+            return v
+
         ctx = {'__builtins__': self._SAFE_BUILTINS}
         for pname, p in param_objects.items():
             if pname == self.name:
                 continue
             if p.value is not None:
-                ctx[pname] = p.value
+                ctx[pname] = _to_num(p.value)
 
         try:
             result = eval(expr, ctx)  # noqa: S307
@@ -790,9 +861,9 @@ class FractionFromExprParameter(CaseParameter):
 
 
 class ScenarioParameter(RandomParameter):
-    """Picks a random row from a list of lists.
+    """Picks one or more random rows from a list of lists.
 
-    YAML spec:
+    YAML spec (single pick — default):
       item:
         type: scenario
         rows:
@@ -800,8 +871,20 @@ class ScenarioParameter(RandomParameter):
           - [a pencil, cm]
           - [a person, m]
 
-    The value is a Python list. Access fields with {{ item[0] }}, {{ item[1] }}, etc.
-    Use item[1] in logic rules to mark the correct answer.
+    Value: flat list.  Access with {{ item[0] }}, {{ item[1] }}, etc.
+
+    YAML spec (two distinct picks):
+      activity:
+        type: scenario
+        count: 2          # how many rows to pick
+        rows:
+          - [Sport,   plays sport]
+          - [Gaming,  plays video games]
+          - [Cycling, cycles to work]
+
+    Value: list of lists.  Access with {{ activity[0][0] }}, {{ activity[1][0] }}, etc.
+    By default the picks are distinct (no repeated row).  Set allow_repeats: true to
+    allow the same row to be chosen more than once.
     """
 
     def __init__(self, name, options):
@@ -811,4 +894,22 @@ class ScenarioParameter(RandomParameter):
         rows = self.options.get("rows", [])
         if not rows:
             raise ValueError(f"ScenarioParameter '{self.name}' has no rows")
-        return list(random.choice(rows))
+
+        count = int(self.options.get("count", 1))
+        allow_repeats = bool(self.options.get("allow_repeats", False))
+
+        if count == 1:
+            return list(random.choice(rows))
+
+        if not allow_repeats and len(rows) < count:
+            raise ValueError(
+                f"ScenarioParameter '{self.name}': cannot pick {count} distinct rows "
+                f"from only {len(rows)} available. Add more rows or set allow_repeats: true."
+            )
+
+        if allow_repeats:
+            selected = [random.choice(rows) for _ in range(count)]
+        else:
+            selected = random.sample(rows, count)
+
+        return [list(row) for row in selected]

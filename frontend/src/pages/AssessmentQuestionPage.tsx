@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Layout } from "./components/Layout";
 import { apiFetch } from "../utils/apiFetch";
 import { PreviewPanel } from "./components/PreviewPanel";
-import { Calculator } from "./components/Calculator";
+import { DraggableCalculator } from "./components/Calculator";
 import type { PreviewResponse, StudentRecordResponse } from "../types/PreviewResponse";
 
 interface FocusSkill {
@@ -94,22 +94,10 @@ export function AssessmentQuestionPage() {
   }
 
   function handleStudentNext(result: StudentRecordResponse) {
-    // Record the answer for the teacher dashboard
     if (result.correct !== undefined) {
       recordAssessmentAnswer(result.correct);
     }
-
-    if (result.loop_complete) {
-      advanceSkill();
-      return;
-    }
-
-    const nextId = result.template_id;
-    if (nextId) setSeenTemplateIds(prev => [...prev, nextId]);
-    setTemplateId(nextId ?? undefined);
-    setCurrent(result.next_question);
-    setMastery(result.mastery);
-    setCompetence(result.competence_label);
+    advanceSkill();
   }
 
   if (done) {
@@ -170,6 +158,7 @@ export function AssessmentQuestionPage() {
               seenTemplateIds={seenTemplateIds}
               sessionTemplateIds={sessionTemplateIds}
               onStudentNext={handleStudentNext}
+              disableOnWrong
             />
             <div className="mt-3">
               <button
@@ -180,9 +169,7 @@ export function AssessmentQuestionPage() {
               </button>
             </div>
             {showCalculator && (
-              <div style={{ position: "fixed", right: 24, top: 80, zIndex: 1000, width: 286, transform: "scale(0.82)", transformOrigin: "top right" }}>
-                <Calculator onClose={() => setShowCalculator(false)} />
-              </div>
+              <DraggableCalculator onClose={() => setShowCalculator(false)} />
             )}
           </div>
         </div>

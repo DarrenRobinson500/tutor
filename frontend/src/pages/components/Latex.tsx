@@ -173,20 +173,21 @@ export function Latex({ children }: LatexProps) {
     | { type: "text"; lines: string[] };
   const segments: Segment[] = [];
 
-  for (const line of lines) {
-    if (/^\*\s+/.test(line)) {
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li];
+    if (/^\s*\*\s+/.test(line)) {
       const last = segments[segments.length - 1];
       if (last?.type === "bullets") {
-        last.items.push(line.replace(/^\*\s+/, ""));
+        last.items.push(line.replace(/^\s*\*\s+/, ""));
       } else {
-        segments.push({ type: "bullets", items: [line.replace(/^\*\s+/, "")] });
+        segments.push({ type: "bullets", items: [line.replace(/^\s*\*\s+/, "")] });
       }
-    } else if (/^\d+\.\s+/.test(line)) {
+    } else if (/^\s*\d+\.\s+/.test(line)) {
       const last = segments[segments.length - 1];
       if (last?.type === "ordered") {
-        last.items.push(line.replace(/^\d+\.\s+/, ""));
+        last.items.push(line.replace(/^\s*\d+\.\s+/, ""));
       } else {
-        segments.push({ type: "ordered", items: [line.replace(/^\d+\.\s+/, "")] });
+        segments.push({ type: "ordered", items: [line.replace(/^\s*\d+\.\s+/, "")] });
       }
     } else if (isTableRow(line)) {
       const last = segments[segments.length - 1];
@@ -194,6 +195,22 @@ export function Latex({ children }: LatexProps) {
         last.lines.push(line);
       } else {
         segments.push({ type: "table", lines: [line] });
+      }
+    } else if (line.trim() === "") {
+      // A blank line between list items should not break the list — peek ahead.
+      const next = lines[li + 1] ?? "";
+      const last = segments[segments.length - 1];
+      if (last?.type === "bullets" && /^\s*\*\s+/.test(next)) {
+        // skip: next line continues the bullet list
+      } else if (last?.type === "ordered" && /^\s*\d+\.\s+/.test(next)) {
+        // skip: next line continues the ordered list
+      } else {
+        const textLast = segments[segments.length - 1];
+        if (textLast?.type === "text") {
+          textLast.lines.push(line);
+        } else {
+          segments.push({ type: "text", lines: [line] });
+        }
       }
     } else {
       const last = segments[segments.length - 1];

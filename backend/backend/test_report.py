@@ -1,4 +1,4 @@
-"""PDF Parent Progress Report — Green Learning."""
+"""PDF Parent Progress Report — SubjectMatter."""
 from io import BytesIO
 import re
 from collections import Counter
@@ -293,13 +293,14 @@ def generate_test_report(session) -> bytes:
         focus_areas=focus_data,
     )
 
-    d = session.started_at
+    from django.utils import timezone as _tz
+    d = _tz.localtime(session.started_at)
     date_str = f"{d.day} {d.strftime('%B %Y')}"
     yr_str = f"Year {year_level} Mathematics" if year_level else "Mathematics"
 
     # ── HEADER BAND ───────────────────────────────────────────────────────────
     header = Table(
-        [[Paragraph('Green Learning', s['header_left']),
+        [[Paragraph('<font color="#FFFFFF">Subject</font><font name="Helvetica" color="#FF8C42">Matter</font>', s['header_left']),
           Paragraph(yr_str, s['header_right'])]],
         colWidths=[USABLE_W * 0.6, USABLE_W * 0.4],
     )
@@ -335,7 +336,7 @@ def generate_test_report(session) -> bytes:
         ('TOPPADDING',    (0, 0), (-1, -1), 1),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
         ('LEFTPADDING',   (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 10),
     ]))
 
     info_row = Table([[info_left, info_right]], colWidths=[USABLE_W * 0.65, USABLE_W * 0.35])
@@ -517,7 +518,7 @@ def generate_test_report(session) -> bytes:
 
     # ── FOOTER ────────────────────────────────────────────────────────────────
     elements.append(HRFlowable(width='100%', thickness=0.5, color=BORDER, spaceAfter=3))
-    footer_parts = ['Green Learning']
+    footer_parts = ['SubjectMatter']
     if tutor_name:
         footer_parts.append(f"Tutor: {tutor_name}")
     footer_parts.append("Aligned to the NSW K–10 Mathematics Syllabus")

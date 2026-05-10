@@ -28,6 +28,8 @@ interface PreviewPanelEditorProps extends PreviewPanelBase {
   onImmediateAnswer?: never;
   seenTemplateIds?: never;
   sessionTemplateIds?: never;
+  disableOnWrong?: never;
+  extraInputActions?: never;
 }
 
 /**
@@ -46,6 +48,10 @@ interface PreviewPanelStudentProps extends PreviewPanelBase {
   onImmediateAnswer?: (answer: string, correct: boolean) => void;
   seenTemplateIds?: number[];
   sessionTemplateIds?: number[];
+  /** When true, a wrong answer locks all inputs and shows Next instead of Try Again */
+  disableOnWrong?: boolean;
+  /** Extra buttons rendered inline to the right of the "I don't know" button */
+  extraInputActions?: React.ReactNode;
 
   // explicitly forbidden in student mode
   templateContent?: never;
@@ -100,6 +106,8 @@ export function PreviewPanel({
   studentId,
   seenTemplateIds,
   sessionTemplateIds,
+  disableOnWrong,
+  extraInputActions,
 }: PreviewPanelProps) {
   const [selected, setSelected] = useState<number | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -162,6 +170,7 @@ export function PreviewPanel({
   }, [focusKey]);
 
   const effectiveTemplateId = templateId ?? localTemplateId;
+  const inputsDisabled = isCorrect === true || (!!disableOnWrong && isCorrect === false);
 
   useEffect(() => {
     if (mode !== "student" || !effectiveTemplateId) { setNotes([]); return; }
@@ -259,6 +268,15 @@ export function PreviewPanel({
       }
     }
     // Incorrect: just show "Incorrect — try again"; student clicks again to retry
+  }
+
+  async function handleMultiStepWrongNext() {
+    if (!activeStep) return;
+    if (mode === "student") {
+      const result = await recordAttempt({ text: textInput || activeStep.answer }, false);
+      onStudentNext?.(result);
+    }
+    if (mode === "editor") { loadNextEditorPreview(); }
   }
 
   async function handleIDontKnowMultiStep() {
@@ -406,6 +424,12 @@ export function PreviewPanel({
       const fracIdx = v.match(/^1\/([a-z]\w*)\^(\d+)$/i);
       if (fracIdx) v = `${fracIdx[1]}^-${fracIdx[2]}`;
       // x^-n  →  canonical (already in right form; handles case where stored answer uses ^-)
+      // Sort parenthesized factors: (x-4)(x-3) ≡ (x-3)(x-4)
+      const fm = v.match(/^([^(]*)((?:\([^)]+\))+)$/);
+      if (fm) {
+        const factors = fm[2].match(/\([^)]+\)/g);
+        if (factors && factors.length > 1) v = fm[1] + [...factors].sort().join('');
+      }
       return v;
     };
     const a = normalize(input);
@@ -856,6 +880,7 @@ export function PreviewPanel({
     : null;
   const isStepMC = isMultiStep && Boolean(activeStep?.choices?.length);
   const isStepMultiInput = isMultiStep && Boolean(activeStep?.multiple_answers?.length);
+  const isAlgebraTable = preview?.diagram_code?.startsWith("AlgebraTable(");
   const isInputMode = (isMultiStep && !isStepMC && !isStepMultiInput) || answers.some((a: any) => a?.input_type === "text");
   const correctInputAnswer = answers.find((a: any) => a?.correct);
   const inputAnswerMeta = answers.find((a: any) => a?.input_type === "text");
@@ -877,11 +902,14 @@ export function PreviewPanel({
 
   return (
     <div style={{ padding: 12, fontSize: 18 }}>
-      <div style={{ marginBottom: stepQuestion ? 6 : 12 }}>
+      <div style={{ marginBottom: isMultiStep ? 6 : 12 }}>
         <Latex>{mainQuestion}</Latex>
       </div>
+      {isMultiStep && (
+        <hr style={{ borderTop: "1px solid #000", margin: "6px 0 10px" }} />
+      )}
       {questionKnowledge.map((k, i) => <KnowledgeCallout key={i} k={k} />)}
-      {completedSteps.map((cs, i) => (
+      {!isAlgebraTable && completedSteps.map((cs, i) => (
         <div key={i} style={{ marginBottom: 10, paddingLeft: 8, borderLeft: "3px solid #ccc" }}>
           {cs.question && (
             <div>
@@ -928,7 +956,7 @@ export function PreviewPanel({
                   key={i}
                   className={btnClass}
                   style={{ minWidth: "90px" }}
-                  disabled={isCorrect === true}
+                  disabled={inputsDisabled}
                   onClick={() => handleMultiStepChoiceClick(i, c)}
                 >
                   <Latex>{safeLatex(c.text)}</Latex>
@@ -960,7 +988,7 @@ export function PreviewPanel({
                     }
                   }}
                   onSubmit={handleTextSubmit}
-                  disabled={isCorrect === true}
+                  disabled={inputsDisabled}
                   autoFocus={mode === "student"}
                 />
               ) : answerFormat === "surd" ? (
@@ -977,7 +1005,7 @@ export function PreviewPanel({
                       if (isCorrect === false) { setSelected(null); setIsCorrect(null); }
                     }}
                     onKeyDown={e => { if (e.key === "Enter") surdRadicandRef.current?.focus(); }}
-                    disabled={isCorrect === true}
+                    disabled={inputsDisabled}
                     ref={surdCoeffRef}
                     autoFocus={mode === "student"}
                   />
@@ -994,7 +1022,7 @@ export function PreviewPanel({
                       if (isCorrect === false) { setSelected(null); setIsCorrect(null); }
                     }}
                     onKeyDown={e => { if (e.key === "Enter") handleSurdSubmit(); }}
-                    disabled={isCorrect === true}
+                    disabled={inputsDisabled}
                     ref={surdRadicandRef}
                   />
                 </>
@@ -1013,14 +1041,14 @@ export function PreviewPanel({
                   }
                 }}
                 onKeyDown={e => { if (e.key === "Enter") handleTextSubmit(); }}
-                disabled={isCorrect === true}
+                disabled={inputsDisabled}
                 ref={textInputRef}
               />
               )}
               <button
                 className="btn btn-primary btn-sm"
                 onClick={answerFormat === "surd" ? handleSurdSubmit : handleTextSubmit}
-                disabled={isCorrect === true}
+                disabled={inputsDisabled}
               >
                 Submit
               </button>
@@ -1028,7 +1056,7 @@ export function PreviewPanel({
                 <button
                   className="btn btn-outline-secondary btn-sm"
                   onClick={handleIDontKnowMultiStep}
-                  disabled={isCorrect === true}
+                  disabled={inputsDisabled}
                 >
                   I don't know
                 </button>
@@ -1036,7 +1064,7 @@ export function PreviewPanel({
                 <button
                   className="btn btn-outline-secondary btn-sm"
                   onClick={handleIDontKnow}
-                  disabled={isCorrect === true}
+                  disabled={inputsDisabled}
                 >
                   I don't know
                 </button>
@@ -1070,6 +1098,7 @@ export function PreviewPanel({
                     key={i}
                     className={btnClass}
                     style={{ padding: "4px" }}
+                    disabled={inputsDisabled}
                     onClick={() => handleAnswerClick(i, a)}
                     dangerouslySetInnerHTML={{ __html: a.diagram_svg }}
                   />
@@ -1081,6 +1110,7 @@ export function PreviewPanel({
                   key={i}
                   className={btnClass}
                   style={{ minWidth: "90px" }}
+                  disabled={inputsDisabled}
                   onClick={() => handleAnswerClick(i, a)}
                 >
                   <Latex>{safeLatex(a?.text)}</Latex>
@@ -1088,14 +1118,16 @@ export function PreviewPanel({
               );
             })}
           </div>
-          {selected === null && (
-            <button
-              className="btn btn-outline-secondary btn-sm mt-2"
-              onClick={handleIDontKnow}
-            >
-              I don't know
-            </button>
-          )}
+          <div className="d-flex gap-2 align-items-center mt-2">
+            {selected === null && (
+              <button
+                className="btn btn-outline-secondary btn-sm"
+                onClick={handleIDontKnow}
+              >
+                I don't know
+              </button>
+            )}
+          </div>
           </>
         )
       )}
@@ -1113,7 +1145,7 @@ export function PreviewPanel({
                 <input
                   type="text"
                   className="form-control"
-                  style={{ maxWidth: 60, backgroundColor: '#fff9c4' }}
+                  style={{ maxWidth: item.width ?? 60, backgroundColor: '#fff9c4' }}
                   value={multiInputs[i] ?? ""}
                   onChange={e => {
                     const val = e.target.value;
@@ -1129,7 +1161,7 @@ export function PreviewPanel({
                       }
                     }
                   }}
-                  disabled={isCorrect === true}
+                  disabled={inputsDisabled}
                   ref={el => { multiInputRefs.current[i] = el; }}
                   autoFocus={i === 0 && mode === "student"}
                 />
@@ -1138,14 +1170,14 @@ export function PreviewPanel({
             <button
               className="btn btn-primary btn-sm"
               onClick={handleMultiAnswerSubmit}
-              disabled={isCorrect === true || multiInputs.some(v => !v.trim())}
+              disabled={inputsDisabled || multiInputs.some(v => !v.trim())}
             >
               Submit
             </button>
             <button
               className="btn btn-outline-secondary btn-sm"
               onClick={handleIDontKnow}
-              disabled={isCorrect === true}
+              disabled={inputsDisabled}
             >
               I don't know
             </button>
@@ -1153,22 +1185,29 @@ export function PreviewPanel({
         </div>
       )}
 
-      {selected !== null && (
+      {selected !== null && (isCorrect || !disableOnWrong) && (
         <div className="mt-3" style={{ fontWeight: "bold", fontSize: 18, color: isCorrect ? "#2e7d32" : "#c62828" }}>
           {isCorrect ? "✓ Correct! Next question loading…" : "Try again"}
         </div>
       )}
 
       {selected !== null && !isCorrect && isMultiStep && activeStep && (
-        <div
-          className="mt-2 p-2"
-          style={{ background: "#f8f9fa", borderLeft: "4px solid #dc3545", fontSize: 18 }}
-        >
-          {activeStep.solution
-            ? <Latex>{activeStep.solution}</Latex>
-            : <>The answer is <strong>{activeStep.answer}</strong></>
-          }
-        </div>
+        <>
+          <div
+            className="mt-2 p-2"
+            style={{ background: "#f8f9fa", borderLeft: "4px solid #dc3545", fontSize: 18 }}
+          >
+            {activeStep.solution
+              ? <Latex>{activeStep.solution}</Latex>
+              : <>The answer is <strong>{activeStep.answer}</strong></>
+            }
+          </div>
+          {disableOnWrong && mode === "student" && (
+            <button className="btn btn-primary btn-sm mt-2" onClick={handleMultiStepWrongNext}>
+              Next
+            </button>
+          )}
+        </>
       )}
 
       {selected !== null && !isCorrect && !isMultiStep && (solution || (isInputMode && correctInputAnswer) || isMultiAnswerMode) && (
@@ -1267,6 +1306,10 @@ export function PreviewPanel({
         <div className="alert alert-info mt-2 p-2">
           Added to tutor review list
         </div>
+      )}
+
+      {extraInputActions && (
+        <div className="mt-3">{extraInputActions}</div>
       )}
 
       {mode === "student" && effectiveTemplateId && (

@@ -1,8 +1,8 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { apiFetch } from "../../utils/apiFetch"
 
-import Editor from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
+import Editor, { useMonaco } from "@monaco-editor/react";
+import type * as monacoTypes from "monaco-editor";
 
 export interface EditorHandle {
   insertText: (text: string) => void;
@@ -48,13 +48,14 @@ async function saveToBackend(templateId: string | number | null, content: string
 }
 
 function applyExpressionDecorations(
-  editor: monaco.editor.IStandaloneCodeEditor,
-  collection: monaco.editor.IEditorDecorationsCollection
+  monaco: typeof monacoTypes,
+  editor: monacoTypes.editor.IStandaloneCodeEditor,
+  collection: monacoTypes.editor.IEditorDecorationsCollection
 ) {
   const model = editor.getModel();
   if (!model) return;
   const text = model.getValue();
-  const decorations: monaco.editor.IModelDeltaDecoration[] = [];
+  const decorations: monacoTypes.editor.IModelDeltaDecoration[] = [];
   const regex = /\{\{.*?\}\}/g;
   let match;
   while ((match = regex.exec(text)) !== null) {
@@ -70,14 +71,18 @@ function applyExpressionDecorations(
 
 export const EditorPanel = forwardRef<EditorHandle, EditorPanelProps>(
   ({ content, onChange, validation, templateId }, ref) => {
-    const editorInstanceRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-    const decorationsRef = useRef<monaco.editor.IEditorDecorationsCollection | null>(null);
+    const editorInstanceRef = useRef<monacoTypes.editor.IStandaloneCodeEditor | null>(null);
+    const decorationsRef = useRef<monacoTypes.editor.IEditorDecorationsCollection | null>(null);
+    const monacoRef = useRef<typeof monacoTypes | null>(null);
     const backendTimeoutRef = useRef<number | null>(null);
+
+    const monacoInstance = useMonaco();
 
     useImperativeHandle(ref, () => ({
       insertText(text: string) {
         const editor = editorInstanceRef.current;
-        if (!editor) return;
+        const monaco = monacoRef.current;
+        if (!editor || !monaco) return;
         const position = editor.getPosition();
         if (!position) return;
         editor.executeEdits("parameter-helper", [{
@@ -94,19 +99,21 @@ export const EditorPanel = forwardRef<EditorHandle, EditorPanelProps>(
 
     // Disable Monaco YAML code actions to prevent worker crashes
     useEffect(() => {
-      monaco.languages.registerCodeActionProvider("yaml", {
+      if (!monacoInstance) return;
+      monacoInstance.languages.registerCodeActionProvider("yaml", {
         provideCodeActions() {
           return { actions: [], dispose() {} };
         }
       });
-    }, []);
+    }, [monacoInstance]);
 
     // Update decorations whenever content changes
     useEffect(() => {
       const editor = editorInstanceRef.current;
       const collection = decorationsRef.current;
-      if (editor && collection) {
-        applyExpressionDecorations(editor, collection);
+      const monaco = monacoRef.current;
+      if (editor && collection && monaco) {
+        applyExpressionDecorations(monaco, editor, collection);
       }
     }, [content]);
 
@@ -135,10 +142,11 @@ export const EditorPanel = forwardRef<EditorHandle, EditorPanelProps>(
         value={content}
         onChange={(value) => onChange(value || "")}
         theme="vs-dark"
-        onMount={(editor) => {
+        onMount={(editor, monaco) => {
           editorInstanceRef.current = editor;
+          monacoRef.current = monaco as unknown as typeof monacoTypes;
           decorationsRef.current = editor.createDecorationsCollection([]);
-          applyExpressionDecorations(editor, decorationsRef.current);
+          applyExpressionDecorations(monacoRef.current, editor, decorationsRef.current);
 
           // Ctrl+B — wrap selection in **bold**
           editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB, () => {

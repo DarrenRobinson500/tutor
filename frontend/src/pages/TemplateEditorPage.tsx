@@ -1,6 +1,5 @@
 import debounce from "lodash.debounce";
 import Editor from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
 
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
@@ -8,7 +7,7 @@ import { TemplateMetadataBar } from "./components/TemplateMetadataBar";
 import { SectionedEditorPanel } from "./components/SectionedEditorPanel";
 import { ValuesPanel } from "./components/ValuesPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
-import { Calculator } from "./components/Calculator";
+import { DraggableCalculator } from "./components/Calculator";
 import { Layout } from "./components/Layout";
 import { apiFetch } from "../utils/apiFetch"
 import { usePreferenceStore } from "../utils/pref";
@@ -82,27 +81,6 @@ export function TemplateEditorPage() {
   const [showParamHelper,    setShowParamHelper]    = useState(false);
   const [showDiagramHelper,  setShowDiagramHelper]  = useState(false);
   const [showKnowledgeHelper, setShowKnowledgeHelper] = useState(false);
-  const [calcPos, setCalcPos] = useState({ x: window.innerWidth - 310, y: 80 });
-  const calcDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
-
-  function onCalcDragStart(e: React.MouseEvent) {
-    e.preventDefault();
-    calcDragRef.current = { startX: e.clientX, startY: e.clientY, origX: calcPos.x, origY: calcPos.y };
-    function onMove(ev: MouseEvent) {
-      if (!calcDragRef.current) return;
-      setCalcPos({
-        x: calcDragRef.current.origX + (ev.clientX - calcDragRef.current.startX),
-        y: calcDragRef.current.origY + (ev.clientY - calcDragRef.current.startY),
-      });
-    }
-    function onUp() {
-      calcDragRef.current = null;
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-    }
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  }
   const [aiPrompt, setAiPrompt] = useState("");
   const [isAiUpdating, setIsAiUpdating] = useState(false);
   const [noteText, setNoteText] = useState("");
@@ -879,9 +857,9 @@ const handleToggleValidated = async () => {
                     }, 1500);
                   }}
                   theme="vs-dark"
-                  onMount={(editor) => {
+                  onMount={(editor, _monaco) => {
                     editor.onKeyDown((e) => {
-                      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.keyCode === monaco.KeyCode.KeyB) {
+                      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.keyCode === _monaco.KeyCode.KeyB) {
                         e.preventDefault();
                         e.stopPropagation();
                         const sel = editor.getSelection();
@@ -989,42 +967,7 @@ const handleToggleValidated = async () => {
                 }}
               />
               {showCalculator && (
-                <div style={{ position: "fixed", left: calcPos.x, top: calcPos.y, zIndex: 1000, width: 286, transform: "scale(0.82)", transformOrigin: "top left" }}>
-                  <div
-                    onMouseDown={onCalcDragStart}
-                    style={{
-                      height: 28,
-                      background: "#3a3a3c",
-                      borderRadius: "12px 12px 0 0",
-                      cursor: "grab",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      position: "relative",
-                    }}
-                  >
-                    <div style={{ width: 40, height: 4, borderRadius: 2, background: "#888" }} />
-                    <button
-                      onMouseDown={e => e.stopPropagation()}
-                      onClick={() => setShowCalculator(false)}
-                      style={{
-                        position: "absolute",
-                        right: 8,
-                        background: "none",
-                        border: "none",
-                        color: "#aaa",
-                        fontSize: 18,
-                        lineHeight: 1,
-                        cursor: "pointer",
-                        padding: "0 4px",
-                      }}
-                      aria-label="Close calculator"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <Calculator />
-                </div>
+                <DraggableCalculator onClose={() => setShowCalculator(false)} />
               )}
 
             </div>
