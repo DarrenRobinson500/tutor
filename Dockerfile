@@ -18,7 +18,7 @@ ENV REACT_APP_STRIPE_PUBLISHABLE_KEY=$REACT_APP_STRIPE_PUBLISHABLE_KEY
 
 # Frontend build
 COPY frontend/package*.json /app/frontend/
-RUN cd /app/frontend && npm install
+RUN cd /app/frontend && npm install --legacy-peer-deps
 COPY frontend/ /app/frontend/
 RUN cd /app/frontend && npm run build
 
