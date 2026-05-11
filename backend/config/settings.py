@@ -27,12 +27,16 @@ STRIPE_SECRET_KEY      = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder")
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "pk_test_placeholder")
 STRIPE_WEBHOOK_SECRET  = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["*", "healthcheck.railway.app"]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://web-production-f1310.up.railway.app",
-    "https://greenlearning.vercel.app",
+    "https://www.subject-matter.com.au",
 ]
+for _csrf_key in ("FRONTEND_URL", "CUSTOM_FRONTEND", "BACKEND_URL"):
+    _csrf_val = os.getenv(_csrf_key, "").rstrip("/")
+    if _csrf_val:
+        CSRF_TRUSTED_ORIGINS.extend([v.strip() for v in _csrf_val.split(",")])
+del _csrf_key, _csrf_val
 
 CUSTOM_DOMAIN = os.getenv("CUSTOM_DOMAIN")
 if CUSTOM_DOMAIN:
@@ -154,6 +158,7 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+WHITENOISE_ROOT = BASE_DIR / "staticfiles" / "frontend"
 if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 STATICFILES_DIRS = []
