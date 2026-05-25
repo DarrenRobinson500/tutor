@@ -29,7 +29,23 @@ User = get_user_model()
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .pre_view import *
+
+
+class SuperuserRoleSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        user = self.user
+        if user.is_superuser and getattr(user, 'role', None) != 'admin':
+            user.role = 'admin'
+            user.save(update_fields=['role'])
+        return data
+
+
+class SuperuserRoleTokenView(TokenObtainPairView):
+    serializer_class = SuperuserRoleSerializer
 from .message import *
 from .booking import *
 

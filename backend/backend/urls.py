@@ -1,9 +1,6 @@
 from rest_framework.routers import DefaultRouter
 from django.urls import path
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
+from rest_framework_simplejwt.views import TokenRefreshView
 from .views import *
 
 router = DefaultRouter()
@@ -31,7 +28,7 @@ router.register(r"teachers", TeacherViewSet, basename="teachers")
 router.register(r"assessments", AssessmentViewSet, basename="assessments")
 
 urlpatterns = [
-    path("auth/jwt/login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("auth/jwt/login/", SuperuserRoleTokenView.as_view(), name="token_obtain_pair"),
     path("auth/jwt/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("docs/", editor_docs, name="editor_docs"),
 
