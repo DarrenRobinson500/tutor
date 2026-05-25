@@ -144,10 +144,21 @@ class AuthViewSet(viewsets.ViewSet):
     @method_decorator(csrf_exempt, name='login')
     @action(detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[],)
     def login(self, request):
-        email = request.data.get("email")
+        email = (request.data.get("email") or "").strip()
         password = request.data.get("password")
 
-        user = authenticate(request, username=email, password=password)
+        # Case-insensitive email lookup — find the stored username first,
+        # then authenticate with the exact stored value.
+        if "@" in email:
+            try:
+                stored_user = User.objects.get(username__iexact=email)
+                username = stored_user.username
+            except User.DoesNotExist:
+                username = email
+        else:
+            username = email
+
+        user = authenticate(request, username=username, password=password)
 
         if user is None:
             print("Login: invalid credentials")
@@ -269,6 +280,7 @@ class AuthViewSet(viewsets.ViewSet):
         last_name = (d.get("last_name") or "").strip()
         mobile = (d.get("mobile") or "").strip()
         qualification = (d.get("qualification") or "").strip()
+        university = (d.get("university") or "").strip()
         year_levels = d.get("year_levels", [])
         bio = (d.get("bio") or "").strip()
 
@@ -295,12 +307,18 @@ class AuthViewSet(viewsets.ViewSet):
             tutor=tutor_user,
             mobile=mobile or None,
             qualification=qualification,
+            university=university or None,
             tutor_year_levels=year_levels if isinstance(year_levels, list) else [],
             bio=bio or None,
             approved=False,
         )
         from .models import AdminJob
         AdminJob.objects.create(job_type='approve_tutor', subject=tutor_user)
+        TutorJob.objects.create(
+            tutor=tutor_user,
+            job_type='set_fee',
+            expires_at=timezone.now() + timedelta(days=365),
+        )
         TutorJob.objects.create(
             tutor=tutor_user,
             job_type='review_available_hours',
@@ -547,22 +565,33 @@ class AuthViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["get"])
     def parent_home(self, request):
         """Return parent + children dashboard data."""
-        from .models import AssessmentToken, TestSession, ParentChild
+        from .models import AssessmentToken, TestSession, ParentChild, TutoringSession
         from django.utils import timezone as tz
 
         user = request.user
         if not user.is_authenticated or user.role != "parent":
             return Response({"error": "Not authorised."}, status=403)
 
+        from .models import TutorStudent
         children_links = ParentChild.objects.filter(parent=user).select_related("child")
         children_data = []
         for link in children_links:
             child = link.child
             profile = StudentProfile.objects.filter(user=child).first()
-            latest_session = TestSession.objects.filter(
+            latest_test = TestSession.objects.filter(
                 student=child, status="completed"
             ).order_by("-completed_at").first()
             test_count = TestSession.objects.filter(student=child, status="completed").count()
+
+            tutor_link = TutorStudent.objects.filter(student=child).select_related("tutor").first()
+            tutor_name = tutor_link.tutor.get_full_name() if tutor_link else None
+
+            latest_tutoring = (
+                TutoringSession.objects
+                .filter(student=child)
+                .order_by("-created_at")
+                .first()
+            ) if tutor_link else None
 
             children_data.append({
                 "id": child.id,
@@ -571,7 +600,10 @@ class AuthViewSet(viewsets.ViewSet):
                 "year_level": profile.year_level if profile else None,
                 "school_name": profile.school_name if profile else None,
                 "test_count": test_count,
-                "latest_test_date": latest_session.completed_at.isoformat() if latest_session else None,
+                "latest_test_date": latest_test.completed_at.isoformat() if latest_test else None,
+                "latest_session_date": latest_tutoring.created_at.isoformat() if latest_tutoring else None,
+                "tutor_name": tutor_name,
+                "next_booking": child.next_booking(),
             })
 
         return Response({
@@ -583,6 +615,206 @@ class AuthViewSet(viewsets.ViewSet):
             },
             "children": children_data,
         })
+
+    @action(detail=False, methods=["post"])
+    def select_tutor(self, request):
+        """Connect a child to a tutor and book the recurring weekly slot."""
+        from .models import TutorStudent, BookingWeekly, ParentChild
+        from django.contrib.auth import get_user_model
+        from datetime import time as dtime
+
+        User = get_user_model()
+        user = request.user
+        if not user.is_authenticated or user.role != "parent":
+            return Response({"error": "Not authorised."}, status=403)
+
+        child_id  = request.data.get("child_id")
+        tutor_id  = request.data.get("tutor_id")
+        weekday   = request.data.get("weekday")    # int 0–6
+        start_time = request.data.get("start_time")  # "HH:MM"
+        end_time   = request.data.get("end_time")    # "HH:MM"
+
+        try:
+            child = User.objects.get(id=child_id, role="student")
+        except User.DoesNotExist:
+            return Response({"error": "Child not found."}, status=400)
+
+        if not ParentChild.objects.filter(parent=user, child=child).exists():
+            return Response({"error": "Not authorised."}, status=403)
+
+        try:
+            tutor = User.objects.get(id=tutor_id, role="tutor")
+        except User.DoesNotExist:
+            return Response({"error": "Tutor not found."}, status=400)
+
+        TutorStudent.objects.get_or_create(tutor=tutor, student=child)
+        invalidate_students_cache_for_tutor(tutor.id)
+
+        if weekday is not None and start_time and end_time:
+            h_s, m_s = map(int, start_time.split(":"))
+            h_e, m_e = map(int, end_time.split(":"))
+            BookingWeekly.objects.create(
+                tutor=tutor,
+                student=child,
+                weekday=int(weekday),
+                start_time=dtime(h_s, m_s),
+                end_time=dtime(h_e, m_e),
+                confirmed=True,
+            )
+
+        # Send confirmation emails in background
+        import threading
+        from django.core.mail import send_mail
+        from django.conf import settings as _settings
+
+        tutor_full = f"{tutor.first_name} {tutor.last_name}".strip() or tutor.username
+        child_full = f"{child.first_name} {child.last_name}".strip()
+        from_email = getattr(_settings, "DEFAULT_FROM_EMAIL", "SubjectMatter <noreply@subjectmatter.app>")
+
+        # Build a human-readable session time line if a slot was provided
+        _DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        if weekday is not None and start_time and end_time:
+            def _fmt(hhmm):
+                h, m = map(int, hhmm.split(':'))
+                period = 'am' if h < 12 else 'pm'
+                h12 = 12 if h % 12 == 0 else h % 12
+                return f"{h12}:{m:02d}{period}" if m else f"{h12}{period}"
+            session_line = f"{_DAY_NAMES[int(weekday)]}s, {_fmt(start_time)} – {_fmt(end_time)}"
+        else:
+            session_line = None
+
+        def _send_emails():
+            session_blurb = f"Session time: {session_line}\n\n" if session_line else ""
+            send_mail(
+                subject=f"Your tutor has been confirmed — {tutor_full}",
+                message=(
+                    f"Hi {user.first_name},\n\n"
+                    f"Great news! You've been matched with {tutor_full} for {child_full}.\n\n"
+                    f"{session_blurb}"
+                    f"{tutor_full} will message you to confirm a time.\n\n"
+                    f"— The SubjectMatter team"
+                ),
+                from_email=from_email,
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
+            send_mail(
+                subject=f"New student — {child_full}",
+                message=(
+                    f"Hi {tutor.first_name},\n\n"
+                    f"A session has been arranged with a new student: {child_full}.\n\n"
+                    f"{session_blurb}"
+                    f"Please message the parent to confirm a time.\n\n"
+                    f"— The SubjectMatter team"
+                ),
+                from_email=from_email,
+                recipient_list=[tutor.email],
+                fail_silently=True,
+            )
+
+        threading.Thread(target=_send_emails, daemon=True).start()
+
+        return Response({"status": "ok"})
+
+    @action(detail=False, methods=["post"])
+    def remove_tutor(self, request):
+        """Remove the tutor–student link and any unconfirmed weekly bookings for that child."""
+        from .models import TutorStudent, BookingWeekly, ParentChild
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        user = request.user
+        if not user.is_authenticated or user.role != "parent":
+            return Response({"error": "Not authorised."}, status=403)
+
+        child_id = request.data.get("child_id")
+        try:
+            child = User.objects.get(id=child_id, role="student")
+        except User.DoesNotExist:
+            return Response({"error": "Child not found."}, status=400)
+
+        if not ParentChild.objects.filter(parent=user, child=child).exists():
+            return Response({"error": "Not authorised."}, status=403)
+
+        TutorStudent.objects.filter(student=child).delete()
+        BookingWeekly.objects.filter(student=child, confirmed=False).delete()
+
+        return Response({"status": "ok"})
+
+    @action(detail=False, methods=["post"])
+    def request_tutor_mobile(self, request):
+        """Send the tutor's mobile number to the parent and alert the tutor to expect a call."""
+        from .models import TutorProfile, ParentChild
+        from django.contrib.auth import get_user_model
+        import threading
+        from django.core.mail import send_mail
+        from django.conf import settings as _settings
+
+        User = get_user_model()
+        user = request.user
+        if not user.is_authenticated or user.role != "parent":
+            return Response({"error": "Not authorised."}, status=403)
+
+        tutor_id = request.data.get("tutor_id")
+        child_id = request.data.get("child_id")
+
+        try:
+            tutor = User.objects.get(id=tutor_id, role="tutor")
+        except User.DoesNotExist:
+            return Response({"error": "Tutor not found."}, status=400)
+
+        if child_id:
+            try:
+                child = User.objects.get(id=child_id, role="student")
+                if not ParentChild.objects.filter(parent=user, child=child).exists():
+                    return Response({"error": "Not authorised."}, status=403)
+            except User.DoesNotExist:
+                return Response({"error": "Child not found."}, status=400)
+        else:
+            child = None
+
+        try:
+            profile = TutorProfile.objects.get(tutor=tutor)
+            mobile = profile.mobile or ""
+        except TutorProfile.DoesNotExist:
+            mobile = ""
+
+        if not mobile:
+            return Response({"error": "Tutor has not provided a mobile number yet."}, status=400)
+
+        tutor_full = f"{tutor.first_name} {tutor.last_name}".strip() or tutor.username
+        child_full = f"{child.first_name} {child.last_name}".strip() if child else "your child"
+        from_email = getattr(_settings, "DEFAULT_FROM_EMAIL", "SubjectMatter <noreply@subjectmatter.app>")
+
+        def _send_emails():
+            send_mail(
+                subject=f"{tutor_full}'s contact number",
+                message=(
+                    f"Hi {user.first_name},\n\n"
+                    f"Here is {tutor_full}'s mobile number: {mobile}\n\n"
+                    f"Feel free to give them a call to introduce yourself and discuss {child_full}'s sessions.\n\n"
+                    f"— The SubjectMatter team"
+                ),
+                from_email=from_email,
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
+            send_mail(
+                subject="A parent will be calling you",
+                message=(
+                    f"Hi {tutor.first_name},\n\n"
+                    f"The parent of {child_full} has requested your mobile number "
+                    f"and will be calling you soon to discuss their child's tutoring sessions.\n\n"
+                    f"— The SubjectMatter team"
+                ),
+                from_email=from_email,
+                recipient_list=[tutor.email],
+                fail_silently=True,
+            )
+
+        threading.Thread(target=_send_emails, daemon=True).start()
+
+        return Response({"status": "ok"})
 
     @action(detail=False, methods=["post"])
     def launch_assessment(self, request):
@@ -846,7 +1078,16 @@ class QuestionViewSet(viewsets.ViewSet):
                 next_question["template_id"] = next_template_id  # English ID for session tracking
                 print(f"Successfully generated question with template_id: {next_template_id}")
             else:
-                print("Failed to generate question from template after 3 attempts:", preview.get("error", "")[:200] if preview else "")
+                error_detail = preview.get("error", "") if preview else ""
+                print(f"Failed to generate question from template {render_template.id} after 3 attempts:", error_detail[:200])
+                # Flag the original (English) template so editors can see it needs fixing
+                from .models import Note as _Note
+                note_text = f"Failed to evaluate: {error_detail[:300]}" if error_detail else "Failed to evaluate"
+                _Note.objects.get_or_create(
+                    template=next_template,
+                    category='auto_error',
+                    text=note_text,
+                )
                 next_question = None
                 next_template_id = None
         elif loop_complete:
@@ -867,7 +1108,6 @@ class QuestionViewSet(viewsets.ViewSet):
             "correct": request.data.get("correct", False),
             "loop_complete": loop_complete,
         }
-        print("Returning response:", response_data)
         return Response(response_data, status=201)
 
 class TemplateGroupViewSet(viewsets.ReadOnlyModelViewSet):
@@ -1290,6 +1530,47 @@ class TemplateViewSet(viewsets.ModelViewSet):
         if first_error:
             result["first_error"] = first_error
         return Response(result)
+
+    @action(detail=False, methods=["post"])
+    def import_named(self, request):
+        """POST /api/templates/import_named/
+        Create a single template resolved by skill_detail_id.
+        Body: {skill_detail_id, year, difficulty, yaml}
+        Returns: {id} on success."""
+        import yaml as _yaml
+        skill_detail_id = request.data.get("skill_detail_id")
+        year = str(request.data.get("year") or "").strip()
+        difficulty = str(request.data.get("difficulty") or "").strip().lower()
+        content = str(request.data.get("yaml") or "").strip()
+
+        if not skill_detail_id:
+            return Response({"error": "skill_detail_id is required"}, status=400)
+        if difficulty not in ("easy", "medium", "hard"):
+            return Response({"error": "difficulty must be easy, medium, or hard"}, status=400)
+        if not content:
+            return Response({"error": "yaml content is required"}, status=400)
+
+        skill_detail = Skill.objects.filter(pk=skill_detail_id, is_detail=True).first()
+        if not skill_detail:
+            return Response({"error": "Skill detail not found"}, status=404)
+
+        name = ""
+        try:
+            parsed = _yaml.safe_load(content) or {}
+            name = str(parsed.get("title") or "")
+        except Exception:
+            pass
+
+        template = Template.objects.create(
+            name=name,
+            content=content,
+            grade=year[:4] if year else None,
+            difficulty=difficulty,
+            skill_detail=skill_detail,
+            validated=False,
+            status="draft",
+        )
+        return Response({"id": template.id}, status=201)
 
     @action(detail=False, methods=["post"])
     def delete_all(self, request):
@@ -1785,6 +2066,59 @@ class SkillViewSet(viewsets.ModelViewSet):
         serializer = SkillSerializer(chain, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=["get"])
+    def resolve_detail(self, request):
+        """GET /api/skills/resolve_detail/?name=<text>&year=<year>
+        Returns {id, skill_id, description} for the matching skill detail.
+        Falls back to fuzzy similarity matching (>= 0.85) when no exact match exists."""
+        from difflib import SequenceMatcher
+
+        name = (request.query_params.get("name") or "").strip()
+        year = str(request.query_params.get("year") or "").strip()
+        if not name or not year:
+            return Response({"error": "name and year are required"}, status=400)
+
+        def _in_year(skill):
+            parent = skill.parent
+            if not parent:
+                return False
+            grade_list = [g.strip() for g in (parent.grades or "").split(",") if g.strip()]
+            return year in grade_list
+
+        def _response(skill):
+            return Response({
+                "id": skill.id,
+                "skill_id": skill.parent_id,
+                "description": skill.description,
+            })
+
+        # 1. Exact match
+        for skill in Skill.objects.filter(is_detail=True, description=name).select_related("parent"):
+            if _in_year(skill):
+                return _response(skill)
+
+        # 2. Case-insensitive + normalised whitespace
+        name_norm = " ".join(name.lower().split())
+        for skill in Skill.objects.filter(is_detail=True).select_related("parent"):
+            if not _in_year(skill):
+                continue
+            if " ".join(skill.description.lower().split()) == name_norm:
+                return _response(skill)
+
+        # 3. Fuzzy similarity >= 0.85 — pick the best match above the threshold
+        best_skill, best_score = None, 0.0
+        for skill in Skill.objects.filter(is_detail=True).select_related("parent"):
+            if not _in_year(skill):
+                continue
+            score = SequenceMatcher(None, name_norm, " ".join(skill.description.lower().split())).ratio()
+            if score > best_score:
+                best_score, best_skill = score, skill
+
+        if best_skill and best_score >= 0.85:
+            return _response(best_skill)
+
+        return Response({"error": "Not found"}, status=404)
+
     @action(detail=False, methods=["post"])
     def load_syllabus(self, request):
         import_syllabus()
@@ -1904,20 +2238,6 @@ class SkillViewSet(viewsets.ModelViewSet):
         return result
 
     def destroy(self, request, *args, **kwargs):
-        skill = self.get_object()
-
-        if not skill.is_detail:
-            return Response(
-                {"error": "Only skill detail nodes can be deleted from this interface."},
-                status=400
-            )
-
-        if skill.children.exists():
-            return Response(
-                {"error": "Cannot delete a skill that has sub-skills."},
-                status=400
-            )
-
         result = super().destroy(request, *args, **kwargs)
         _reset_year_caches()
         return result
@@ -2097,6 +2417,7 @@ class TutorViewSet(viewsets.ModelViewSet):
                 'amount_tutor': str(p.amount_tutor),
                 'focus_area': p.focus_area,
                 'notes': p.notes,
+                'status': 'paid' if p.date_credit else 'pending',
             }
 
         current_qs = qs.filter(date_tuition__gte=current_month_start)
@@ -2124,6 +2445,30 @@ class TutorViewSet(viewsets.ModelViewSet):
             },
         })
 
+    @action(detail=True, methods=["get"])
+    def feedback(self, request, pk=None):
+        """Recent parent ratings/comments for this tutor."""
+        tutor = self.get_object()
+        payments = (
+            SessionPayment.objects
+            .filter(tutor=tutor, rating__isnull=False)
+            .select_related('session', 'session__student', 'student', 'parent')
+            .order_by('-paid_at')[:20]
+        )
+        result = []
+        for p in payments:
+            student = (p.session.student if p.session else p.student)
+            result.append({
+                'id': p.id,
+                'rating': p.rating,
+                'rating_comment': p.rating_comment or '',
+                'student_name': student.first_name if student else '',
+                'parent_name': p.parent.get_full_name() if p.parent else '',
+                'session_date': p.session.created_at.date().isoformat() if p.session else p.created_at.date().isoformat(),
+                'paid_at': p.paid_at.isoformat() if p.paid_at else None,
+            })
+        return Response(result)
+
     @action(detail=True, methods=["post"])
     def toggle_looking(self, request, pk=None):
         tutor = self.get_object()
@@ -2131,6 +2476,130 @@ class TutorViewSet(viewsets.ModelViewSet):
         profile.looking_for_students = not profile.looking_for_students
         profile.save()
         return Response({"looking_for_students": profile.looking_for_students})
+
+    @action(detail=False, methods=["get"], url_path="available")
+    def available(self, request):
+        from .models import TutorAvailability, TutorProfile, SessionPayment
+        from django.db.models import Count, Avg
+
+        WEEKDAY_MAP = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+        def time_of_day(start_time):
+            h = start_time.hour
+            if h < 12:
+                return 'Morning'
+            if h < 17:
+                return 'Afternoon'
+            return 'Evening'
+
+        profiles = (
+            TutorProfile.objects
+            .filter(approved=True, looking_for_students=True)
+            .select_related('tutor')
+        )
+
+        tutor_ids = [p.tutor_id for p in profiles]
+
+        stats = (
+            SessionPayment.objects
+            .filter(tutor__in=tutor_ids, status='paid')
+            .values('tutor')
+            .annotate(n=Count('id'), avg_rating=Avg('rating'))
+        )
+        stats_by_tutor = {r['tutor']: r for r in stats}
+
+        availability_qs = TutorAvailability.objects.filter(tutor__in=tutor_ids)
+        avail_by_tutor = {}
+        for av in availability_qs:
+            avail_by_tutor.setdefault(av.tutor_id, []).append({
+                'day': WEEKDAY_MAP[av.weekday],
+                'timeOfDay': time_of_day(av.start_time),
+                'startTime': av.start_time.strftime('%H:%M'),
+                'endTime': av.end_time.strftime('%H:%M'),
+            })
+
+        tutors = []
+        for profile in profiles:
+            u = profile.tutor
+            last = u.last_name or ''
+            s = stats_by_tutor.get(u.id, {})
+            session_count = s.get('n') or 0
+            avg_rating = s.get('avg_rating')
+            tutors.append({
+                'id': str(u.id),
+                'firstName': u.first_name,
+                'lastInitial': last[0].upper() if last else '',
+                'university': profile.university or '',
+                'qualification': profile.qualification or '',
+                'availability': avail_by_tutor.get(u.id, []),
+                'hourlyRate': float(profile.default_hourly_rate),
+                'sessionCount': session_count,
+                'rating': round(avg_rating, 1) if avg_rating is not None else None,
+                'bio': profile.bio or '',
+            })
+
+        return Response(tutors)
+
+    @action(detail=True, methods=["get"], url_path="available_slots")
+    def available_slots(self, request, pk=None):
+        """Return specific bookable time slots for a tutor.
+
+        Each TutorAvailability window is split into session-length increments.
+        Any slot that overlaps a confirmed or unconfirmed BookingWeekly is removed.
+        """
+        from .models import TutorAvailability, BookingWeekly, TutorProfile
+        from datetime import time, timedelta as td, datetime as dt
+
+        tutor = self.get_object()
+
+        try:
+            profile = TutorProfile.objects.get(tutor=tutor)
+            session_mins = profile.default_session_minutes or 60
+        except TutorProfile.DoesNotExist:
+            session_mins = 60
+
+        WEEKDAY_MAP = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+        # Collect existing bookings as (weekday, start_time, end_time) tuples
+        bookings = list(
+            BookingWeekly.objects
+            .filter(tutor=tutor)
+            .values_list('weekday', 'start_time', 'end_time')
+        )
+
+        def to_minutes(t):
+            return t.hour * 60 + t.minute
+
+        def overlaps(slot_start_m, slot_end_m, bstart, bend):
+            bs = to_minutes(bstart)
+            be = to_minutes(bend)
+            return slot_start_m < be and slot_end_m > bs
+
+        slots = []
+        for av in TutorAvailability.objects.filter(tutor=tutor).order_by('weekday', 'start_time'):
+            window_start = to_minutes(av.start_time)
+            window_end   = to_minutes(av.end_time)
+            cursor = window_start
+            while cursor + session_mins <= window_end:
+                slot_end = cursor + session_mins
+                blocked = any(
+                    av.weekday == bday and overlaps(cursor, slot_end, bstart, bend)
+                    for bday, bstart, bend in bookings
+                )
+                if not blocked:
+                    sh, sm = divmod(cursor, 60)
+                    eh, em = divmod(slot_end, 60)
+                    slots.append({
+                        'weekday':   av.weekday,
+                        'day':       WEEKDAY_MAP[av.weekday],
+                        'dayFull':   DAY_FULL[av.weekday],
+                        'startTime': f'{sh:02d}:{sm:02d}',
+                        'endTime':   f'{eh:02d}:{em:02d}',
+                    })
+                cursor += session_mins
+
+        return Response(slots)
 
     @action(detail=True, methods=["post"], url_path="visited_schedule")
     def visited_schedule(self, request, pk=None):
@@ -2480,9 +2949,53 @@ class TutorViewSet(viewsets.ModelViewSet):
 
         if command == "confirm":return confirm_booking(booking, user_role)
         if command == "edit": return edit_booking(booking, data, booking_type, user_role)
-        if command == "skip": return skip_booking(booking, user_role)
+        if command == "skip": return skip_booking(booking, user_role, weeks=int(data.get("weeks", 1)))
         if command == "remove_skip": return remove_skip_booking(booking, user_role)
         if command == "delete":return delete_booking(booking, booking_type, user_role)
+
+        if command == "complete":
+            from datetime import date as _date
+            from .models import TutorJob, BookingOutcome, StudentFocusArea
+
+            student = booking.student
+
+            if booking_type == "adhoc":
+                occurrence_date = booking.start_datetime.date()
+                occurrence_time = booking.start_datetime.time().replace(second=0, microsecond=0)
+                ref = f"adhoc_{booking.id}"
+            else:
+                date_str = data.get("date")
+                if not date_str:
+                    return Response({"ok": False, "error": "Date required for weekly booking"}, status=400)
+                occurrence_date = _date.fromisoformat(date_str)
+                occurrence_time = booking.start_time
+                ref = f"weekly_{booking.id}_{occurrence_date.isoformat()}"
+
+            expires_at = timezone.now() + timedelta(days=14)
+            job, created = TutorJob.objects.get_or_create(
+                tutor=tutor,
+                student=student,
+                job_type='post_tuition_review',
+                booking_ref=ref,
+                defaults={'expires_at': expires_at},
+            )
+            if created:
+                outcome = BookingOutcome.objects.create(
+                    tutor=tutor,
+                    student=student,
+                    date=occurrence_date,
+                    time=occurrence_time,
+                )
+                skill_ids = list(
+                    StudentFocusArea.objects.filter(student=student)
+                    .values_list('skill_id', flat=True)
+                )
+                if skill_ids:
+                    outcome.focus_areas.set(skill_ids)
+                job.booking_outcome = outcome
+                job.save(update_fields=['booking_outcome'])
+
+            return Response({"ok": True, "job_id": job.id, "student_id": student.id})
 
         return Response({"ok": False, "error": "Unknown command"}, status=400)
 
@@ -2535,6 +3048,48 @@ class TutorJobViewSet(viewsets.ViewSet):
                 'booking_date': outcome.date if outcome else None,
                 'booking_time': outcome.time.strftime('%H:%M') if outcome and outcome.time else None,
             })
+
+        # Synthetic jobs for unconfirmed bookings
+        from .models import BookingAdhoc, BookingWeekly
+        unconfirmed_adhoc = (
+            BookingAdhoc.objects
+            .filter(tutor=request.user, confirmed=False, start_datetime__gte=now)
+            .select_related('student')
+            .order_by('start_datetime')
+        )
+        for b in unconfirmed_adhoc:
+            data.append({
+                'id': None,
+                'job_type': 'confirm_appointment',
+                'student_id': b.student_id,
+                'student_first_name': b.student.first_name if b.student else None,
+                'student_last_name': b.student.last_name if b.student else None,
+                'tutor_id': request.user.id,
+                'booking_type': 'adhoc',
+                'booking_id': b.id,
+                'booking_date': b.start_datetime.date().isoformat(),
+                'booking_time': b.start_datetime.strftime('%H:%M'),
+            })
+
+        unconfirmed_weekly = (
+            BookingWeekly.objects
+            .filter(tutor=request.user, confirmed=False)
+            .select_related('student')
+        )
+        for b in unconfirmed_weekly:
+            data.append({
+                'id': None,
+                'job_type': 'confirm_appointment',
+                'student_id': b.student_id,
+                'student_first_name': b.student.first_name if b.student else None,
+                'student_last_name': b.student.last_name if b.student else None,
+                'tutor_id': request.user.id,
+                'booking_type': 'weekly',
+                'booking_id': b.id,
+                'booking_date': None,
+                'booking_time': b.start_time.strftime('%H:%M'),
+            })
+
         return Response(data)
 
     @action(detail=True, methods=['get'])
@@ -2778,7 +3333,7 @@ class TutorJobViewSet(viewsets.ViewSet):
     @action(detail=True, methods=['post'])
     def apply_payment(self, request, pk=None):
         from .models import (
-            StudentProfile, TutorProfile, DistributorParent, ParentChild, Payment
+            StudentProfile, TutorProfile, DistributorParent, ParentChild, Payment, SessionPayment
         )
         import decimal
 
@@ -2808,17 +3363,19 @@ class TutorJobViewSet(viewsets.ViewSet):
         tutor_profile = TutorProfile.objects.filter(tutor=tutor).first()
         session_minutes = tutor_profile.default_session_minutes if tutor_profile else 60
 
-        # Distributor
+        # Distributor and parent
         distributor = None
+        parent = None
         parent_link = ParentChild.objects.filter(child=student).select_related('parent').first()
         if parent_link:
-            dist_link = DistributorParent.objects.filter(parent=parent_link.parent).select_related('distributor').first()
+            parent = parent_link.parent
+            dist_link = DistributorParent.objects.filter(parent=parent).select_related('distributor').first()
             if dist_link:
                 distributor = dist_link.distributor
 
         # Focus areas as text
         focus_text = ", ".join(
-            fa.skill.description for fa in outcome.focus_areas.select_related('skill').all() if fa
+            fa.description for fa in outcome.focus_areas.all() if fa
         ) if outcome.focus_areas.exists() else ""
 
         # Split: tutor share = hourly_rate prorated; platform and (if distributor exists) distributor fees from GlobalSettings
@@ -2849,6 +3406,22 @@ class TutorJobViewSet(viewsets.ViewSet):
         outcome.payment = payment
         outcome.save(update_fields=['payment'])
 
+        # Create a SessionPayment so the parent sees it on their home page.
+        # session is null here (no online room required for all booking types).
+        if parent:
+            SessionPayment.objects.create(
+                session=None,
+                student=student,
+                parent=parent,
+                tutor=tutor,
+                distributor=distributor,
+                tutor_amount=amount_tutor,
+                platform_amount=amount_platform,
+                distributor_amount=amount_distributor,
+                total_amount=amount_paid,
+                status='pending',
+            )
+
         return Response({'ok': True, 'payment_id': payment.id})
 
     @action(detail=True, methods=['post'])
@@ -2862,6 +3435,14 @@ class TutorJobViewSet(viewsets.ViewSet):
         # For post_tuition_review, persist any outcome data submitted with the request.
         # If the BookingOutcome is missing (e.g. legacy job) and focus_area_next_ids are
         # being submitted, create the record now so data is never silently dropped.
+        if job.job_type == 'set_fee':
+            hourly_rate = request.data.get('hourly_rate')
+            if hourly_rate is not None:
+                from .models import TutorProfile
+                profile, _ = TutorProfile.objects.get_or_create(tutor=request.user)
+                profile.default_hourly_rate = hourly_rate
+                profile.save(update_fields=['default_hourly_rate'])
+
         if job.job_type == 'post_tuition_review' and not job.booking_outcome and 'focus_area_next_ids' in request.data:
             from .models import BookingOutcome as _BO
             import datetime as _dt
@@ -2906,6 +3487,100 @@ class TutorJobViewSet(viewsets.ViewSet):
 
 # -------------- ADMIN JOBS ---------------- #
 
+class AdminEmailViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def _check_admin(self, request):
+        if getattr(request.user, 'role', None) != 'admin':
+            return Response({'error': 'Forbidden'}, status=403)
+        return None
+
+    @action(detail=False, methods=['get'])
+    def list_emails(self, request):
+        err = self._check_admin(request)
+        if err:
+            return err
+        from .models import AdminEmailRecord
+        records = AdminEmailRecord.objects.select_related('sent_by').all()[:200]
+        return Response([{
+            'id': r.id,
+            'to_email': r.to_email,
+            'to_name': r.to_name,
+            'subject': r.subject,
+            'body': r.body,
+            'sent_at': r.sent_at.isoformat(),
+            'sent_by': r.sent_by.get_full_name() if r.sent_by else '',
+            'status': r.status,
+            'error': r.error,
+        } for r in records])
+
+    @action(detail=False, methods=['post'])
+    def send(self, request):
+        err = self._check_admin(request)
+        if err:
+            return err
+        from .models import AdminEmailRecord, User
+        from django.core.mail import EmailMessage as DjangoEmailMessage
+        from django.conf import settings as _settings
+
+        recipient_type = request.data.get('recipient_type', 'custom')
+        subject = (request.data.get('subject') or '').strip()
+        body = (request.data.get('body') or '').strip()
+        if not subject:
+            return Response({'error': 'Subject is required.'}, status=400)
+        if not body:
+            return Response({'error': 'Body is required.'}, status=400)
+
+        from_email = getattr(_settings, 'DEFAULT_FROM_EMAIL', 'noreply@subjectmatter.app')
+
+        # Build recipient list
+        if recipient_type == 'custom':
+            to_email = (request.data.get('to_email') or '').strip()
+            to_name = (request.data.get('to_name') or '').strip()
+            if not to_email:
+                return Response({'error': 'Recipient email is required.'}, status=400)
+            recipients = [{'email': to_email, 'name': to_name, 'user': None}]
+        else:
+            role_map = {'all_parents': 'parent', 'all_tutors': 'tutor', 'all_students': 'student'}
+            role = role_map.get(recipient_type)
+            if not role:
+                return Response({'error': 'Invalid recipient_type.'}, status=400)
+            users = User.objects.filter(role=role, is_active=True).exclude(email='')
+            recipients = [{'email': u.email, 'name': u.get_full_name(), 'user': u} for u in users]
+
+        if not recipients:
+            return Response({'error': 'No recipients found.'}, status=400)
+
+        sent, failed = 0, 0
+        for r in recipients:
+            status_val = 'sent'
+            error_val = ''
+            try:
+                msg = DjangoEmailMessage(
+                    subject=subject,
+                    body=body,
+                    from_email=from_email,
+                    to=[f"{r['name']} <{r['email']}>" if r['name'] else r['email']],
+                )
+                msg.send(fail_silently=False)
+                sent += 1
+            except Exception as e:
+                status_val = 'failed'
+                error_val = str(e)
+                failed += 1
+            AdminEmailRecord.objects.create(
+                to_email=r['email'],
+                to_name=r['name'],
+                subject=subject,
+                body=body,
+                sent_by=request.user,
+                status=status_val,
+                error=error_val,
+            )
+
+        return Response({'sent': sent, 'failed': failed})
+
+
 class AdminJobViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
@@ -2917,7 +3592,7 @@ class AdminJobViewSet(viewsets.ViewSet):
     def list(self, request):
         err = self._check_admin(request)
         if err: return err
-        from .models import AdminJob, TutorProfile, DistributorProfile
+        from .models import AdminJob, TutorProfile, DistributorProfile, GlobalSetting
 
         # Ensure every unapproved applicant has a pending AdminJob,
         # regardless of when they registered.
@@ -2933,6 +3608,11 @@ class AdminJobViewSet(viewsets.ViewSet):
             ).exists():
                 AdminJob.objects.create(job_type='approve_distributor', subject=profile.user)
 
+        # Ensure bank details are configured
+        if not GlobalSetting.get('bank_bsb') or not GlobalSetting.get('bank_account'):
+            if not AdminJob.objects.filter(job_type='setup_bank_details', completed_at__isnull=True).exists():
+                AdminJob.objects.create(job_type='setup_bank_details', subject=None)
+
         jobs = AdminJob.objects.filter(completed_at__isnull=True).select_related('subject')
         data = []
         for job in jobs:
@@ -2940,9 +3620,9 @@ class AdminJobViewSet(viewsets.ViewSet):
                 'id': job.id,
                 'job_type': job.job_type,
                 'subject_id': job.subject_id,
-                'first_name': job.subject.first_name,
-                'last_name': job.subject.last_name,
-                'email': job.subject.email,
+                'first_name': job.subject.first_name if job.subject else '',
+                'last_name': job.subject.last_name if job.subject else '',
+                'email': job.subject.email if job.subject else '',
                 'triggered_at': job.triggered_at,
             }
             if job.job_type == 'approve_tutor':
@@ -2956,6 +3636,11 @@ class AdminJobViewSet(viewsets.ViewSet):
                 if profile:
                     entry['bio'] = profile.bio
                     entry['mobile'] = profile.mobile
+            elif job.job_type == 'setup_bank_details':
+                from .models import GlobalSetting as GS
+                entry['bank_bsb'] = GS.get('bank_bsb', '')
+                entry['bank_account'] = GS.get('bank_account', '')
+                entry['bank_name'] = GS.get('bank_name', '')
             data.append(entry)
         return Response(data)
 
@@ -2993,6 +3678,64 @@ class AdminJobViewSet(viewsets.ViewSet):
         job = AdminJob.objects.filter(pk=pk).first()
         if not job:
             return Response({'error': 'Not found'}, status=404)
+        job.completed_at = timezone.now()
+        job.save()
+        return Response({'ok': True})
+
+    @action(detail=False, methods=['get', 'post'], url_path='bank_details')
+    def bank_details(self, request):
+        err = self._check_admin(request)
+        if err: return err
+        from .models import GlobalSetting
+
+        if request.method == 'GET':
+            return Response({
+                'bank_bsb': GlobalSetting.get('bank_bsb', ''),
+                'bank_account': GlobalSetting.get('bank_account', ''),
+                'bank_name': GlobalSetting.get('bank_name', ''),
+            })
+
+        bsb = request.data.get('bank_bsb', '').strip()
+        account = request.data.get('bank_account', '').strip()
+        name = request.data.get('bank_name', '').strip()
+
+        if not bsb or not account:
+            return Response({'error': 'BSB and account number are required'}, status=400)
+
+        GlobalSetting.set('bank_bsb', bsb)
+        GlobalSetting.set('bank_account', account)
+        if name:
+            GlobalSetting.set('bank_name', name)
+
+        # Mark any open setup_bank_details jobs as complete
+        from .models import AdminJob as AJ
+        AJ.objects.filter(job_type='setup_bank_details', completed_at__isnull=True).update(
+            completed_at=timezone.now()
+        )
+
+        return Response({'ok': True})
+
+    @action(detail=True, methods=['post'], url_path='save_bank_details')
+    def save_bank_details(self, request, pk=None):
+        err = self._check_admin(request)
+        if err: return err
+        from .models import AdminJob, GlobalSetting
+        job = AdminJob.objects.filter(pk=pk, job_type='setup_bank_details').first()
+        if not job:
+            return Response({'error': 'Not found'}, status=404)
+
+        bsb = request.data.get('bank_bsb', '').strip()
+        account = request.data.get('bank_account', '').strip()
+        name = request.data.get('bank_name', '').strip()
+
+        if not bsb or not account:
+            return Response({'error': 'BSB and account number are required'}, status=400)
+
+        GlobalSetting.set('bank_bsb', bsb)
+        GlobalSetting.set('bank_account', account)
+        if name:
+            GlobalSetting.set('bank_name', name)
+
         job.completed_at = timezone.now()
         job.save()
         return Response({'ok': True})
@@ -3220,7 +3963,7 @@ class StudentViewSet(viewsets.ModelViewSet):
 
         student.save()
 
-        profile_fields = ["year_level", "area_of_study", "mobile", "address"]
+        profile_fields = ["year_level", "area_of_study", "mobile", "address", "min_questions_per_skill"]
         changed = False
 
         for key, value in fields.items():
@@ -3265,20 +4008,58 @@ class StudentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"])
     def progress(self, request, pk=None):
-        """Return weekly overall progress snapshots for the student."""
-        from .models import WeeklyProgressSnapshot
+        """Return weekly overall progress snapshots plus skill competency summary."""
+        from .models import WeeklyProgressSnapshot, StudentSkillCompetency, StudentFocusArea
+        from .competency import level_to_label
         student_profile = self.get_object()
         student = student_profile.user
 
         snapshots = WeeklyProgressSnapshot.objects.filter(student=student).order_by('recorded_at')
+
+        comp_qs = StudentSkillCompetency.objects.filter(student=student).select_related('skill')
+        distribution = [0] * 7
+        for c in comp_qs:
+            distribution[max(0, min(6, c.level))] += 1
+        total_skills = sum(distribution)
+        avg_level = (
+            sum(i * distribution[i] for i in range(7)) / total_skills
+            if total_skills else None
+        )
+
+        focus_qs = (
+            StudentFocusArea.objects
+            .filter(student=student)
+            .select_related('skill')
+            .order_by('order')[:6]
+        )
+        focus_competency = {
+            c.skill_id: c.level
+            for c in StudentSkillCompetency.objects.filter(
+                student=student,
+                skill_id__in=[f.skill_id for f in focus_qs],
+            )
+        }
+        focus_areas = [
+            {
+                'name': fa.skill.description,
+                'level': focus_competency.get(fa.skill_id, 0),
+                'label': level_to_label(focus_competency.get(fa.skill_id, 0)),
+            }
+            for fa in focus_qs
+        ]
+
         return Response({
             "snapshots": [
-                {
-                    "date": s.recorded_at.strftime("%d %b %Y"),
-                    "score": s.score,
-                }
+                {"date": s.recorded_at.strftime("%d %b"), "score": round(s.score, 1)}
                 for s in snapshots
-            ]
+            ],
+            "competency": {
+                "total_skills": total_skills,
+                "avg_level": round(avg_level, 1) if avg_level is not None else None,
+                "avg_label": level_to_label(round(avg_level)) if avg_level is not None else None,
+                "distribution": distribution,
+            },
+            "focus_areas": focus_areas,
         })
 
     @action(detail=True, methods=["get"])
@@ -4130,7 +4911,7 @@ class KnowledgeViewSet(viewsets.ModelViewSet):
 def editor_docs(request):
     print("Editor docs")
     import os
-    doc_path = os.path.join(os.path.dirname(__file__), "Editor Documentation.txt")
+    doc_path = os.path.join(os.path.dirname(__file__), "docs/Editor Documentation.txt")
     with open(doc_path, encoding="utf-8") as f:
         content = f.read()
     return Response({"content": content})
@@ -4251,6 +5032,12 @@ def _build_question_payload(session, template, skill_code: str, skill_descriptio
     from .template_utilities import generate_values_and_question
     preview_result = generate_values_and_question(template.id)
     if not preview_result.get('ok'):
+        error_detail = preview_result.get('error', '') or ''
+        note_text = f"Failed to evaluate: {str(error_detail)[:300]}" if error_detail else "Failed to evaluate"
+        from .models import Note as _Note
+        # Use parent_template so the note lands on the English original, not a translation
+        original = getattr(template, 'parent_template', None) or template
+        _Note.objects.get_or_create(template=original, category='auto_error', text=note_text)
         return None
     preview = preview_result['preview']
     preview['template_id'] = template.id
@@ -4364,10 +5151,25 @@ def _advance_to_question_learning_mode(session):
                 continue
 
             _random.shuffle(template_ids)
+
+            # Enforce tutor-configured question count per skill (pad up or cap down)
+            from .models import StudentProfile as _SP
+            sp = _SP.objects.filter(user=session.student).first()
+            target_q = sp.min_questions_per_skill if sp else 0
+            if target_q:
+                if len(template_ids) < target_q:
+                    base = list(template_ids)
+                    while len(template_ids) < target_q:
+                        extra = list(base)
+                        _random.shuffle(extra)
+                        template_ids.extend(extra)
+                template_ids = template_ids[:target_q]
+
             state = {
                 'skill_code': skill_code,
                 'loop': 1,
                 'loop_remaining': template_ids,
+                'loop_total': len(template_ids),
                 'loop1_correct': 0,
                 'loop1_total': 0,
             }
@@ -4411,6 +5213,7 @@ def _advance_to_question_learning_mode(session):
         payload['mode'] = 'learning'
         payload['loop'] = state['loop']
         payload['loop_remaining'] = len(loop_remaining)
+        payload['loop_total'] = state.get('loop_total', len(loop_remaining))
         payload['loop1_correct'] = state.get('loop1_correct', 0)
         payload['loop1_total'] = state.get('loop1_total', 0)
         return payload
@@ -4503,6 +5306,7 @@ def _handle_learning_answer(session, skill_code, skill_description, correct):
 
             state['loop'] = 2
             state['loop_remaining'] = template_ids
+            state['loop_total'] = len(template_ids)
             session.mode_state = state
             result_obj.save()
             session.save()
@@ -4542,8 +5346,9 @@ def _learning_complete_payload(session):
         skill = Skill.objects.filter(code=session.skill_codes[0]).first()
         skill_description = skill.description if skill else None
 
-    if session.linked_focus_area_id:
-        fa = StudentFocusArea.objects.filter(id=session.linked_focus_area_id).first()
+    fa_id = session.linked_focus_area_id or session.linked_tutoring_focus_area_id
+    if fa_id:
+        fa = StudentFocusArea.objects.filter(id=fa_id).first()
         if fa:
             stars_before = fa.level_before_learning
             stars_after = fa.level_after_learning
@@ -4584,7 +5389,11 @@ def _complete_learning_focus_area(session):
     if session.linked_tutoring_focus_area_id:
         tfa = session.linked_tutoring_focus_area
         tfa.tutoring_done_week = monday
-        tfa.save(update_fields=['tutoring_done_week'])
+        comp = StudentSkillCompetency.objects.filter(
+            student=session.student, skill=tfa.skill
+        ).values_list('level', flat=True).first()
+        tfa.level_after_learning = comp if comp is not None else 0
+        tfa.save(update_fields=['tutoring_done_week', 'level_after_learning'])
 
 
 def _recompute_session_competency(session):
@@ -5011,6 +5820,7 @@ class TestViewSet(viewsets.ViewSet):
                 session.completed_at = timezone.now()
                 session.save()
                 _recompute_session_competency(session)
+                _send_test_report_email(session)
                 skill_progress = [
                     {'code': r.skill_code, 'description': r.skill_description, 'result': r.highest_difficulty_reached}
                     for r in session.skill_results.all()
@@ -5023,6 +5833,7 @@ class TestViewSet(viewsets.ViewSet):
                 session.completed_at = timezone.now()
                 session.save()
                 _recompute_session_competency(session)
+                _send_test_report_email(session)
                 skill_progress = [
                     {'code': r.skill_code, 'description': r.skill_description, 'result': r.highest_difficulty_reached}
                     for r in session.skill_results.all()
@@ -5049,6 +5860,7 @@ class TestViewSet(viewsets.ViewSet):
         if session.test_type in ('easy', 'medium', 'hard', 'dynamic'):
             # Fixed/dynamic test: just record the answer.
             # Skill advancement is handled by _advance_to_question.
+            result_obj.highest_difficulty_reached = session.current_difficulty
             result_obj.save()
             session.save()
         else:
@@ -5158,6 +5970,49 @@ class TestViewSet(viewsets.ViewSet):
         session.save()
         return Response({'ok': True})
 
+    @action(detail=True, methods=['post'], url_path='quit_early')
+    def quit_early(self, request, pk=None):
+        from .models import TestSession, Skill
+        try:
+            session = TestSession.objects.get(id=pk)
+        except TestSession.DoesNotExist:
+            return Response({'error': 'Session not found'}, status=404)
+        if session.status != 'active':
+            return Response({'error': 'Session is not active'}, status=400)
+
+        session.status = 'abandoned'
+        session.completed_at = timezone.now()
+        session.save()
+        _send_test_report_email(session)
+
+        tested = {r.skill_code: r for r in session.skill_results.all()}
+        all_codes = session.skill_codes or []
+
+        # Look up descriptions for untested skills in one query
+        untested_codes = [c for c in all_codes if c not in tested]
+        desc_map = {}
+        if untested_codes:
+            for sk in Skill.objects.filter(code__in=untested_codes).values('code', 'description'):
+                desc_map[sk['code']] = sk['description']
+
+        skill_progress = []
+        for code in all_codes:
+            if code in tested:
+                r = tested[code]
+                skill_progress.append({
+                    'code': code,
+                    'description': r.skill_description or code,
+                    'result': r.highest_difficulty_reached,
+                })
+            else:
+                skill_progress.append({
+                    'code': code,
+                    'description': desc_map.get(code, code),
+                    'result': 'untested',
+                })
+
+        return Response({'complete': True, 'skill_progress': skill_progress})
+
     @action(detail=False, methods=['get'])
     def past(self, request):
         from .models import TestSession, TestSkillResult
@@ -5193,6 +6048,77 @@ class TestViewSet(viewsets.ViewSet):
 # ─────────────────────────────────────────────────────────────────────────────
 # TEACHER
 # ─────────────────────────────────────────────────────────────────────────────
+
+def _send_test_report_email(session):
+    """Generate the test report PDF and email it to the student's parent(s).
+    Records every attempt (success or failure) in AdminEmailRecord."""
+    import threading
+
+    def _send():
+        from django.core.mail import EmailMessage as DjangoEmailMessage
+        from django.conf import settings as _settings
+        from .test_report import generate_test_report
+        from .models import ParentChild, AdminEmailRecord
+
+        student_name = session.student.get_full_name() or session.student.username
+        date_str = (session.started_at or session.completed_at).strftime('%Y-%m-%d')
+        subject = f"{student_name}'s Assessment Report — SubjectMatter"
+        from_email = getattr(_settings, 'DEFAULT_FROM_EMAIL', 'noreply@subjectmatter.app')
+
+        parent_links = ParentChild.objects.filter(child=session.student).select_related('parent')
+        recipients = [(lnk.parent.get_full_name(), lnk.parent.email)
+                      for lnk in parent_links if lnk.parent.email]
+
+        if not recipients:
+            AdminEmailRecord.objects.create(
+                to_email='',
+                to_name='',
+                subject=subject,
+                body='',
+                status='failed',
+                error=f'No parent email found for student {student_name}',
+            )
+            return
+
+        try:
+            pdf_bytes = generate_test_report(session)
+            filename = f"progress_report_{student_name.replace(' ', '_')}_{date_str}.pdf"
+        except Exception as e:
+            for name, email in recipients:
+                AdminEmailRecord.objects.create(
+                    to_email=email, to_name=name,
+                    subject=subject, body='',
+                    status='failed', error=f'PDF generation failed: {e}',
+                )
+            return
+
+        for name, email in recipients:
+            first_name = name.split()[0] if name else ''
+            greeting = f"Hi {first_name}," if first_name else "Hi,"
+            body = (
+                f"{greeting}\n\n"
+                f"Please find attached the assessment report for {student_name}.\n\n"
+                f"SubjectMatter"
+            )
+            status_val, error_val = 'sent', ''
+            try:
+                msg = DjangoEmailMessage(
+                    subject=subject, body=body,
+                    from_email=from_email,
+                    to=[f"{name} <{email}>" if name else email],
+                )
+                msg.attach(filename, pdf_bytes, 'application/pdf')
+                msg.send(fail_silently=False)
+            except Exception as e:
+                status_val, error_val = 'failed', str(e)
+            AdminEmailRecord.objects.create(
+                to_email=email, to_name=name,
+                subject=subject, body=body,
+                status=status_val, error=error_val,
+            )
+
+    threading.Thread(target=_send, daemon=True).start()
+
 
 def _send_student_welcome_email(student, plaintext_password, teacher_class, teacher):
     """Send a welcome email to a newly-created student with their login credentials."""
@@ -5850,7 +6776,7 @@ from rest_framework.decorators import permission_classes as _permission_classes
 from .models import (
     SessionPayment, ParentPaymentProfile, ParentJob,
     TutorProfile, DistributorProfile, DistributorParent,
-    ParentChild, TutorJob, AdminJob,
+    ParentChild, TutorJob, AdminJob, GlobalSetting,
 )
 permission_classes = _permission_classes  # make available as bare name for decorators
 
@@ -5937,7 +6863,7 @@ def payment_pending(request):
     payments = SessionPayment.objects.filter(
         parent=parent,
         status='pending',
-    ).select_related('session', 'session__student', 'tutor')
+    ).select_related('session', 'session__student', 'student', 'tutor')
 
     profile = ParentPaymentProfile.objects.filter(parent=parent).first()
     has_setup = bool(profile and profile.setup_complete)
@@ -6032,11 +6958,11 @@ def _run_charge(payment, profile):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def payment_authorise(request, pk):
-    """Parent authorises payment: save rating, charge card via Stripe."""
+    """Parent marks payment as paid after bank transfer."""
     from django.utils import timezone as _tz
 
     try:
-        payment = SessionPayment.objects.select_related('session', 'session__student', 'tutor', 'parent').get(pk=pk)
+        payment = SessionPayment.objects.select_related('session', 'session__student', 'student', 'tutor', 'parent').get(pk=pk)
     except SessionPayment.DoesNotExist:
         return Response({'error': 'Payment not found'}, status=404)
 
@@ -6052,26 +6978,43 @@ def payment_authorise(request, pk):
     if rating is not None:
         payment.rating = int(rating)
         payment.rating_comment = comment
-        payment.save(update_fields=['rating', 'rating_comment'])
 
-    # Check payment profile
+    payment.status = 'paid'
+    payment.paid_at = _tz.now()
+    update_fields = ['status', 'paid_at']
+    if rating is not None:
+        update_fields += ['rating', 'rating_comment']
+    payment.save(update_fields=update_fields)
+
+    # Flag low ratings to admin
+    if payment.rating and payment.rating <= 2:
+        AdminJob.objects.create(job_type='low_session_rating', subject=payment.parent)
+
+    return Response({'success': True, 'payment': payment.to_dict()})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def payment_confirm_receipt(request, pk):
+    """Tutor confirms they have received payment after parent marks as paid."""
+    from django.utils import timezone as _tz
+
     try:
-        profile = ParentPaymentProfile.objects.get(parent=request.user, setup_complete=True)
-    except ParentPaymentProfile.DoesNotExist:
-        return Response({'error': 'No payment method on file. Please add a card first.'}, status=400)
+        payment = SessionPayment.objects.get(pk=pk)
+    except SessionPayment.DoesNotExist:
+        return Response({'error': 'Payment not found'}, status=404)
 
-    success, error_code, message = _run_charge(payment, profile)
+    if payment.tutor != request.user:
+        return Response({'error': 'Forbidden'}, status=403)
 
-    if success:
-        # Flag low ratings to admin
-        if payment.rating and payment.rating <= 2:
-            AdminJob.objects.create(job_type='low_session_rating', subject=payment.parent)
+    if payment.status != 'paid':
+        return Response({'error': f'Payment must be in paid status to confirm receipt (current: {payment.status})'}, status=400)
 
-        return Response({'success': True, 'payment': payment.to_dict()})
+    payment.status = 'confirmed'
+    payment.confirmed_at = _tz.now()
+    payment.save(update_fields=['status', 'confirmed_at'])
 
-    # Card declined — create failure jobs
-    _create_payment_failed_jobs(payment)
-    return Response({'success': False, 'error': error_code, 'message': message}, status=402)
+    return Response({'success': True, 'payment': payment.to_dict()})
 
 
 def _create_payment_failed_jobs(payment):
@@ -6100,7 +7043,7 @@ def _create_payment_failed_jobs(payment):
 def payment_retry(request, pk):
     """Parent retries after a failed payment using an updated card."""
     try:
-        payment = SessionPayment.objects.select_related('session', 'session__student', 'tutor', 'parent').get(pk=pk)
+        payment = SessionPayment.objects.select_related('session', 'session__student', 'student', 'tutor', 'parent').get(pk=pk)
     except SessionPayment.DoesNotExist:
         return Response({'error': 'Payment not found'}, status=404)
 
@@ -6158,19 +7101,17 @@ def payment_retry(request, pk):
 def payment_detail(request, pk):
     """GET /api/payments/:id/ — fetch a single SessionPayment."""
     try:
-        payment = SessionPayment.objects.select_related('session', 'session__student', 'tutor', 'parent').get(pk=pk)
+        payment = SessionPayment.objects.select_related('session', 'session__student', 'student', 'tutor', 'parent').get(pk=pk)
     except SessionPayment.DoesNotExist:
         return Response({'error': 'Not found'}, status=404)
 
     if payment.parent != request.user and payment.tutor != request.user and getattr(request.user, 'role', '') != 'admin':
         return Response({'error': 'Forbidden'}, status=403)
 
-    profile = ParentPaymentProfile.objects.filter(parent=payment.parent).first()
     data = payment.to_dict()
-    if profile and profile.setup_complete:
-        data['card_info'] = {'brand': profile.card_brand, 'last4': profile.card_last4}
-    else:
-        data['card_info'] = None
+    data['bank_bsb'] = GlobalSetting.get('bank_bsb', '')
+    data['bank_account'] = GlobalSetting.get('bank_account', '')
+    data['bank_name'] = GlobalSetting.get('bank_name', 'SubjectMatter')
 
     return Response(data)
 
@@ -6183,14 +7124,15 @@ def tutor_billing(request):
     tutor = request.user
     payments = SessionPayment.objects.filter(
         tutor=tutor,
-    ).select_related('session', 'session__student', 'parent').order_by('-created_at')
+    ).select_related('session', 'session__student', 'student', 'parent').order_by('-created_at')
 
     import datetime as _dt
     today = _dt.date.today()
     month_start = today.replace(day=1)
 
-    pending, confirmed, failed = [], [], []
+    pending, paid, confirmed, failed = [], [], [], []
     total_pending = Decimal('0.00')
+    total_paid = Decimal('0.00')
     total_confirmed_month = Decimal('0.00')
     total_confirmed_all = Decimal('0.00')
 
@@ -6200,21 +7142,55 @@ def tutor_billing(request):
             pending.append(d)
             total_pending += p.tutor_amount
         elif p.status == 'paid':
+            paid.append(d)
+            total_paid += p.tutor_amount
+        elif p.status == 'confirmed':
             confirmed.append(d)
             total_confirmed_all += p.tutor_amount
-            if p.paid_at and p.paid_at.date() >= month_start:
+            if p.confirmed_at and p.confirmed_at.date() >= month_start:
                 total_confirmed_month += p.tutor_amount
         elif p.status == 'failed':
             failed.append(d)
 
     return Response({
         'pending': pending,
+        'paid': paid,
         'confirmed': confirmed,
         'failed': failed,
         'total_pending': str(total_pending),
+        'total_paid': str(total_paid),
         'total_confirmed_this_month': str(total_confirmed_month),
         'total_confirmed_all_time': str(total_confirmed_all),
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_feedback(request):
+    """GET /api/payments/admin-feedback/ — all parent ratings across all tutors."""
+    if getattr(request.user, 'role', '') != 'admin':
+        return Response({'error': 'Forbidden'}, status=403)
+
+    payments = (
+        SessionPayment.objects
+        .filter(rating__isnull=False)
+        .select_related('session', 'session__student', 'student', 'tutor')
+        .order_by('-paid_at')
+    )
+    result = []
+    for p in payments:
+        student = (p.session.student if p.session else p.student)
+        result.append({
+            'id': p.id,
+            'rating': p.rating,
+            'rating_comment': p.rating_comment or '',
+            'student_name': student.first_name if student else '',
+            'tutor_name': p.tutor.get_full_name(),
+            'tutor_id': p.tutor.id,
+            'session_date': p.session.created_at.date().isoformat() if p.session else p.created_at.date().isoformat(),
+            'paid_at': p.paid_at.isoformat() if p.paid_at else None,
+        })
+    return Response(result)
 
 
 @api_view(['GET'])
@@ -6226,16 +7202,16 @@ def parent_payment_history(request, pk):
 
     payments = SessionPayment.objects.filter(
         parent_id=pk,
-    ).select_related('session', 'session__student', 'tutor').order_by('-created_at')
+    ).select_related('session', 'session__student', 'student', 'tutor').order_by('-created_at')
 
     pending, paid, failed = [], [], []
     for p in payments:
         d = p.to_dict()
         if p.status in ('pending', 'authorised', 'overdue_7', 'overdue_14'):
             pending.append(d)
-        elif p.status == 'paid':
+        elif p.status in ('paid', 'confirmed'):
             paid.append(d)
-        else:
+        elif p.status == 'failed':
             failed.append(d)
 
     return Response({'pending': pending, 'paid': paid, 'failed': failed})

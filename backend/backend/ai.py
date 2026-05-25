@@ -6,7 +6,7 @@ import yaml
 from .utilities import *
 from openai import OpenAI
 
-_DOC_PATH = os.path.join(os.path.dirname(__file__), "Editor Documentation.txt")
+_DOC_PATH = os.path.join(os.path.dirname(__file__), "docs/Editor Documentation.txt")
 with open(_DOC_PATH, encoding="utf-8") as _f:
     _EDITOR_DOCS = _f.read()
 

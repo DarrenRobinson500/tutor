@@ -5,6 +5,32 @@ from math import gcd
 from fractions import Fraction as _Fraction
 from .context import MATH_CONTEXT
 
+
+def _split_ratio_parts(expr: str):
+    """Split an expression on top-level ':' (not inside brackets/parens/braces).
+
+    Returns a list of part strings if at least one ':' is found, otherwise None.
+    Used to support ratio expressions like ``a:b`` or ``a/d:b/d``.
+    """
+    depth = 0
+    parts: list[str] = []
+    current: list[str] = []
+    for ch in expr:
+        if ch in '([{':
+            depth += 1
+            current.append(ch)
+        elif ch in ')]}':
+            depth -= 1
+            current.append(ch)
+        elif ch == ':' and depth == 0:
+            parts.append(''.join(current).strip())
+            current = []
+        else:
+            current.append(ch)
+    if current:
+        parts.append(''.join(current).strip())
+    return parts if len(parts) > 1 else None
+
 _NAMES = [
     "Emma", "Olivia", "Ava", "Isabella", "Sophia",
     "Liam", "Noah", "Oliver", "Elijah", "James",
@@ -332,7 +358,9 @@ class DecimalParameter(RandomParameter):
         dp = int(self.options.get("decimal_places", 1))
         size = self.options.get("size")
         if size in self.SIZE_MAP:
-            lo, hi, dp = self.SIZE_MAP[size]
+            lo, hi, size_dp = self.SIZE_MAP[size]
+            if "decimal_places" not in self.options:
+                dp = size_dp
         else:
             lo = float(self.options["min"])
             hi = float(self.options["max"])
@@ -348,7 +376,7 @@ class DecimalParameter(RandomParameter):
             min_scaled = int(round(lo * scale))
             max_scaled = int(round(hi * scale))
             raw = round(random.randint(min_scaled, max_scaled) / scale, dp)
-        return str(raw)
+        return f"{raw:.{dp}f}"
 
 
 class DollarParameter(RandomParameter):
@@ -538,7 +566,25 @@ class ListParameter(RandomParameter):
         else:
             lo = int(self.options.get("min", 1))
             hi = int(self.options.get("max", 10))
-        values = [random.randint(lo, hi) for _ in range(count)]
+
+        distinct = self.options.get("distinct", False)
+        if distinct:
+            pool = list(range(lo, hi + 1))
+            if len(pool) < count:
+                raise ValueError(
+                    f"ListParameter '{self.name}': cannot pick {count} distinct values "
+                    f"from range [{lo}, {hi}] (only {len(pool)} available)"
+                )
+            values = random.sample(pool, count)
+        else:
+            values = [random.randint(lo, hi) for _ in range(count)]
+
+        sign = self.options.get("sign", "pos")
+        if sign == "neg":
+            values = [-abs(v) for v in values]
+        elif sign == "pos_neg":
+            values = [-v if random.choice([True, False]) else v for v in values]
+
         if self.options.get("order", False):
             values.sort()
         return values
@@ -607,9 +653,29 @@ class ExprParameter(RandomParameter):
             self.value = self._TOKEN_RE.sub(_subst, self._template)
             return
 
+        # Ratio expression: "a:b" or "a/d:b/d" — split on top-level ':' and join results.
+        ratio_parts = _split_ratio_parts(self._expr)
+        if ratio_parts is not None:
+            try:
+                rendered = []
+                for part in ratio_parts:
+                    node = ExpressionNode(part, param_objects)
+                    node.evaluate()
+                    rendered.append(node.format())
+                self.value = ':'.join(rendered)
+                return
+            except Exception as e:
+                raise ValueError(f"Derived parameter '{self.name}': {e}") from e
+
         try:
             node = ExpressionNode(self._expr, param_objects)
             result = node.evaluate()
+            # If the expression had a format pipe (e.g. {{ n | decimal_2 }}), use the
+            # formatted string as the value so that `answer: ans` stores the correctly
+            # rounded/formatted answer text rather than the raw numeric value.
+            if node.format_type is not None:
+                self.value = node.output
+                return
             # Preserve lists as-is (e.g. from gaussian_list())
             if isinstance(result, list):
                 self.value = result
@@ -619,6 +685,13 @@ class ExprParameter(RandomParameter):
                 f = float(result)
                 self.value = int(f) if f == int(f) else f
             except (TypeError, ValueError):
+                # Complex results (e.g. negative**0.5) are not valid parameter values.
+                # Raise so the retry loop in render_template_preview picks a different set.
+                if isinstance(result, complex):
+                    raise ValueError(
+                        f"Derived parameter '{self.name}' produced a complex number "
+                        f"(the expression may involve a square root of a negative value)."
+                    )
                 # Check for unresolved sympy symbols (undefined variables)
                 try:
                     free = result.free_symbols

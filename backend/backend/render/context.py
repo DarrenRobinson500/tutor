@@ -285,6 +285,62 @@ def _gaussian_list(mean, sd, count, sort=False):
     return values
 
 
+def _linear_factor(r):
+    """Format a single linear factor (x - r) correctly for any sign of r.
+
+    Examples:
+      linear_factor(6)  → '(x - 6)'
+      linear_factor(-7) → '(x + 7)'
+      linear_factor(0)  → '(x)'
+    """
+    r = int(r) if float(r) == int(float(r)) else float(r)
+    if r == 0:
+        return "(x)"
+    if r < 0:
+        return f"(x + {abs(r)})"
+    return f"(x - {r})"
+
+
+def _poly_from_roots(*args):
+    """Build a factored polynomial string from roots.
+
+    Accepts either a list or individual arguments:
+      poly_from_roots([-7, -5, 6])       → '(x + 7)(x + 5)(x - 6)'
+      poly_from_roots(-7, -5, 6)         → '(x + 7)(x + 5)(x - 6)'
+    """
+    if len(args) == 1 and isinstance(args[0], list):
+        roots = args[0]
+    else:
+        roots = list(args)
+    return "".join(_linear_factor(r) for r in roots)
+
+
+def _log(x, base=None):
+    """Logarithm with optional base.  log(x) = natural log; log(x, base) = log base *base* of x.
+    Integer results (e.g. log(8, 2) = 3) are returned as int rather than float.
+    """
+    result = _math.log(x) if base is None else _math.log(x) / _math.log(base)
+    rounded = round(result)
+    return rounded if abs(result - rounded) < 1e-9 else result
+
+
+def _not_in(lst, lo=None, hi=None):
+    """Return a random integer that is not in *lst*.
+
+    Search range defaults to [min(lst)-3, max(lst)+3] so the result is
+    a similarly-sized value to those already in the list.  Provide explicit
+    *lo*/*hi* to override.
+    """
+    import random as _random
+    lst_set = set(lst)
+    _lo = int(lo) if lo is not None else (min(lst) - 3 if lst else -9)
+    _hi = int(hi) if hi is not None else (max(lst) + 3 if lst else 9)
+    candidates = [x for x in range(_lo, _hi + 1) if x not in lst_set]
+    if not candidates:
+        raise ValueError(f"not_in: no value available outside {lst} in range [{_lo}, {_hi}]")
+    return _random.choice(candidates)
+
+
 def _repeat(value, count, sep=""):
     """Repeat *value* *count* times joined by *sep*.
 
@@ -373,7 +429,7 @@ MATH_CONTEXT = {
     "atan2":            _math.atan2,
     # Logarithms / angles
     "sqrt":             _math.sqrt,
-    "log":              _math.log,
+    "log":              _log,
     "log10":            _math.log10,
     "degrees":          _math.degrees,
     "radians":          _math.radians,
@@ -389,6 +445,10 @@ MATH_CONTEXT = {
     "simplify_expr_latex":  _simplify_expr_latex,
     # Data generation
     "gaussian_list":    _gaussian_list,
+    "not_in":           _not_in,
+    # Polynomial helpers
+    "linear_factor":    _linear_factor,
+    "poly_from_roots":  _poly_from_roots,
     # String / formatting helpers available in math expressions
     "repeat":           _repeat,
     "str":              str,

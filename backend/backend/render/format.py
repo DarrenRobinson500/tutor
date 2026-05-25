@@ -135,7 +135,7 @@ def _decimal_alias(dp: int):
     _Fmt.__name__ = f"Decimal{dp}Format"
     return _Fmt
 
-for _i in range(1, 6):
+for _i in range(0, 6):
     FORMAT_REGISTRY[f"decimal_{_i}"] = _decimal_alias(_i)
 
 @register_format_type
@@ -168,6 +168,16 @@ class PercentFormat(FormatType):
         if f == int(f):
             return f"{int(f)}%"
         return f"{round(f, 2):g}%"
+
+@register_format_type
+class Percent1Format(FormatType):
+    name = "percent_1"
+
+    def format(self, value):
+        if isinstance(value, str) and "/" in value:
+            from fractions import Fraction
+            value = float(Fraction(value))
+        return f"{float(value) * 100:.1f}%"
 
 @register_format_type
 class NumberFormat(FormatType):
@@ -219,6 +229,37 @@ class IntegerFormat(FormatType):
 
     def format(self, value):
         return str(int(value))
+
+@register_format_type
+class CompassBearingFormat(FormatType):
+    """Converts a true bearing (0–360°, clockwise from North) to a compass bearing.
+
+    Examples:
+      0   → N          90  → E         180 → S         270 → W
+      30  → N30°E      45  → N45°E     135 → S45°E     225 → S45°W     315 → N45°W
+    """
+    name = "compass"
+
+    def format(self, value):
+        b = float(value) % 360
+        if b < 0:
+            b += 360
+        if b == 0 or b == 360:
+            return "N"
+        if b == 90:
+            return "E"
+        if b == 180:
+            return "S"
+        if b == 270:
+            return "W"
+        if b < 90:
+            return f"N{int(b)}°E"
+        if b < 180:
+            return f"S{int(180 - b)}°E"
+        if b < 270:
+            return f"S{int(b - 180)}°W"
+        return f"N{int(360 - b)}°W"
+
 
 @register_format_type
 class PronumeralFormat(FormatType):

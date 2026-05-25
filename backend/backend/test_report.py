@@ -37,7 +37,7 @@ USABLE_W = PAGE_W - 2 * MARGIN
 # ── Competency scale ──────────────────────────────────────────────────────────
 LEVELS = ['none', 'easy', 'medium', 'hard', 'mastered']
 LEVEL_LABEL = {
-    'none':     'Not yet assessed',
+    'none':     'Untested',
     'easy':     'Developing',
     'medium':   'Proficient',
     'hard':     'Advanced',
@@ -171,9 +171,14 @@ def _strengths_and_focus(results):
 
 
 def _compute_coverage(session, results):
-    """Return (pct_or_None, assessed_count, total_or_None)."""
-    from .models import Skill
-    from django.db.models import Count
+    """Return (pct_or_None, assessed_count, total_or_None).
+
+    Coverage is derived from the star system: sum of capped competency levels
+    (max 4 per leaf skill) divided by 4 × total leaf skills, matching what the
+    student home page displays under 'Your Syllabus'.
+    """
+    from .models import Skill, StudentSkillCompetency
+    from django.db.models import Count, Q as _Q
 
     assessed = len(results)
     try:
@@ -188,21 +193,31 @@ def _compute_coverage(session, results):
         if m:
             grade_num = m.group()
 
-    total = None
-    if grade_num:
-        try:
-            from django.db.models import Q as _Q
-            total = (
-                Skill.objects
-                .filter(is_detail=False, grades__icontains=grade_num)
-                .annotate(non_detail_children=Count('children', filter=_Q(children__is_detail=False)))
-                .filter(non_detail_children=0)
-                .count()
-            )
-        except Exception:
-            pass
+    if not grade_num:
+        return None, assessed, None
 
-    pct = round(assessed / total * 100) if total else None
+    try:
+        leaf_skill_ids = list(
+            Skill.objects
+            .filter(is_detail=False, grades__icontains=grade_num)
+            .annotate(non_detail_children=Count('children', filter=_Q(children__is_detail=False)))
+            .filter(non_detail_children=0)
+            .values_list('id', flat=True)
+        )
+        total = len(leaf_skill_ids)
+        if not total:
+            return None, assessed, None
+
+        competencies = StudentSkillCompetency.objects.filter(
+            student=session.student,
+            skill_id__in=leaf_skill_ids,
+        ).values_list('level', flat=True)
+
+        star_sum = sum(min(lvl, 4) for lvl in competencies)
+        pct = round(star_sum / (4 * total) * 100)
+    except Exception:
+        return None, assessed, None
+
     return pct, assessed, total
 
 
@@ -254,6 +269,19 @@ def generate_test_report(session) -> bytes:
 
     # ── Gather data ───────────────────────────────────────────────────────────
     results = list(session.skill_results.all())
+
+    # Untested skills (present in skill_codes but no TestSkillResult)
+    from .models import Skill as _Skill
+    tested_codes = {r.skill_code for r in results}
+    all_codes = session.skill_codes or []
+    untested_codes = [c for c in all_codes if c not in tested_codes]
+    untested_desc = {}
+    if untested_codes:
+        for sk in _Skill.objects.filter(code__in=untested_codes).values('code', 'description'):
+            untested_desc[sk['code']] = sk['description']
+
+    proportion_tested = len(tested_codes) / len(all_codes) if all_codes else 1.0
+    quit_early = session.status == 'abandoned' and len(untested_codes) > 0
     student = session.student
     student_name = student.get_full_name() or student.username
     first_name = (student.first_name or student_name.split()[0]).strip()
@@ -263,6 +291,28 @@ def generate_test_report(session) -> bytes:
         year_level = profile.year_level
     except Exception:
         year_level = None
+
+    yr_num = None
+    if year_level:
+        _m = re.search(r'\d+', str(year_level))
+        if _m:
+            yr_num = int(_m.group())
+
+    if yr_num and 7 <= yr_num <= 12:
+        quit_threshold    = 0.50 + (yr_num - 7) * 0.10   # 50 % … 100 %
+        sitting_questions = 10  + (yr_num - 7) * 10       # 10 … 60
+    else:
+        quit_threshold    = 0.50
+        sitting_questions = 10
+
+    attn_text = ''
+    if quit_early and proportion_tested < quit_threshold:
+        attn_text = (
+            f"{first_name} completed {len(tested_codes)} of {len(all_codes)} skills "
+            f"({round(proportion_tested * 100)}%) before ending the test early. "
+            f"{first_name} should work towards being able to complete "
+            f"{sitting_questions} questions in a sitting."
+        )
 
     tutor = student.get_tutor()
     tutor_name = tutor.get_full_name() if tutor else None
@@ -352,9 +402,12 @@ def generate_test_report(session) -> bytes:
 
     # ── SUMMARY CARD ─────────────────────────────────────────────────────────
     summary_text = narrative.get('summary', '')
-    if summary_text:
+    combined_summary = summary_text
+    if attn_text:
+        combined_summary = (f"{summary_text}<br/><br/>{attn_text}" if summary_text else attn_text)
+    if combined_summary:
         summary_card = Table(
-            [[Paragraph(summary_text, s['summary'])]],
+            [[Paragraph(combined_summary, s['summary'])]],
             colWidths=[USABLE_W],
         )
         summary_card.setStyle(TableStyle([
@@ -369,7 +422,7 @@ def generate_test_report(session) -> bytes:
         elements.append(Spacer(1, 0.35 * cm))
 
     # ── SNAPSHOT ROW ─────────────────────────────────────────────────────────
-    cell_w = USABLE_W / 3 - 6   # leave a little gap between cells via outer padding
+    cell_w = USABLE_W / 2 - 6   # leave a little gap between cells via outer padding
 
     # Cell 1 — Coverage
     if coverage_pct is not None:
@@ -386,16 +439,8 @@ def generate_test_report(session) -> bytes:
         [Paragraph(sub_text, s['snap_label'])],
     ]
 
-    # Cell 2 — Overall level
-    dots = DotScale(LEVEL_INDEX[overall_lvl])
+    # Cell 2 — Skills count
     snap2_rows = [
-        [Paragraph(overall_label, s['snap_level'])],
-        [dots],
-        [Paragraph("Overall Competency", s['snap_label'])],
-    ]
-
-    # Cell 3 — Skills count
-    snap3_rows = [
         [Paragraph(str(assessed_count), s['snap_big'])],
         [Spacer(1, 8)],   # align height with bar row
         [Paragraph(f"skill{'s' if assessed_count != 1 else ''} assessed", s['snap_label'])],
@@ -417,8 +462,8 @@ def generate_test_report(session) -> bytes:
         return t
 
     snap_outer = Table(
-        [[_snap(snap1_rows), _snap(snap2_rows), _snap(snap3_rows)]],
-        colWidths=[USABLE_W / 3] * 3,
+        [[_snap(snap1_rows), _snap(snap2_rows)]],
+        colWidths=[USABLE_W / 2] * 2,
     )
     snap_outer.setStyle(TableStyle([
         ('LEFTPADDING',   (0, 0), (-1, -1), 3),
@@ -476,6 +521,13 @@ def generate_test_report(session) -> bytes:
             Paragraph(r.skill_description or r.skill_code, s['table_cell']),
             Paragraph(f'<font color="{lvl_hex}"><b>{lvl_label}</b></font>', s['table_cell']),
             Paragraph(score, s['table_cell']),
+        ])
+    for code in untested_codes:
+        desc = untested_desc.get(code, code)
+        tbl_data.append([
+            Paragraph(desc, s['table_cell']),
+            Paragraph('<font color="#95A5A6"><i>Untested</i></font>', s['table_cell']),
+            Paragraph('—', s['table_cell']),
         ])
 
     col_widths = [USABLE_W * 0.58, USABLE_W * 0.27, USABLE_W * 0.15]

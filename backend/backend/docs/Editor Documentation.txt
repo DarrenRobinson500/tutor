@@ -26,6 +26,8 @@ An Easy template includes additional guidance, such as:
 - Highlighted steps
 - Hints embedded in the wording
 
+Easy questions should not have more than 3 parts.
+
 Students who can complete Easy templates are demonstrating progress toward the syllabus expectations, with scaffolding.
 
 ── Medium ──────────────────────────────────────────────────
@@ -257,6 +259,7 @@ Generates a list of random integers. Use for statistics questions
 Display the list in the question using a pipe:
   {{ data | sorted }}   — sorted ascending: "2, 3, 5, 7, 8"
   {{ data }}            — original (random) order: "5, 2, 8, 3, 7"
+  {{ data | length }}   — number of items: "5"
 
 List functions for use in expressions and answers:
   mode(data)      — most frequent value
@@ -531,6 +534,7 @@ Standard mathematical functions can be used directly inside
   {{ acos(a) }}         — inverse cosine; result in radians
   {{ atan(a) }}         — inverse tangent; result in radians
   {{ log(a) }}          — natural logarithm (ln)
+  {{ log(a, b) }}       — logarithm base b of a  (e.g. log(8, 2) = 3)
   {{ log10(a) }}        — base-10 logarithm
   {{ degrees(a) }}      — convert radians to degrees
   {{ radians(a) }}      — convert degrees to radians
@@ -820,6 +824,10 @@ use pipes.
   {{ expr | mixed_number }}                 — displays as a mixed number
   {{ expr | decimal }}                      — displays as a decimal (fixed 2 decimal places by default)
   {{ expr | decimal(decimal_places=1) }}    — fixed 1 dp, e.g. 7.5, 6.0
+  {{ expr | decimal_0 }}                   — 0 decimal places, e.g. 8
+  {{ expr | decimal_1 }}                   — 1 decimal place, e.g. 7.5
+  {{ expr | decimal_2 }}                   — 2 decimal places, e.g. 7.50
+  {{ expr | decimal_3 }}                   — 3 decimal places, e.g. 7.500
   {{ expr | dollar }}                       — displays as $X.XX
   {{ expr | percent }}                      — displays as X%
   {{ expr | percent(decimal_places=1) }}    — fixed 1 dp, e.g. 33.3%
@@ -852,6 +860,7 @@ use pipes.
   {{ expr | operation }}                    — typesets operator symbols: * → ×, / → ÷
   {{ expr | lower }}                        — converts a string to lowercase: 'Run' → 'run'
   {{ expr | capitalize }}                   — capitalises the first letter: 'run' → 'Run'
+  {{ list | length }}                       — number of items in a list: [[1,45],[2,55],[3,62]] → 3
 
   Example:
     parameters:
@@ -990,6 +999,16 @@ is shown but the attempt is not counted as incorrect.
                                        is stored as "base^exp" (e.g. "5^2")
                                        and compared numerically to the correct
                                        answer (25).
+  answer_format: log                 — student types their answer in a single text
+                                       box as log_2(10). As they type, a live
+                                       KaTeX preview appears below ("Your answer:
+                                       log₂(10)") so they can verify the engine
+                                       has interpreted the base and argument
+                                       correctly. The answer is compared
+                                       numerically to the correct answer. The
+                                       correct answer is typically set with
+                                       log(arg, base), e.g.:
+                                         expr: "log(b, a)"  # log_a(b)
 
 Example — fraction to decimal conversion:
 
@@ -1673,6 +1692,115 @@ parts (arc, chord, sector, segment, tangent).
     diagram: 'Circle(radius: 5, label_r: false, show_arc: true, show_chord: true)'
 
 
+── CircleTheorem Diagram ────────────────────────────────────
+
+Draws a labelled circle with named points, chords, radii, arcs,
+tangents, angle markers, right-angle markers, and length labels.
+Designed for circle-theorem questions (angles in the same segment,
+tangent–radius, cyclic quadrilaterals, etc.).
+
+  diagram: 'CircleTheorem(
+    points: {O: centre, A: 40, B: 160, C: 260},
+    lines: [OA, OB, AB, AC, BC],
+    label_angle: {AOB: "2x", ACB: "?"}
+  )'
+
+  Parameters:
+    radius        — circle radius used only for the viz-scale calculation;
+                    the SVG always fills the viewBox (default 5).
+
+    points        — dict of named points. Four value forms are supported:
+
+                    centre             → at the circle centre
+                      O: centre
+
+                    <number>           → on the circumference, degrees CCW
+                                         from the 3 o'clock position
+                      A: 40
+
+                    (x, y)             → explicit SVG coordinates. The origin
+                                         is the circle centre; the circle is
+                                         always 10 SVG units in radius.
+                                         Use for points outside the circle.
+                      P: (0, 14)
+
+                    AB CD              → intersection of segment AB and
+                                         segment CD. Both segments must be
+                                         defined by earlier points in the
+                                         same dict.
+                      P: AB CD
+
+    lines         — segments to draw, as two-letter pairs. A special
+                    'tangentX' token draws a tangent line (red) at the
+                    circumference point X, perpendicular to the radius.
+                      lines: [OA, OB, AB, tangentT]
+
+    highlight_arc — two circumference-point letters whose minor arc is
+                    highlighted in blue.
+                      highlight_arc: AB
+
+    label_angle   — dict of angle labels. The key is a three-letter triplet
+                    where the middle letter is the vertex; the value is the
+                    label string shown near the angle arc.
+                      label_angle: {AOB: "2x", ACB: "?"}
+
+    right_angle_at — list of point names where a small right-angle square
+                     marker is drawn. The marker is placed between the two
+                     line segments that meet at that point (or between the
+                     radius and tangent when tangent_at is the same point).
+                       right_angle_at: [T]
+
+    label_length  — dict mapping segment names to label strings. The label
+                    is placed at the segment midpoint, offset perpendicularly
+                    outward from the circle centre.
+                      label_length: {OA: "r cm", AB: "?"}
+
+    midpoint      — dict of new named points, each placed at the midpoint
+                    of a named segment. The midpoint can then be used in
+                    label_length.
+                      midpoint: {M: AB}
+
+  Examples:
+
+  Angle at the centre and circumference (same arc):
+    diagram: 'CircleTheorem(
+      points: {O: centre, A: 40, B: 160, C: 260},
+      lines: [OA, OB, AC, BC],
+      highlight_arc: AB,
+      label_angle: {AOB: "2x", ACB: "x"}
+    )'
+
+  Tangent from an external point (tangent–radius right angle):
+    diagram: 'CircleTheorem(
+      points: {O: centre, A: 140, B: 220, T: 270, P: (0, 14)},
+      lines: [PT, PA, PB, OT, tangentT],
+      right_angle_at: [T],
+      label_length: {PA: "a cm", PB: "b cm", PT: "?"}
+    )'
+
+  Chord with midpoint labelled:
+    diagram: 'CircleTheorem(
+      points: {O: centre, A: 30, B: 150},
+      lines: [OA, OB, AB],
+      midpoint: {M: AB},
+      label_length: {OM: "d cm", AB: "?"}
+    )'
+
+  Intersecting chords (PA × PB = PC × PD):
+    diagram: 'CircleTheorem(
+      points: {O: centre, A: 200, B: 20, C: 110, D: 290, P: AB CD},
+      lines: [AB, CD],
+      label_length: {PA: "{{ pa }}", PB: "{{ pb }}", PC: "{{ pc }}", PD: "?"}
+    )'
+
+  Cyclic quadrilateral (opposite angles sum to 180°):
+    diagram: 'CircleTheorem(
+      points: {A: 20, B: 100, C: 200, D: 310},
+      lines: [AB, BC, CD, DA],
+      label_angle: {DAB: "{{ a }}°", BCD: "?"}
+    )'
+
+
 ── Prism Diagram ────────────────────────────────────────────
 
 Draws a 3D prism with a triangular or rectangular cross-section.
@@ -2080,6 +2208,118 @@ the overall 3D structure.
 
   Three-part composite (base + body + roof):
     diagram: 'CompositeSolid(rect_prism(w:6, h:1, d:4), rect_prism(w:4, h:3, d:3, on:top), half_cylinder(r:1.5, length:4, on:top))'
+
+
+── Solid3D Diagram ───────────────────────────────────────────
+
+Draws a fully annotatable 3D solid using oblique projection,
+viewed from above-left. Supports named points, annotation lines,
+length labels, angle markers, and right-angle markers.
+
+  diagram: 'Solid3D(shape: rect_prism, w: 4, h: 3, d: 5)'
+  diagram: 'Solid3D(shape: square_pyramid, w: 4, h: 5, d: 4)'
+  diagram: 'Solid3D(shape: triangular_prism, w: 3, h: 4, d: 6)'
+
+  ── Shape and Dimensions ────────────────────────────────────
+
+  shape   — solid type (default: rect_prism):
+              rect_prism        rectangular prism (cuboid)
+              square_pyramid    square-based pyramid
+              triangular_prism  triangular prism
+  w       — width  (x-axis)
+  h       — height (y-axis)
+  d       — depth  (z-axis)
+
+  ── Built-in Vertex Names ───────────────────────────────────
+
+  rect_prism
+    Bottom face:  A (front-left)  B (front-right)
+                  C (back-right)  D (back-left)
+    Top face:     E (front-left)  F (front-right)
+                  G (back-right)  H (back-left)
+
+  square_pyramid
+    Base:  A (front-left)  B (front-right)
+           C (back-right)  D (back-left)
+    Apex:  P
+
+  triangular_prism
+    Front face:  A (bottom-left)  B (bottom-right)  C (top)
+    Back face:   D (bottom-left)  E (bottom-right)  F (top)
+
+  ── Named Points ────────────────────────────────────────────
+
+  points: {NAME: VALUE, ...}
+
+  Adds extra named points beyond the built-in vertices.
+  Value forms:
+    (x, y, z)      unit-cube coordinates (0–1 on each axis,
+                   scaled by w/h/d at render time)
+    centre_base    centre of the bottom face: (0.5, 0, 0.5)
+    centre_top     centre of the top face: (0.5, 1, 0.5)
+    midpoint(AB)   midpoint of segment AB
+    foot(P, base)  point on y=0 directly below P
+
+  ── Annotation Lines ────────────────────────────────────────
+
+  lines: [AC, BG, ...]
+    Solid black lines drawn between named points.
+
+  dash: [AG, DF, ...]
+    Dashed grey lines drawn between named points.
+
+  highlight: [AC, BF]
+    Lines drawn in blue (default). To specify a colour per segment:
+    highlight: [(AC, blue), (BF, red)]
+    Any CSS colour name or hex code is accepted.
+
+  ── Labels ──────────────────────────────────────────────────
+
+  label_length: {AB: "{{ w }} cm", BF: "{{ h }}", AG}
+    Draws a length label beside a segment, placed outside the
+    shape. Provide an explicit string value, or omit the value
+    (bare segment name) to have the length computed automatically
+    from the shape dimensions (shown as an integer or 2 d.p.).
+
+  label_point: {A: "A", P: "P"}
+    Draws a filled dot and text label at a named point.
+    Labels are positioned outside the shape and avoid lines.
+
+  label_angle: {ABF: "θ", DAB: "90°"}
+    Draws an angle arc and label. Each key is a three-letter triplet
+    where the middle letter is the vertex; the outer letters are the
+    two ray endpoints. The value is the label string shown near the arc.
+    Multiple angles can be specified in the same dict.
+
+  right_angle_at: {A: [AB, AE]}
+    Draws a small square right-angle marker at vertex A between
+    the two named segments.
+
+  Examples:
+
+  Rectangular prism with auto-computed edge labels:
+    diagram: 'Solid3D(shape: rect_prism, w: {{ w }}, h: {{ h }}, d: {{ d }},
+      label_length: {AB, AE, AD})'
+
+  Pyramid showing slant height from apex to base midpoint:
+    diagram: 'Solid3D(shape: square_pyramid, w: {{ b }}, h: {{ h }}, d: {{ b }},
+      points: {M: midpoint(AB)},
+      lines: [PM],
+      label_length: {AB: "{{ b }}", PM: "l"},
+      label_point: {A: "A", B: "B", P: "P"})'
+
+  Triangular prism with highlighted hypotenuse:
+    diagram: 'Solid3D(shape: triangular_prism, w: {{ a }}, h: {{ b }}, d: {{ d }},
+      highlight: [(AC, blue)],
+      label_length: {AB, BC, AC, AD},
+      label_point: {A: "A", B: "B", C: "C", D: "D"})'
+
+  Rectangular prism with space diagonal:
+    diagram: 'Solid3D(shape: rect_prism, w: {{ w }}, h: {{ h }}, d: {{ d }},
+      lines: [AG],
+      dash: [BG, AB],
+      label_length: {AG: "d", AB, AE, AD},
+      label_point: {A: "A", G: "G"})'
 
 
 ── Number Line Diagram ──────────────────────────────────────
@@ -2881,6 +3121,45 @@ COMPLETE EXAMPLES
           correct: "not right_angle"
       solution: "A triangle {{ 'with' if right_angle else 'without'}} a 90° angle is {{ '' if right_angle else 'not '}}a right-angle triangle."
 
+── Example: For-Loop Table ──────────────────────────────────────────
+
+    Use {% for var in list %}...{% endfor %} to repeat a block for every item in a
+    list parameter. This is most useful for building Markdown tables from data points.
+
+    Syntax:
+
+        {% for var in list_param %}
+        ...{{ var[0] }}...{{ var[1] }}...
+        {% endfor %}
+
+    - var[0], var[1], etc. access elements of each item by index.
+    - The list parameter must use type: literal with a value: containing a list.
+
+    Example — data table from a list of (x, y) pairs:
+
+        parameters:
+          x_label:
+            type: literal
+            value: "Hours studied"
+          y_label:
+            type: literal
+            value: "Test score (%)"
+          points:
+            type: literal
+            value: [[1,45],[2,55],[3,62],[4,70],[5,78]]
+
+        question:
+          text: |
+            | {{ x_label }} | {{ y_label }} |
+            |---|---|
+            {% for p in points %}| {{ p[0] }} | {{ p[1] }} |
+            {% endfor %}
+
+    Important: use | (literal block scalar) rather than > (folded) for the
+    question text field when it contains {% %} tags, so that newlines are
+    preserved. If > is used accidentally, the system will attempt to correct it
+    automatically, but | is always the safe choice.
+
 ── Example: Multipart question with multiple choice ──────────────────────────────────────────
 
   parameters:
@@ -3090,6 +3369,7 @@ Answer types
   input + correct + answer_format                   text input with format enforcement
   input + correct + answer_format + format_instruction  text input with both
   diagram + correct                                 diagram choice
+  answer_format: log                                single text input — student types log_2(10); live KaTeX preview shown
 
 Multi-part questions
   question.parts: [{ text, answer, solution }, ...]   sequential parts on one diagram
@@ -3135,6 +3415,14 @@ Diagram types
   Trapezium(a: N, b: N, h: N [, labels: true, label_a: "...", label_b: "...", label_h: "..."])  ← top, base, height
   FractionBar(a: n/d, b: n/d [, label: true])          ← explicit second fraction
   FractionBar(a: n/d, den: N [, label: true])           ← auto equivalent fraction
+  Solid3D(shape: rect_prism|square_pyramid|triangular_prism, w, h, d
+    [, points: {NAME: (x,y,z)|centre_base|centre_top|midpoint(XY)|foot(P,base)}]
+    [, lines: [XY, ...]] [, dash: [XY, ...]]
+    [, highlight: [XY, ...] | [(XY, colour), ...]]
+    [, label_length: {XY: "text", ...} | {XY, ...}]
+    [, label_point: {X: "text", ...}]
+    [, label_angle: {XYZ: "...", ...}]
+    [, right_angle_at: {X: [XY, XZ]}])
 
 MULTIPLE DIAGRAMS — separate with semicolons in a single-quoted string:
   diagram: 'Rect(x: 10, y: 11.9, pos: (-10, 0), labels: false, name: "Vic"); Rect(x: 10, y: 3.4, pos: (10, 0), labels: false, name: "Tas")'
@@ -3151,7 +3439,7 @@ Probability functions
 Math functions
   sqrt(x)   abs(x)   factorial(n)   round(x[,n])
   sin(x)   cos(x)   tan(x)   asin(x)   acos(x)   atan(x)
-  log(x)   log10(x)   degrees(x)   radians(x)   ceil(x)   floor(x)
+  log(x)   log(x, base)   log10(x)   degrees(x)   radians(x)   ceil(x)   floor(x)
 
 Number theory functions
   gcd(a, b)             greatest common divisor

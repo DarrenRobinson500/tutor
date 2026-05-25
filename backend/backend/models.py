@@ -485,8 +485,8 @@ class BookingWeekly(models.Model):
         if not self.confirmed: result += " [unconfirmed]"
         return result
 
-    def skip(self):
-        self.start_date = now + timedelta(days=7)
+    def skip(self, weeks=1):
+        self.start_date = now + timedelta(weeks=weeks)
         self.save(update_fields=["start_date"])
 
     def remove_skip(self):
@@ -608,6 +608,7 @@ class StudentProfile(models.Model):
     school_name = models.CharField(max_length=200, blank=True, null=True)
     hourly_rate = models.DecimalField(max_digits=8, decimal_places=2, default=70)
     plain_password = models.CharField(max_length=50, blank=True, null=True)
+    min_questions_per_skill = models.IntegerField(default=0)
 
     def __str__(self): return f"Profile {self.user} {self.id}"
 
@@ -638,6 +639,7 @@ class StudentProfile(models.Model):
             "area_of_study": self.area_of_study,
             "mobile": self.mobile,
             "address": self.address,
+            "min_questions_per_skill": self.min_questions_per_skill,
 
             # Tutor details (flattened for convenience)
             "tutor_id": tutor_user.id if tutor_user else None,
@@ -664,7 +666,6 @@ class UserPreference(models.Model):
     def __str__(self):
         return f"{self.user} – {self.key} = {self.value}"
 
-
 class TutorProfile(models.Model):
     # Branding
     tutor = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tutor")
@@ -676,6 +677,7 @@ class TutorProfile(models.Model):
     mobile = models.CharField(max_length=20, blank=True, null=True, default='0493461541')
     address = models.CharField(max_length=255, blank=True, null=True)
 
+
     # Bookings
     default_session_minutes = models.IntegerField(default=60)
     buffer_minutes = models.IntegerField(default=15)
@@ -683,6 +685,7 @@ class TutorProfile(models.Model):
 
     # Registration / application
     qualification = models.CharField(max_length=255, blank=True, null=True)
+    university = models.CharField(max_length=255, blank=True, null=True)
     tutor_year_levels = models.JSONField(default=list)
     bio = models.TextField(blank=True, null=True)
     approved = models.BooleanField(default=False)
@@ -949,6 +952,7 @@ class TutorJob(models.Model):
         ('review_focus_area', 'Review Focus Area'),
         ('review_available_hours', 'Review My Available Hours'),
         ('setup_weekly_session', 'Set Up Weekly Session'),
+        ('set_fee', 'Set Your Tutoring Fee'),
         ('payment_failed', 'Payment Failed'),
         ('payment_overdue_7', 'Payment Overdue — 7 Days'),
         ('payment_overdue_14', 'Payment Overdue — 14 Days — Sessions Paused'),
@@ -984,11 +988,14 @@ class AdminJob(models.Model):
         ('payment_overdue_7', 'Payment Overdue — 7 Days'),
         ('payment_overdue_14', 'Payment Overdue — 14 Days'),
         ('low_session_rating', 'Low Session Rating'),
+        ('setup_bank_details', 'Setup Bank Details'),
     ]
     job_type = models.CharField(max_length=50, choices=JOB_TYPES)
     subject = models.ForeignKey(
         django_settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name='admin_jobs',
     )
     triggered_at = models.DateTimeField(auto_now_add=True)
@@ -1284,7 +1291,9 @@ def get_bool(key, default=False):
         # print("Get bool (db):", val)
         global_settings_cache_min = get_int("global_settings_cache_min", 10)
         cache.set(cache_key, val, global_settings_cache_min * 60)
-    return val.lower() in ("1", "true", "yes", "on")
+    if isinstance(val, bool):
+        return val
+    return str(val).lower() in ("1", "true", "yes", "on")
 
 def get_int(key, default=0):
     cache_key = f"global_setting_{key}"
@@ -1397,6 +1406,26 @@ class SMSSendJob(models.Model):
             "time_until_sent_seconds": self.time_until_sent.total_seconds(),
             "cancelled": self.cancelled,
         }
+
+
+class AdminEmailRecord(models.Model):
+    to_email = models.EmailField()
+    to_name = models.CharField(max_length=255, blank=True, default='')
+    subject = models.CharField(max_length=255)
+    body = models.TextField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+    sent_by = models.ForeignKey(
+        django_settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='sent_admin_emails'
+    )
+    status = models.CharField(max_length=20, default='sent')  # 'sent' | 'failed'
+    error = models.TextField(blank=True, default='')
+
+    class Meta:
+        ordering = ['-sent_at']
+
+    def __str__(self):
+        return f"Email to {self.to_email} — {self.subject}"
 
 
 def get_or_create_conversation(tutor, student):
@@ -1814,12 +1843,14 @@ class SessionPayment(models.Model):
         ('pending',     'Pending'),
         ('authorised',  'Authorised'),
         ('paid',        'Paid'),
+        ('confirmed',   'Confirmed'),
         ('failed',      'Failed'),
         ('overdue_7',   'Overdue 7d'),
         ('overdue_14',  'Overdue 14d'),
     ]
 
-    session      = models.OneToOneField('TutoringSession', on_delete=models.CASCADE, related_name='session_payment')
+    session      = models.OneToOneField('TutoringSession', on_delete=models.CASCADE, related_name='session_payment', null=True, blank=True)
+    student      = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='session_payments_as_student')
     parent       = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='session_payments_as_parent')
     tutor        = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='session_payments_as_tutor')
     distributor  = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='session_payments_as_distributor')
@@ -1837,6 +1868,7 @@ class SessionPayment(models.Model):
     created_at               = models.DateTimeField(auto_now_add=True)
     authorised_at            = models.DateTimeField(null=True, blank=True)
     paid_at                  = models.DateTimeField(null=True, blank=True)
+    confirmed_at             = models.DateTimeField(null=True, blank=True)
     expected_settlement_date = models.DateField(null=True, blank=True)
 
     rating         = models.IntegerField(null=True, blank=True)
@@ -1882,14 +1914,16 @@ class SessionPayment(models.Model):
             'tutor_name': self.tutor.get_full_name(),
             'tutor_id': self.tutor.id,
             'parent_id': self.parent.id,
-            'session_id': self.session.id,
-            'session_date': self.session.created_at.date().isoformat(),
-            'child_name': self.session.student.first_name,
+            'session_id': self.session.id if self.session else None,
+            'session_date': self.session.created_at.date().isoformat() if self.session else self.created_at.date().isoformat(),
+            'child_name': (self.session.student if self.session else self.student).first_name if (self.session or self.student) else '',
             'focus_areas': self._focus_areas(),
             'parent_message': self._parent_message(),
             'rating': self.rating,
+            'student_name': (self.session.student if self.session else self.student).get_full_name() if (self.session or self.student) else '',
             'created_at': self.created_at.isoformat(),
             'paid_at': self.paid_at.isoformat() if self.paid_at else None,
+            'confirmed_at': self.confirmed_at.isoformat() if self.confirmed_at else None,
             'expected_settlement_date': self.expected_settlement_date.isoformat() if self.expected_settlement_date else None,
         }
 

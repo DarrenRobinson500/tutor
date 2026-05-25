@@ -45,26 +45,25 @@ def get_cached_students_for_tutor(tutor):
 def update_student_cache(student):
     global STUDENTS_CACHE
 
-    # Find all tutors linked to this student
     profile = student.get_student_profile()
     tutor = student.get_tutor()
+    if tutor is None:
+        return
     updated_summary = profile.to_dict()
 
-    if tutor.id not in STUDENTS_CACHE: STUDENTS_CACHE[tutor.id] = []
+    # Only update if the tutor's list is already cached; otherwise let it be
+    # built fresh on the next request (avoids a partial cache entry).
+    if tutor.id not in STUDENTS_CACHE:
+        return
 
     students = STUDENTS_CACHE[tutor.id]
 
-    # Try to find existing entry
-    found = False
     for i, entry in enumerate(students):
         if entry["user_id"] == student.id:
             students[i] = updated_summary
-            found = True
-            break
+            return
 
-    # If not found, add it
-    if not found:
-        students.append(updated_summary)
+    students.append(updated_summary)
 
 
 def invalidate_students_cache_for_tutor(tutor_id):
@@ -265,9 +264,10 @@ def update_booking_caches(booking, action):
 
             # Reinsert unless deleted
             if action != "delete":
-                day_str = booking.start_datetime.date().isoformat()
+                booking_dict = booking.to_dict()
+                day_str = booking_dict["day_str"]  # local date, not UTC
                 bookings_by_date.setdefault(day_str, [])
-                bookings_by_date[day_str].append(booking.to_dict())
+                bookings_by_date[day_str].append(booking_dict)
 
         # Only invalidate slots for time-changing actions
         if action not in ("confirm"):

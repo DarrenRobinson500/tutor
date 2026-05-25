@@ -179,12 +179,52 @@ def _fix_parameters_indentation(content: str) -> str:
     return '\n'.join(new_lines)
 
 
+def _fix_folded_blocks_with_tags(content: str) -> str:
+    """Convert YAML `>` folded block scalars that contain {%...%} to `|` literal.
+
+    With `>`, PyYAML joins consecutive non-blank lines with spaces, collapsing
+    the newlines that a {% for %} loop needs to produce separate table rows.
+    Switching to `|` (literal) preserves newlines so the expanded loop body
+    lands on its own line.  Only affects blocks that actually contain {%...%};
+    normal prose blocks using `>` are left unchanged.
+    """
+    lines = content.splitlines(keepends=True)
+    result = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        # Detect a folded block indicator: `key: >`, `key: >-`, `key: >+`, etc.
+        m = _re.match(r'^(\s*\S.*?:\s*)(>[0-9+\-]*)(\s*\n)', line)
+        if m and '>' in m.group(2):
+            base_indent = len(line) - len(line.lstrip())
+            j = i + 1
+            block_lines = []
+            while j < len(lines):
+                bl = lines[j]
+                stripped = bl.rstrip('\n\r')
+                if stripped and len(stripped) - len(stripped.lstrip()) <= base_indent:
+                    break
+                block_lines.append(bl)
+                j += 1
+            if any('{%' in bl for bl in block_lines):
+                # Replace `>` with `|`, keeping any modifier (+/-) and trailing whitespace
+                new_indicator = m.group(2).replace('>', '|', 1)
+                result.append(m.group(1) + new_indicator + m.group(3))
+                result.extend(block_lines)
+                i = j
+                continue
+        result.append(line)
+        i += 1
+    return ''.join(result)
+
+
 def _fix_bare_expressions(content: str) -> str:
     """
     Quote any YAML scalar value that starts with {{ so the parser doesn't
     treat it as a flow mapping.  Only touches lines of the form:
         key: {{ ... }}   →   key: "{{ ... }}"
     Already-quoted values are left alone.
+    Lines inside YAML block scalars (| or >) are skipped entirely.
     """
     def _repl(m):
         indent, key, value = m.group(1), m.group(2), m.group(3)
@@ -192,18 +232,42 @@ def _fix_bare_expressions(content: str) -> str:
             return m.group(0)
         escaped = value.replace('\\', '\\\\').replace('"', '\\"')
         return f'{indent}{key}: "{escaped}"'
-    return _re.sub(
-        r'^(\s*)([\w_]+):\s*(\{\{.*)',
-        _repl,
-        content,
-        flags=_re.MULTILINE,
-    )
+
+    result = []
+    in_block = False
+    block_indent = -1
+
+    for line in content.split('\n'):
+        if in_block:
+            # A line with no content (blank) stays in the block.
+            # A non-blank line at indentation <= block_indent ends the block.
+            stripped = line.lstrip()
+            current_indent = len(line) - len(stripped)
+            if stripped and current_indent <= block_indent:
+                in_block = False
+            else:
+                result.append(line)
+                continue
+
+        # Detect the start of a block scalar (key: > or key: |)
+        bm = _re.match(r'^(\s*)\S.*:\s*[|>][-+]?\s*$', line)
+        if bm:
+            in_block = True
+            block_indent = len(bm.group(1))
+            result.append(line)
+            continue
+
+        # Apply the bare-expression fix to non-block-scalar lines
+        result.append(_re.sub(r'^(\s*)([\w_]+):\s*(\{\{.*)', _repl, line))
+
+    return '\n'.join(result)
 
 
 def generate_preview_from_content(content: str):
     # 1. Parse YAML
     # print("Generate preview from content - 1")
     content = _fix_unquoted_diagram(content)
+    content = _fix_folded_blocks_with_tags(content)
     content = _fix_bare_expressions(content)
     content = _fix_parameters_indentation(content)
     try:
@@ -286,6 +350,7 @@ def generate_values_and_question(template_id: int):
 
     # Apply same preprocessing as generate_preview_from_content
     content = _fix_unquoted_diagram(content)
+    content = _fix_folded_blocks_with_tags(content)
     content = _fix_bare_expressions(content)
     content = _fix_parameters_indentation(content)
 
@@ -319,7 +384,7 @@ def generate_values_and_question(template_id: int):
 
     # 4. Render preview
     try:
-        preview = render_template_preview(parsed)
+        preview = render_template_preview(parsed, template_id=template_id)
 
         # Always include substituted YAML
         if "substituted_yaml" not in preview:
@@ -423,7 +488,7 @@ def generate_preview_from_template_id(template_id: int):
 
     for attempt in range(MAX_ATTEMPTS):
         try:
-            preview = render_template_preview(parsed)
+            preview = render_template_preview(parsed, template_id=template_obj.id)
 
             # Inject metadata
             preview["skill"] = template_obj.skill.description if template_obj.skill else None

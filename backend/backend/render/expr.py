@@ -8,6 +8,58 @@ from .context import (
     list_range, list_quartile, list_stdev, list_pop_stdev,
 )
 
+def _replace_caret_outside_strings(expr: str) -> str:
+    """Replace ^ with ** only when outside string literals."""
+    result = []
+    i = 0
+    n = len(expr)
+    while i < n:
+        ch = expr[i]
+        if ch in ('"', "'"):
+            quote = ch
+            result.append(ch)
+            i += 1
+            # Triple-quoted string
+            if expr[i:i+2] == quote * 2:
+                result.append(quote)
+                result.append(quote)
+                i += 2
+                end = quote * 3
+                while i < n:
+                    if expr[i] == '\\' and i + 1 < n:
+                        result.append(expr[i])
+                        result.append(expr[i + 1])
+                        i += 2
+                    elif expr[i:i+3] == end:
+                        result.append(end)
+                        i += 3
+                        break
+                    else:
+                        result.append(expr[i])
+                        i += 1
+            else:
+                # Single-quoted string
+                while i < n:
+                    if expr[i] == '\\' and i + 1 < n:
+                        result.append(expr[i])
+                        result.append(expr[i + 1])
+                        i += 2
+                    elif expr[i] == quote:
+                        result.append(expr[i])
+                        i += 1
+                        break
+                    else:
+                        result.append(expr[i])
+                        i += 1
+        elif ch == '^':
+            result.append('**')
+            i += 1
+        else:
+            result.append(ch)
+            i += 1
+    return ''.join(result)
+
+
 # Back-compat aliases used by render.py and tests
 _MATH_CONTEXT = MATH_CONTEXT
 _LIST_CONTEXT = LIST_CONTEXT
@@ -126,8 +178,9 @@ class ExpressionNode:
             self.evaluated_value = value_map[bare]
             return self.evaluated_value
 
-        # Normalise ^ → ** so exponentiation works in Python eval.
-        self.raw_expr = self.raw_expr.replace('^', '**')
+        # Normalise ^ → ** so exponentiation works in Python eval,
+        # but skip ^ characters that appear inside string literals.
+        self.raw_expr = _replace_caret_outside_strings(self.raw_expr)
 
         # 2. Unified Python eval.
         from fractions import Fraction as _Frac
@@ -139,9 +192,9 @@ class ExpressionNode:
         try:
             self.evaluated_value = eval(self.raw_expr, ctx)  # noqa: S307
             return self.evaluated_value
-        except TypeError:
-            # TypeError is the expected failure when an operator-string param
-            # (e.g. op = "+") is present — fall through to sympy substitution.
+        except (TypeError, SyntaxError):
+            # TypeError/SyntaxError are the expected failures when an operator-string
+            # param (e.g. op = "+") appears as an infix — fall through to sympy substitution.
             pass
 
         # 3. Sympy text-substitution fallback.
@@ -188,6 +241,13 @@ class ExpressionNode:
     # ── Formatting ───────────────────────────────────────────────────────────
 
     def format(self):
+        # | length — returns count of items in a list (or characters in a string)
+        if self.format_type == "length":
+            try:
+                return str(len(self.evaluated_value))
+            except TypeError:
+                return "0"
+
         # Lists → comma-separated (| sorted sorts first)
         if isinstance(self.evaluated_value, list):
             vals = sorted(self.evaluated_value) if self.format_type == "sorted" \

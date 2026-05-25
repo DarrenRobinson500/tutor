@@ -7,10 +7,12 @@ from ..rendering import load_template_yaml
 
 _DEFAULT_FORMAT_INSTRUCTIONS = {
     "percent":              "Enter as a percentage, e.g. 25%",
+    "percent_1":            "Enter as a percentage to 1 decimal place (if necessary), e.g. 12.5%",
     "percentage":           "Enter as a percentage, e.g. 25%",
     "fraction":             "Enter as an improper fraction, e.g. 7/3",
     "integer":              "Enter a whole number, e.g. 42",
     "decimal":              "Give your answer as a decimal",
+    "decimal_0":            "Give your answer to the nearest whole number",
     "decimal_1":            "Give your answer to 1 decimal place",
     "decimal_2":            "Give your answer to 2 decimal places",
     "decimal_3":            "Give your answer to 3 decimal places",
@@ -19,12 +21,29 @@ _DEFAULT_FORMAT_INSTRUCTIONS = {
     "ratio":                "Enter as a ratio, e.g. 1:2",
     "proper_fraction":      "Enter as a mixed number, e.g. 2 1/3",
     "scientific_notation":  "Enter in scientific notation, e.g. 3.2 × 10^3",
+    "log":                  "Enter your answer in the form: log_2(10)",
 }
 
 # Match {{{...}}} (LaTeX-brace-wrapped expression) before {{...}} (plain expression).
 # Group 1 = triple-brace expression (result wrapped in { } for LaTeX)
 # Group 2 = double-brace expression (result substituted as-is)
-EXPR_PATTERN = re.compile(r"\{\{\{(.*?)\}\}\}|\{\{(.*?)\}\}")
+EXPR_PATTERN = re.compile(r"\{\{\{((?:[^}]|\}(?!\}))*)\}\}\}|\{\{([^{].*?)\}\}")
+
+# Jinja2-style block tags
+_IF_TAG     = re.compile(r'\{%-?\s*if\s+(.*?)\s*-?%\}', re.DOTALL)
+_ELSE_TAG   = re.compile(r'\{%-?\s*else\s*-?%\}')
+_ENDIF_TAG  = re.compile(r'\{%-?\s*endif\s*-?%\}')
+_FOR_TAG    = re.compile(r'\{%-?\s*for\s+(\w+)\s+in\s+(\w+)\s*-?%\}')
+_ENDFOR_TAG = re.compile(r'\{%-?\s*endfor\s*-?%\}')
+
+
+class _LoopVar:
+    """Minimal parameter-like wrapper for a for-loop variable."""
+    default_format_type    = None
+    default_format_options = {}
+
+    def __init__(self, value):
+        self.value = value
 
 
 def _inject_format_pipe(text, format_type):
@@ -207,7 +226,166 @@ class Render:
         self.substituted_yaml = walk(substituted, formatter="raw")
         self.preview_yaml = walk(preview, formatter="formatted")
 
+    def _process_conditionals(self, text: str, params: dict) -> str:
+        """Expand {% if condition %}...{% else %}...{% endif %} blocks.
+
+        Handles nesting. The condition is evaluated with the same rules as
+        answer `correct:` expressions (parameter names, ==, !=, <, >, etc.).
+        Whitespace immediately inside the tags is preserved as-is.
+        """
+        result = []
+        pos = 0
+
+        while pos < len(text):
+            m = _IF_TAG.search(text, pos)
+            if not m:
+                result.append(text[pos:])
+                break
+
+            result.append(text[pos:m.start()])
+            condition   = m.group(1)
+            inner_start = m.end()
+
+            depth      = 1
+            scan       = inner_start
+            true_end   = None
+            else_start = None
+            false_end  = None
+            end_pos    = None
+
+            while scan < len(text) and depth > 0:
+                ni = _IF_TAG.search(text, scan)
+                ne = _ENDIF_TAG.search(text, scan)
+                nl = _ELSE_TAG.search(text, scan) if depth == 1 else None
+
+                candidates = []
+                if ni: candidates.append((ni.start(), 'if',    ni))
+                if ne: candidates.append((ne.start(), 'endif', ne))
+                if nl: candidates.append((nl.start(), 'else',  nl))
+                if not candidates:
+                    break
+
+                _, tag_type, tag_m = min(candidates, key=lambda x: x[0])
+
+                if tag_type == 'if':
+                    depth += 1
+                    scan = tag_m.end()
+                elif tag_type == 'else' and depth == 1:
+                    true_end   = tag_m.start()
+                    else_start = tag_m.end()
+                    scan       = tag_m.end()
+                elif tag_type == 'endif':
+                    depth -= 1
+                    if depth == 0:
+                        if true_end is None:
+                            true_end = tag_m.start()
+                        if else_start is not None:
+                            false_end = tag_m.start()
+                        end_pos = tag_m.end()
+                        break
+                    scan = tag_m.end()
+
+            if end_pos is None:
+                result.append(text[inner_start:])
+                break
+
+            true_branch  = text[inner_start:true_end]
+            false_branch = text[else_start:false_end] if else_start is not None else ''
+
+            try:
+                cond_result = _evaluate_rule(condition, params)
+            except Exception:
+                cond_result = False
+
+            branch = true_branch if cond_result else false_branch
+            result.append(self._process_conditionals(branch, params))
+            pos = end_pos
+
+        return ''.join(result)
+
+    def _process_for_loops(self, text: str, formatter: str) -> str:
+        """Expand {% for var in iterable %}...{% endfor %} blocks.
+
+        The loop body is fully processed per iteration (including nested block
+        tags and {{ }} expressions) because the loop variable only exists in
+        that scope.  The iterable must be a parameter whose value is a list.
+        """
+        result = []
+        pos = 0
+
+        while pos < len(text):
+            m = _FOR_TAG.search(text, pos)
+            if not m:
+                result.append(text[pos:])
+                break
+
+            result.append(text[pos:m.start()])
+            var_name      = m.group(1)
+            iterable_name = m.group(2)
+            inner_start   = m.end()
+
+            # Find the matching {% endfor %}, tracking nested for loops
+            depth    = 1
+            scan     = inner_start
+            body_end = None
+            end_pos  = None
+
+            while scan < len(text) and depth > 0:
+                nf = _FOR_TAG.search(text, scan)
+                ne = _ENDFOR_TAG.search(text, scan)
+
+                candidates = []
+                if nf: candidates.append((nf.start(), 'for',    nf))
+                if ne: candidates.append((ne.start(), 'endfor', ne))
+                if not candidates:
+                    break
+
+                _, tag_type, tag_m = min(candidates, key=lambda x: x[0])
+
+                if tag_type == 'for':
+                    depth += 1
+                    scan = tag_m.end()
+                else:  # endfor
+                    depth -= 1
+                    if depth == 0:
+                        body_end = tag_m.start()
+                        end_pos  = tag_m.end()
+                        break
+                    scan = tag_m.end()
+
+            if end_pos is None:
+                result.append(text[inner_start:])
+                break
+
+            body          = text[inner_start:body_end]
+            iter_param    = self.param_objects.get(iterable_name)
+            iterable_val  = iter_param.value if iter_param is not None else None
+
+            if not isinstance(iterable_val, list):
+                # Iterable not found or not a list — emit a visible error and skip
+                result.append(f"[for: '{iterable_name}' is not a list parameter]")
+            else:
+                # Save any existing binding for the loop variable name
+                saved = self.param_objects.pop(var_name, None)
+                for item in iterable_val:
+                    self.param_objects[var_name] = _LoopVar(item)
+                    # Fully process body: block tags + {{ }} expressions
+                    result.append(self._process_string(body, formatter))
+                # Restore previous binding (if any)
+                if saved is not None:
+                    self.param_objects[var_name] = saved
+                else:
+                    self.param_objects.pop(var_name, None)
+
+            pos = end_pos
+
+        return ''.join(result)
+
     def _process_string(self, text, formatter):
+        params = {name: p.value for name, p in self.param_objects.items()}
+        text = self._process_conditionals(text, params)
+        text = self._process_for_loops(text, formatter)
+
         def repl(match):
             triple = match.group(1) is not None
             expr_text = (match.group(1) if triple else match.group(2)).strip()
@@ -229,6 +407,12 @@ class Render:
             value = node.evaluate()
 
             if formatter == "raw":
+                # If the evaluated value is a list and an explicit pipe was given
+                # (e.g. | length), apply the pipe formatter — lists can't be
+                # coerced to float and the pipe is the only meaningful output.
+                if isinstance(value, list) and node.format_type is not None:
+                    result = node.format()
+                    return "{" + result + "}" if triple else result
                 try:
                     f = float(value)
                     value = int(f) if f == int(f) else round(f, 10)
@@ -266,6 +450,9 @@ def _evaluate_rule(expr, params):
     from ..maths.fractions import denominator, numerator
     # Allow {{ a }} style in addition to bare variable names
     expr = EXPR_PATTERN.sub(lambda m: (m.group(1) or m.group(2) or "").strip(), expr)
+    # Normalise bare = to == so that natural writing like `answer_str = "1/2"`
+    # works as an equality check.  Preserves ==, !=, <=, >= unchanged.
+    expr = re.sub(r'(?<![=!<>])=(?!=)', '==', expr)
     # Convert string fraction values (e.g. "3/5") to numeric so comparisons work
     numeric_params = {}
     for k, v in params.items():
@@ -348,7 +535,7 @@ def _resolve_answer_value(raw_val: str, preview_val: str, params: dict, answer_f
     return raw_val
 
 
-def render_template_preview(parsed):
+def render_template_preview(parsed, template_id=None):
     """
     Drop-in replacement for rendering.render_template_preview.
     Uses the Render class for parameter generation and expression substitution.
@@ -399,10 +586,12 @@ def render_template_preview(parsed):
                 break
 
         if not rule_failed:
+            collected_errors = []   # discard transient errors from failed attempts
             break
     else:
+        id_hint = f" (template_id={template_id})" if template_id is not None else ""
         raise ValueError(
-            f"Parameter generation failed after {MAX_ATTEMPTS} attempts: {last_error}"
+            f"Parameter generation failed after {MAX_ATTEMPTS} attempts{id_hint}: {last_error}"
         )
 
     preview = renderer.preview_yaml or {}
@@ -608,11 +797,13 @@ def render_template_preview(parsed):
     _question_level_answer_format = None
     _question_level_tolerance = None
     _question_level_format_instruction = None
+    _question_level_answer_unit = None
     _q_block = raw_sub.get("question")
     if isinstance(_q_block, dict):
         _question_level_answer_format = _q_block.get("answer_format")
         _question_level_tolerance = _q_block.get("tolerance")
         _question_level_format_instruction = _q_block.get("format_instruction")
+        _question_level_answer_unit = _q_block.get("answer_unit")
 
     answers = []
     for i, ans in enumerate(raw_answers):
@@ -769,7 +960,7 @@ def render_template_preview(parsed):
                 # `expr: {{ ratio }}` with `answer_format: ratio` stores "1:2" not "0.5".
                 # Fall back to the question-level format (e.g. decimal_1 on the question block).
                 # Skip LaTeX-producing formats — store plain fraction strings instead.
-                answer_format = ans.get("answer_format") or _question_level_answer_format
+                answer_format = ans.get("answer_format") or ans.get("input_format") or _question_level_answer_format
                 if answer_format and answer_format in FORMAT_REGISTRY and answer_format not in _LATEX_ANSWER_FORMATS:
                     try:
                         text = FORMAT_REGISTRY[answer_format]().format(float(text))
@@ -790,6 +981,9 @@ def render_template_preview(parsed):
                 answer_obj["format_instruction"] = str(instruction)
             if fmt:
                 answer_obj["answer_format"] = str(fmt)
+            unit = ans.get("answer_unit") or _question_level_answer_unit
+            if unit:
+                answer_obj["answer_unit"] = str(unit)
             tol = ans.get("tolerance")
             if tol is None:
                 tol = _question_level_tolerance
@@ -951,6 +1145,32 @@ def render_template_preview(parsed):
                     if _v is not None and not isinstance(_v, list):
                         raw_ans = str(_v)
                         break
+
+                # When answers: is a list with a correct input/expr answer (text-input
+                # style written inside a part), evaluate the expr and use it as raw_ans.
+                if not raw_ans:
+                    _pans = part.get("answers") or raw_part.get("answers")
+                    if isinstance(_pans, list):
+                        for _a in _pans:
+                            if not (isinstance(_a, dict) and _a.get("correct")):
+                                continue
+                            _expr_str = _a.get("expr") or (
+                                _a.get("input") if not isinstance(_a.get("input"), bool) else None
+                            )
+                            if _expr_str and isinstance(_expr_str, str):
+                                try:
+                                    _result = renderer._process_string(
+                                        f"{{{{ {_expr_str} }}}}", "raw"
+                                    )
+                                    _f = float(_result)
+                                    # Use 12 significant figures so JS float comparison
+                                    # doesn't lose precision (e.g. log10(20) = 1.30103 in
+                                    # 6 s.f. differs from Math.log(20)/Math.log(10) by ~4e-9,
+                                    # exceeding the default 1e-9 tolerance).
+                                    raw_ans = str(int(_f)) if _f == int(_f) else f"{_f:.12g}"
+                                except Exception:
+                                    pass
+                            break
                 # Bare param name shorthand: if the answer is just a param name, resolve it
                 if raw_ans.strip() in params:
                     param_val = params.get(raw_ans.strip())
@@ -975,6 +1195,13 @@ def render_template_preview(parsed):
                 # For equation-format answers sympy returns "A**2"; convert to "A^2"
                 # so it matches what the PowerInput widget produces.
                 part_answer_format = str(part.get("answer_format", "") or "")
+                if not part_answer_format:
+                    _pans_af = part.get("answers") or raw_part.get("answers")
+                    if isinstance(_pans_af, list):
+                        for _a in _pans_af:
+                            if isinstance(_a, dict) and _a.get("correct"):
+                                part_answer_format = str(_a.get("answer_format", "") or "")
+                                break
                 if part_answer_format == "equation":
                     raw_ans = raw_ans.replace("**", "^")
                 if part_answer_format == "ratio" and ":" not in raw_ans:
@@ -1018,6 +1245,9 @@ def render_template_preview(parsed):
                 }
                 if part_answer_format:
                     step["answer_format"] = part_answer_format
+                part_answer_unit = str(part.get("answer_unit", "") or _question_level_answer_unit or "")
+                if part_answer_unit:
+                    step["answer_unit"] = part_answer_unit
                 _part_fi = part.get("format_instruction") or _DEFAULT_FORMAT_INSTRUCTIONS.get(part_answer_format)
                 if _part_fi:
                     step["format_instruction"] = str(_part_fi)

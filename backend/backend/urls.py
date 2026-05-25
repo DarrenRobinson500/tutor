@@ -25,10 +25,10 @@ router.register(r'focus-areas', FocusAreaViewSet, basename='focus-areas')
 router.register(r'jobs', TutorJobViewSet, basename='jobs')
 router.register(r'distributors', DistributorViewSet, basename='distributors')
 router.register(r'admin-jobs', AdminJobViewSet, basename='admin-jobs')
+router.register(r'admin-emails', AdminEmailViewSet, basename='admin-emails')
 router.register(r"template_groups", TemplateGroupViewSet)
 router.register(r"teachers", TeacherViewSet, basename="teachers")
 router.register(r"assessments", AssessmentViewSet, basename="assessments")
-
 
 urlpatterns = [
     path("auth/jwt/login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
@@ -36,14 +36,16 @@ urlpatterns = [
     path("docs/", editor_docs, name="editor_docs"),
 
     # Payment flow
-    path("api/payments/setup-intent/",        payment_setup_intent,    name="payment_setup_intent"),
-    path("api/payments/save-payment-method/", payment_save_method,     name="payment_save_method"),
-    path("api/payments/pending/",             payment_pending,         name="payment_pending"),
-    path("api/payments/tutor-billing/",       tutor_billing,           name="tutor_billing"),
-    path("api/payments/<int:pk>/",            payment_detail,          name="payment_detail"),
-    path("api/payments/<int:pk>/authorise/",  payment_authorise,       name="payment_authorise"),
-    path("api/payments/<int:pk>/retry/",      payment_retry,           name="payment_retry"),
-    path("api/parents/<int:pk>/payments/",    parent_payment_history,  name="parent_payment_history"),
+    path("payments/setup-intent/",        payment_setup_intent,    name="payment_setup_intent"),
+    path("payments/save-payment-method/", payment_save_method,     name="payment_save_method"),
+    path("payments/pending/",             payment_pending,         name="payment_pending"),
+    path("payments/tutor-billing/",       tutor_billing,           name="tutor_billing"),
+    path("payments/admin-feedback/",      admin_feedback,          name="admin_feedback"),
+    path("payments/<int:pk>/",            payment_detail,          name="payment_detail"),
+    path("payments/<int:pk>/authorise/",  payment_authorise,       name="payment_authorise"),
+    path("payments/<int:pk>/confirm/",    payment_confirm_receipt, name="payment_confirm_receipt"),
+    path("payments/<int:pk>/retry/",      payment_retry,           name="payment_retry"),
+    path("parents/<int:pk>/payments/",    parent_payment_history,  name="parent_payment_history"),
 ]
 
 urlpatterns += router.urls

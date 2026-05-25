@@ -57,13 +57,23 @@ def _svg_content_bbox(svg_body: str):
         for px, py in re.findall(r'[ML]\s*(-?[\d.]+)[,\s]+(-?[\d.]+)', m.group(1)):
             xs.append(float(px));  ys.append(float(py))
 
-    # <text x y font-size>: include anchor point padded by font-size so labels
-    # are not clipped when the viewBox is auto-zoomed.
+    # <text x y font-size>: estimate extent based on anchor direction.
+    # Use 5× font-size as an approximate text width (covers "deg = N" and similar
+    # multi-character labels); direction depends on text-anchor attribute.
     for m in re.finditer(r'<text\b([^>]*)>', svg_body):
         t = m.group(1)
         tx = _attr_float(t, 'x');  ty = _attr_float(t, 'y')
         fs = _attr_float(t, 'font-size', 2.0)
-        xs += [tx - fs, tx + fs];  ys += [ty - fs, ty + fs]
+        tw = fs * 5.0
+        am = re.search(r'text-anchor="(\w+)"', t)
+        anchor = am.group(1) if am else 'start'
+        if anchor == 'middle':
+            xs += [tx - tw / 2, tx + tw / 2]
+        elif anchor == 'end':
+            xs += [tx - tw, tx]
+        else:
+            xs += [tx, tx + tw]
+        ys += [ty - fs, ty + fs]
 
     if not xs or not ys:
         return None
@@ -114,11 +124,13 @@ def _auto_zoom_viewbox(vb, svg_body: str, min_width_ratio: float = 0.6, min_heig
         # Content too small — shrink viewBox
         new_vb_w = vb_w_to_fill
     else:
-        return vb  # already within acceptable bounds
+        new_vb_w = vb_w
 
-    new_vb_h = new_vb_w * vb_h / vb_w          # preserve aspect ratio
+    # Trim height independently to content — eliminates dead vertical space
+    # for wide/short diagrams (e.g. NumberLine) without affecting the width zoom.
+    new_vb_h = content_h / MAX_RATIO
 
-    # Centre on the content
+    # Centre each axis on the content independently
     cx_center = (cx_min + cx_max) / 2
     cy_center = (cy_min + cy_max) / 2
     new_vb_min_x = cx_center - new_vb_w / 2
@@ -166,7 +178,11 @@ def render_diagram_from_code(code: str, width: int = 500) -> str:
     if not code.strip():
         return ""
 
-    lines = _split_diagram_code(code)
+    # Collapse any embedded newlines + surrounding whitespace within each
+    # segment into a single space.  This handles YAML `>` folded block scalars
+    # whose continuation lines are more-indented than the first line, causing
+    # PyYAML to preserve literal newlines inside the diagram call string.
+    lines = [re.sub(r'\s*\n\s*', ' ', s) for s in _split_diagram_code(code)]
 
     DEFAULT_VIEWBOX = (-30, -18, 60, 36)
 
@@ -176,7 +192,7 @@ def render_diagram_from_code(code: str, width: int = 500) -> str:
     vb = DEFAULT_VIEWBOX
     for line in lines:
         matched = False
-        for diagram_type, module in DIAGRAM_REGISTRY.items():
+        for diagram_type, module in sorted(DIAGRAM_REGISTRY.items(), key=lambda x: -len(x[0])):
             if line.startswith(diagram_type):
                 matched = True
                 try:
@@ -225,6 +241,11 @@ def render_diagram_from_code(code: str, width: int = 500) -> str:
             f'fill="#fff8f8" stroke="#c00" stroke-width="0.4" rx="1"/>'
             f'{text_els}</svg>'
         )
+
+    # ── HTML modules bypass the SVG pipeline entirely ────────────────────────
+    for module, parsed in items:
+        if getattr(module, 'RENDERS_HTML', False):
+            return module.render(parsed)
 
     def _render(module, parsed, viz_scale):
         """Render one diagram, passing viz_scale if the module supports it."""

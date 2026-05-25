@@ -213,7 +213,7 @@ def _net_cone(d: NetDiagram, sw: float, fs: float) -> Tagged:
     cc     = cc_raw - shift_y
 
     large = 1 if theta > math.pi else 0
-    sweep = large
+    sweep = 0  # always counter-clockwise so the arc curves through the bottom toward the base circle
     sector = (f'<path d="M0,{apex_y:.3f} L{-arc_ex:.3f},{aey:.3f} '
               f'A{L:.3f},{L:.3f} 0 {large},{sweep} {arc_ex:.3f},{aey:.3f} Z" '
               f'fill="{_FILL}" stroke="black" stroke-width="{sw:.3f}" stroke-linejoin="round"/>')
@@ -241,12 +241,26 @@ def _net_rect_pyramid(d: NetDiagram, sw: float, fs: float) -> Tagged:
     W, D = w*scale, dep*scale
     SF, SL = sf*scale, sl*scale
 
+    # Dotted height line on right face: midpoint of base edge → apex
+    _tick = sw * 3.5
+    _right_height_line = (
+        f'<line x1="{W/2:.3f}" y1="0.000" x2="{W/2 + SL:.3f}" y2="0.000" '
+        f'stroke="#555" stroke-width="{sw:.3f}" '
+        f'stroke-dasharray="{sw*4:.3f} {sw*2.5:.3f}"/>'
+    )
+    _right_angle_mark = (
+        f'<polyline points="{W/2:.3f},{-_tick:.3f} {W/2+_tick:.3f},{-_tick:.3f} {W/2+_tick:.3f},0.000" '
+        f'fill="none" stroke="#555" stroke-width="{sw:.3f}"/>'
+    )
+
     out: Tagged = [
         ("base",  _r(-W/2, -D/2, W, D, _FILL_ACCENT, sw)),
         ("front", _p([(-W/2, D/2),  (W/2, D/2),  (0, D/2 + SF)],          _FILL, sw)),
         ("back",  _p([(-W/2, -D/2), (W/2, -D/2), (0, -D/2 - SF)],         _FILL, sw)),
         ("left",  _p([(-W/2, -D/2), (-W/2, D/2), (-W/2 - SL, 0)],         _FILL, sw)),
         ("right", _p([(W/2,  -D/2), (W/2,  D/2), (W/2 + SL, 0)],          _FILL, sw)),
+        ("right", _right_height_line),
+        ("right", _right_angle_mark),
     ]
 
     if d.labels:

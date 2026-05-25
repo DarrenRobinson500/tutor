@@ -120,9 +120,25 @@ def generate_param_values(params):
 
     for key, spec in params.items():
 
+        # Case: scenario type → pick a random row, store as a list
+        if isinstance(spec, dict) and spec.get("type") == "scenario":
+            rows = spec.get("rows", [])
+            generated[key] = list(random.choice(rows)) if rows else []
+            continue
+
         # Case 1: literal values (int, float, str)
-        if isinstance(spec, (int, float, str)):
+        # Handle identifier[n] index references before treating as a plain string.
+        if isinstance(spec, (int, float)):
             generated[key] = spec
+            continue
+        if isinstance(spec, str):
+            m = re.match(r'^(\w+)\[(\d+)\]$', spec.strip())
+            if m:
+                ref_key, ref_idx = m.group(1), int(m.group(2))
+                ref_val = generated.get(ref_key)
+                generated[key] = ref_val[ref_idx] if isinstance(ref_val, list) and ref_idx < len(ref_val) else None
+            else:
+                generated[key] = spec
             continue
 
         # Case 2: random range { min: X, max: Y }
@@ -177,7 +193,6 @@ def evaluate_rule_expression(expr, params):
     return bool(eval(expr, {"__builtins__": {}}, safe_locals))
 
 def render_template_preview(parsed):
-    # print("Rendering template preview")
     """
     1. Generate parameters
     2. Substitute ALL {{ ... }} in the entire YAML
@@ -223,7 +238,16 @@ def render_template_preview(parsed):
 
 
     # 2. Substitute parameters
-    # print("Substituting parameters")
+    # Substitute the diagram string directly on the Python value before the
+    # YAML round-trip.  PyYAML may choose a quoted/wrapped YAML style for
+    # strings that contain both " chars and {{ }} expressions, causing the
+    # re-parsed YAML to have a flow-mapping wrapped across lines that fails
+    # the scanner.  Substituting first avoids that entirely.
+    if isinstance(parsed.get("diagram"), str):
+        parsed = dict(parsed)
+        parsed["diagram"] = substitute_params_and_expressions(
+            parsed["diagram"], generated_params
+        )
 
     original_yaml_text = _yaml.dump(parsed, allow_unicode=True)
     substituted_yaml_text = substitute_params_and_expressions(original_yaml_text, generated_params)
@@ -344,7 +368,6 @@ def render_template_preview(parsed):
     if isinstance(diagram_code, str) and diagram_code.strip():
         svg = render_diagram_from_code(diagram_code)
     else:
-        # print("Failed to svg render:", diagram_code, isinstance(diagram_code, str))
         diagram_code = ""
 
     substituted = build_debug_yaml(parsed, generated_params, substituted)

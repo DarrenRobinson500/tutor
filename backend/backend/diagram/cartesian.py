@@ -24,6 +24,7 @@ class CartesianDiagram:
     x_tick_labels: List[str] = field(default_factory=list)
     vline: Optional[float] = None
     points: List[tuple] = field(default_factory=list)  # list of (x, y, label) tuples
+    lock_x_y: bool = True
 
 
 def _get_str_val(key: str, line: str) -> str:
@@ -75,8 +76,9 @@ def parse(line: str) -> Optional[CartesianDiagram]:
         or re.search(r"\beq2:\s*'([^']+)'", line)
         or re.search(r"\beq2:\s*([^,)'\"]+)", line)
     )
-    pos_match    = re.search(r'\bpos:\s*\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\)', line)
-    square_match = re.search(r'\bsquare:\s*(true|false)', line)
+    pos_match      = re.search(r'\bpos:\s*\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\)', line)
+    square_match   = re.search(r'\bsquare:\s*(true|false)', line)
+    lock_xy_match  = re.search(r'\block_x_y:\s*(true|false)', line)
     w_val = get_num("w")
     h_val = get_num("h")
 
@@ -90,8 +92,9 @@ def parse(line: str) -> Optional[CartesianDiagram]:
     if None in (xmin, xmax, ymin, ymax):
         return None
 
-    pos    = [float(pos_match.group(1)), float(pos_match.group(2))] if pos_match else [0.0, 0.0]
-    square = (square_match.group(1) == "true") if square_match else False
+    pos      = [float(pos_match.group(1)), float(pos_match.group(2))] if pos_match else [0.0, 0.0]
+    square   = (square_match.group(1) == "true") if square_match else False
+    lock_x_y = (lock_xy_match.group(1) == "true") if lock_xy_match else True
 
     xtl_raw = get_str("x_tick_labels")
     x_tick_labels = [s.strip() for s in xtl_raw.split(",")] if xtl_raw else []
@@ -115,6 +118,7 @@ def parse(line: str) -> Optional[CartesianDiagram]:
         x_tick_labels=x_tick_labels,
         vline=vline_val,
         points=points_val,
+        lock_x_y=lock_x_y,
     )
 
 
@@ -122,7 +126,10 @@ def viewbox(d: CartesianDiagram) -> tuple:
     cx, cy = d.pos
     y_range = d.ymax - d.ymin
     x_range = d.xmax - d.xmin
-    eff_w = d.h * x_range / y_range if y_range > 0 else d.w
+    if d.lock_x_y and y_range > 0:
+        eff_w = min(d.h * x_range / y_range, d.w * 8)
+    else:
+        eff_w = d.w
     L = cx - eff_w / 2
     R = cx + eff_w / 2
     T = cy - d.h / 2
@@ -178,8 +185,14 @@ def render(d: CartesianDiagram, viz_scale: float = 1.0) -> str:
 
     y_range = d.ymax - d.ymin
     x_range = xmax - xmin
-    # Equal-scale plot width: keeps d.h fixed, adjusts w so scale_x == scale_y
-    eff_w = d.h * x_range / y_range if y_range > 0 else d.w
+    # lock_x_y=True (default): enforce equal scale so grid cells are square.
+    # Cap at 8×d.w so extreme x/y ratios (e.g. trig over [0°,360°]) stay visible.
+    # lock_x_y=False: x fills d.w, y fills d.h independently — axes may have
+    # different unit scales.
+    if d.lock_x_y and y_range > 0 and not d.square:
+        eff_w = min(d.h * x_range / y_range, d.w * 8)
+    else:
+        eff_w = d.w
 
     cx, cy = d.pos
     L = cx - eff_w / 2
@@ -202,11 +215,15 @@ def render(d: CartesianDiagram, viz_scale: float = 1.0) -> str:
     sw        = 0.2  * viz_scale
     tick_len  = 0.8  * viz_scale
     font_size = 1.8  * viz_scale
-    # Use the same step on both axes so grid cells are visually square.
-    # Take the coarser of the two independently-ideal steps.
     _x_step = _nice_step((xmax - xmin) / 8)
     _y_step = _nice_step((d.ymax - d.ymin) / 6)
-    x_step = y_step = max(_x_step, _y_step)
+    if d.lock_x_y and not d.square:
+        # Equal scale: share the coarser step so grid cells are visually square.
+        x_step = y_step = max(_x_step, _y_step)
+    else:
+        # Independent axes: each axis uses its own nice step.
+        x_step = _x_step
+        y_step = _y_step
 
     x_grid_start = math.ceil(xmin / x_step) * x_step
     y_grid_start = math.ceil(d.ymin / y_step) * y_step
@@ -319,7 +336,7 @@ def render(d: CartesianDiagram, viz_scale: float = 1.0) -> str:
         s = re.sub(r'(\d)([a-zA-Z(])', r'\1*\2', s)
         s = re.sub(r'([a-zA-Z])\(', r'\1*(', s)  # x( → x*(  but not sin( — handled below
         # Restore math function calls broken by the rule above (sin, cos, tan, sqrt, …)
-        s = re.sub(r'\b(sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|sqrt|log|log2|log10|exp|abs|ceil|floor)\*\(', r'\1(', s)
+        s = re.sub(r'\b(sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|sqrt|log|log2|log10|exp|abs|ceil|floor|radians|degrees|pow|round|hypot)\*\(', r'\1(', s)
         return s
 
     # Plot equation (skipped when eq is empty)

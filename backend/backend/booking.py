@@ -89,13 +89,14 @@ def edit_booking(booking, data, booking_type, user_role):
     if user_role == "student": booking.confirmed = False
     booking.save()
     update_booking_caches(booking, "edit")
-    if changed_date_or_starttime:
+    if changed_date_or_starttime or user_role == "tutor":
         sms_enqueue(booking, "updated", user_role)
 
-    return Response({"ok": True, "edit": booking.id})
+    student_name = booking.student.get_full_name() if booking.student else ""
+    return Response({"ok": True, "edit": booking.id, "student_name": student_name})
 
-def skip_booking(booking, user_role):
-    booking.skip()
+def skip_booking(booking, user_role, weeks=1):
+    booking.skip(weeks=weeks)
     update_booking_caches(booking, "skip")
     sms_enqueue(booking, "skipped", user_role)
 

@@ -22,6 +22,17 @@ SMS_TEMPLATES = {
     "student_cancelled_weekly": ("Hi {tutor_name}, your weekly booking with {student_name} has been cancelled."),
     "student_cancelled_adhoc": ("Hi {tutor_name}, your booking with {student_name} has been cancelled."),
 
+    # Parent → Tutor (parent acting on behalf of student)
+    "parent_create_adhoc": ("Hi {tutor_name}, a booking has been created for {student_name} by their parent. We will see you {date_and_time}\n"),
+    "parent_create_weekly": ("Hi {tutor_name}, a weekly booking has been created for {student_name} by their parent. The first booking is {date_and_time}\n"),
+    "parent_updated": ("Hi {tutor_name}, the booking for {student_name} has been updated by their parent. We will see you {date_and_time}\n"),
+    "parent_confirmed": ("Hi {tutor_name}, the booking for {student_name} has been confirmed by their parent. We will see you {date_and_time}\n"),
+    "parent_unconfirmed": ("Hi {tutor_name}, the booking for {student_name} has been unconfirmed by their parent. Please call them if this is unexpected.\n"),
+    "parent_skipped": ("Hi {tutor_name}, the weekly booking for {student_name} will be skipped. Their parent has paused it.\n"),
+    "parent_unskipped": ("Hi {tutor_name}, the booking pause for {student_name} has been removed by their parent. We will see you {date_and_time}\n"),
+    "parent_cancelled_weekly": ("Hi {tutor_name}, the weekly booking for {student_name} has been cancelled by their parent."),
+    "parent_cancelled_adhoc": ("Hi {tutor_name}, the booking for {student_name} has been cancelled by their parent."),
+
     # Tutor → Student
     "tutor_create_adhoc": ("Hi {student_name}, your booking has been created by {tutor_name}. We will see you {date_and_time}\n"),
     "tutor_create_weekly": ("Hi {student_name}, your weekly booking has been created by {tutor_name}. We will see you each week and the first booking is {date_and_time}\n"),
