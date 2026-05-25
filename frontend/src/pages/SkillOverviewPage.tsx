@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import * as jsYaml from "js-yaml";
 import { Layout } from "./components/Layout";
 import { apiFetch } from "../utils/apiFetch";
 
@@ -26,6 +27,18 @@ interface TemplateSummary {
   question_text: string;
 }
 
+interface ImportEntry {
+  skill_detail: string;
+  difficulty: string;
+  yaml: string;
+}
+
+interface FailedImport extends ImportEntry {
+  error: string;
+}
+
+type ImportPhase = "preview" | "importing" | "done";
+
 const DIFFICULTIES = ["easy", "medium", "hard"] as const;
 
 const DIFFICULTY_LABEL: Record<string, string> = {
@@ -48,7 +61,8 @@ export function SkillOverviewPage() {
 
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
-  const canEditSyllabus = user?.role === "admin" || user?.edit_syllabus === true;
+  const isAdmin = user?.role === "admin";
+  const canEditSyllabus = isAdmin || user?.edit_syllabus === true;
 
   const [skillName, setSkillName] = useState<string>("");
   const [skillGrades, setSkillGrades] = useState<string[]>([]);
@@ -65,6 +79,20 @@ export function SkillOverviewPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [pendingDelete, setPendingDelete] = useState<TemplateSummary | null>(null);
   const [shiftingGrade, setShiftingGrade] = useState<string | null>(null);
+  const [pendingDeleteSkill, setPendingDeleteSkill] = useState(false);
+  const [deletingSkill, setDeletingSkill] = useState(false);
+
+  // ── Bulk import state ──────────────────────────────────────────────────────
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [importYear, setImportYear] = useState<number | null>(null);
+  const [importEntries, setImportEntries] = useState<ImportEntry[]>([]);
+  const [importPhase, setImportPhase] = useState<ImportPhase>("preview");
+  const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
+  const [importSucceeded, setImportSucceeded] = useState(0);
+  const [importFailed, setImportFailed] = useState<FailedImport[]>([]);
+  const [importStopError, setImportStopError] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     if (!skillId) return;
@@ -217,6 +245,149 @@ export function SkillOverviewPage() {
     setShiftingGrade(null);
   };
 
+  const confirmDeleteSkill = async () => {
+    setDeletingSkill(true);
+    const res = await apiFetch(`/api/skills/${skillId}/`, { method: "DELETE" });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => res.status.toString());
+      alert(`Delete failed (${res.status}): ${msg}`);
+      setDeletingSkill(false);
+      return;
+    }
+    // Hard redirect forces a full page reload, bypassing any server-side
+    // in-process matrix cache that may not have been invalidated yet.
+    window.location.href = "/skills";
+  };
+
+  // ── Bulk import logic ──────────────────────────────────────────────────────
+
+  function handleImportFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setFileError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset input so the same file can be re-selected
+    e.target.value = "";
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      let parsed: any;
+      try {
+        parsed = jsYaml.load(text);
+      } catch {
+        setFileError("Could not read file — please check it is valid YAML.");
+        return;
+      }
+      if (!parsed || typeof parsed !== "object") {
+        setFileError("Could not read file — please check it is valid YAML.");
+        return;
+      }
+      if (parsed.year == null) {
+        setFileError('Missing required field: "year". Add "year: 10" (or the relevant year) at the top of the file.');
+        return;
+      }
+      const entries: ImportEntry[] = parsed.templates || [];
+      if (!Array.isArray(entries) || entries.length === 0) {
+        setFileError("No templates found in file.");
+        return;
+      }
+      setImportYear(Number(parsed.year));
+      setImportEntries(entries);
+      setImportPhase("preview");
+      setImportStopError(null);
+      setImportSucceeded(0);
+      setImportFailed([]);
+      setShowImportModal(true);
+    };
+    reader.readAsText(file);
+  }
+
+  async function runImport() {
+    if (importYear === null) return;
+    setImportPhase("importing");
+    setImportStopError(null);
+
+    // Resolve unique skill detail names
+    const uniqueNames = Array.from(new Set(importEntries.map(e => e.skill_detail)));
+    const resolvedMap: Record<string, { id: number; skill_id: number }> = {};
+
+    for (const name of uniqueNames) {
+      const url = `/api/skills/resolve_detail/?name=${encodeURIComponent(name)}&year=${importYear}`;
+      const r = await apiFetch(url);
+      if (!r.ok) {
+        setImportStopError(
+          `Import stopped — skill detail not found in Year ${importYear}:\n"${name}"\nCheck the name matches exactly and the year is correct.`
+        );
+        setImportPhase("done");
+        return;
+      }
+      resolvedMap[name] = await r.json();
+    }
+
+    // POST each template
+    const total = importEntries.length;
+    setImportProgress({ done: 0, total });
+    const failed: FailedImport[] = [];
+    let succeeded = 0;
+
+    for (let i = 0; i < importEntries.length; i++) {
+      const entry = importEntries[i];
+      const detail = resolvedMap[entry.skill_detail];
+      setImportProgress({ done: i, total });
+
+      const r = await apiFetch("/api/templates/import_named/", {
+        method: "POST",
+        body: JSON.stringify({
+          skill_detail_id: detail.id,
+          year: importYear,
+          difficulty: entry.difficulty,
+          yaml: entry.yaml,
+        }),
+      });
+
+      if (r.ok) {
+        succeeded++;
+      } else {
+        const body = await r.text().catch(() => "");
+        failed.push({ ...entry, error: `HTTP ${r.status}: ${body}` });
+      }
+
+      setImportProgress({ done: i + 1, total });
+    }
+
+    setImportSucceeded(succeeded);
+    setImportFailed(failed);
+    setImportPhase("done");
+  }
+
+  function closeImportModal() {
+    setShowImportModal(false);
+    if (importPhase === "done" && importSucceeded > 0) {
+      // Refresh templates so imported ones appear
+      apiFetch(`/api/templates/filtered/?skill=${skillId}`)
+        .then(r => r.json())
+        .then((data: TemplateSummary[]) => setTemplates(data));
+    }
+  }
+
+  function downloadFailedYaml() {
+    const data = { year: importYear, templates: importFailed.map(({ error: _e, ...rest }) => rest) };
+    const yaml = `year: ${importYear}\n\ntemplates:\n` +
+      importFailed.map(f =>
+        `  - skill_detail: ${JSON.stringify(f.skill_detail)}\n` +
+        `    difficulty: ${f.difficulty}\n` +
+        `    yaml: |\n` +
+        f.yaml.split("\n").map(l => `      ${l}`).join("\n")
+      ).join("\n\n");
+    const blob = new Blob([yaml], { type: "text/yaml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "failed_imports.yaml";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // Sort templates by their skill_detail's position in detailSkills
   function sortByDetail(group: TemplateSummary[]): TemplateSummary[] {
     return [...group].sort((a, b) => {
@@ -247,6 +418,19 @@ export function SkillOverviewPage() {
             ← Back
           </button>
           <h4 className="mb-0 flex-grow-1">{skillName}</h4>
+          <input
+            ref={importFileRef}
+            type="file"
+            accept=".yaml,.yml"
+            style={{ display: "none" }}
+            onChange={handleImportFileChange}
+          />
+          <button
+            className="btn btn-outline-primary btn-sm"
+            onClick={() => { setFileError(null); importFileRef.current?.click(); }}
+          >
+            Add multiple templates
+          </button>
           <button
             className="btn btn-outline-success btn-sm"
             onClick={() => navigate(`/knowledge/new?skill_id=${skillId}`)}
@@ -265,7 +449,21 @@ export function SkillOverviewPage() {
           >
             Invalidate All
           </button>
+          {isAdmin && (
+            <button
+              className="btn btn-danger btn-sm"
+              onClick={() => setPendingDeleteSkill(true)}
+            >
+              Delete Skill
+            </button>
+          )}
         </div>
+
+        {fileError && (
+          <div className="alert alert-danger py-2 px-3 mb-3" style={{ fontSize: 14 }}>
+            {fileError}
+          </div>
+        )}
 
         {detailSkills.length > 0 && (
           <div className="mb-4 p-3 bg-light rounded" style={{ fontSize: 14 }}>
@@ -529,6 +727,134 @@ export function SkillOverviewPage() {
                 <div className="modal-footer border-0">
                   <button className="btn btn-secondary" onClick={() => setPendingDelete(null)}>Cancel</button>
                   <button className="btn btn-danger" onClick={confirmDelete}>Delete</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Delete Skill Confirm Modal ────────────────────── */}
+        {pendingDeleteSkill && (
+          <div className="modal show d-block" style={{ background: "rgba(0,0,0,0.4)" }} onClick={() => setPendingDeleteSkill(false)}>
+            <div className="modal-dialog modal-dialog-centered" onClick={e => e.stopPropagation()}>
+              <div className="modal-content">
+                <div className="modal-header border-0 pb-0">
+                  <h5 className="modal-title">Delete skill?</h5>
+                  <button className="btn-close" onClick={() => setPendingDeleteSkill(false)} />
+                </div>
+                <div className="modal-body pt-2">
+                  <p className="mb-0">
+                    <strong>{skillName}</strong> and all its templates will be permanently deleted. This cannot be undone.
+                  </p>
+                </div>
+                <div className="modal-footer border-0">
+                  <button className="btn btn-secondary" onClick={() => setPendingDeleteSkill(false)}>Cancel</button>
+                  <button className="btn btn-danger" disabled={deletingSkill} onClick={confirmDeleteSkill}>
+                    {deletingSkill ? "Deleting…" : "Delete"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Bulk Import Modal ─────────────────────────────── */}
+        {showImportModal && (
+          <div className="modal show d-block" style={{ background: "rgba(0,0,0,0.4)" }}>
+            <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" onClick={e => e.stopPropagation()}>
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    Import templates — Year {importYear}
+                  </h5>
+                  {importPhase !== "importing" && (
+                    <button className="btn-close" onClick={closeImportModal} />
+                  )}
+                </div>
+
+                <div className="modal-body">
+                  {/* Phase: preview */}
+                  {importPhase === "preview" && (
+                    <>
+                      <p className="mb-3 text-muted" style={{ fontSize: 14 }}>
+                        <strong>{importEntries.length} template{importEntries.length !== 1 ? "s" : ""}</strong> ready to import
+                      </p>
+                      <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                        <table className="table table-sm table-bordered mb-0" style={{ fontSize: 13 }}>
+                          <thead className="table-light">
+                            <tr>
+                              <th>Skill detail</th>
+                              <th style={{ width: 90 }}>Difficulty</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {importEntries.map((e, i) => (
+                              <tr key={i}>
+                                <td>{e.skill_detail}</td>
+                                <td className="text-capitalize">{e.difficulty}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Phase: importing */}
+                  {importPhase === "importing" && (
+                    <div className="text-center py-3">
+                      <div className="spinner-border text-primary mb-3" role="status" />
+                      <p className="mb-0">
+                        Importing {importProgress.done} of {importProgress.total}…
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Phase: done */}
+                  {importPhase === "done" && (
+                    <>
+                      {importStopError ? (
+                        <div className="alert alert-danger" style={{ whiteSpace: "pre-line", fontSize: 14 }}>
+                          {importStopError}
+                        </div>
+                      ) : (
+                        <>
+                          <p className="mb-2" style={{ fontSize: 14 }}>
+                            <strong>Import complete — Year {importYear}</strong>
+                          </p>
+                          <ul className="list-unstyled mb-3" style={{ fontSize: 14 }}>
+                            <li>Succeeded: <strong>{importSucceeded}</strong></li>
+                            <li>Failed: <strong>{importFailed.length}</strong></li>
+                          </ul>
+                          {importFailed.length > 0 && (
+                            <>
+                              <p className="text-danger mb-1" style={{ fontSize: 13 }}>Failed entries:</p>
+                              <ul className="mb-3" style={{ fontSize: 13 }}>
+                                {importFailed.map((f, i) => (
+                                  <li key={i}>{f.skill_detail} — {f.difficulty}</li>
+                                ))}
+                              </ul>
+                              <button className="btn btn-outline-secondary btn-sm" onClick={downloadFailedYaml}>
+                                Download failed_imports.yaml
+                              </button>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <div className="modal-footer">
+                  {importPhase === "preview" && (
+                    <>
+                      <button className="btn btn-secondary btn-sm" onClick={closeImportModal}>Cancel</button>
+                      <button className="btn btn-primary btn-sm" onClick={runImport}>Import</button>
+                    </>
+                  )}
+                  {importPhase === "done" && (
+                    <button className="btn btn-secondary btn-sm" onClick={closeImportModal}>Close</button>
+                  )}
                 </div>
               </div>
             </div>

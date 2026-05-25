@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../utils/apiFetch";
+import { dashboardPath } from "../utils/dashboardPath";
 import "./DistributorHomePage.css";
 
 interface Child {
@@ -89,7 +90,7 @@ export default function DistributorHomePage() {
       {/* ── Header ─────────────────────────────────── */}
       <header className="dh-header">
         <div className="dh-header-inner">
-          <Link to="/" className="dh-logo">
+          <Link to={dashboardPath()} className="dh-logo">
             <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" />
           </Link>
           <div className="dh-header-right">

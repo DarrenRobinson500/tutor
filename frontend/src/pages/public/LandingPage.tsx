@@ -38,6 +38,9 @@ export default function LandingPage({ refCode }: { refCode?: string } = {}) {
               <Link to={registerHref} className="sm-btn-primary">
                 Get a Free Assessment
               </Link>
+              <Link to={registerHref} className="sm-btn-primary">
+                Get a Tutor
+              </Link>
               <Link to="/register/tutor" className="sm-btn-secondary">
                 I'm a Tutor →
               </Link>

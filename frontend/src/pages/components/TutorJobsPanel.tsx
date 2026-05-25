@@ -18,12 +18,14 @@ interface StoredJob {
 
 type Job = DerivedJob | StoredJob;
 
-const JOB_LABELS: Record<string, (firstName: string | null) => string> = {
+const JOB_LABELS: Record<string, (firstName: string | null, job?: any) => string> = {
   post_tuition_review: (n) => `Post Tuition Review${n ? ` — ${n}` : ""}`,
   send_progress_message: (n) => `Send progress message for ${n}`,
   review_focus_area: (n) => `Review focus area for ${n}`,
   review_available_hours: () => `Review my available hours`,
   setup_weekly_session: (n) => `Set up weekly session${n ? ` for ${n}` : ""}`,
+  set_fee: () => `Set your tutoring fee`,
+  confirm_appointment: (n) => `Confirm Appointment${n ? `: ${n}` : ""}`,
 };
 
 const JOB_LINKS: Record<string, (tutorId: string, studentId: number, jobId: number) => string> = {
@@ -34,6 +36,8 @@ const JOB_LINKS: Record<string, (tutorId: string, studentId: number, jobId: numb
     `/students/${studentId}/focus-areas?returnTo=/tutors/${tutorId}`,
   review_available_hours: (tutorId) => `/tutors/${tutorId}/schedule`,
   setup_weekly_session: (tutorId) => `/tutors/${tutorId}/booking`,
+  set_fee: (tutorId, _studentId, jobId) => `/tutors/${tutorId}/set-fee?job_id=${jobId}`,
+  confirm_appointment: (tutorId) => `/tutors/${tutorId}/booking`,
 };
 
 export function TutorJobsPanel({ tutorId }: { tutorId: string }) {
@@ -53,18 +57,6 @@ export function TutorJobsPanel({ tutorId }: { tutorId: string }) {
     const activeStudentIds = new Set(activeStudents.map(s => s.user_id));
 
     const derived: DerivedJob[] = [];
-
-    // Check if tutor has any availability set
-    const availData = await apiFetch(`/api/tutors/${tutorId}/availability/`)
-      .then(r => r.json())
-      .catch(() => ({ availability: [] }));
-    if (!(availData.availability?.length > 0)) {
-      derived.push({
-        kind: "derived",
-        label: "Set available hours",
-        to: `/tutors/${tutorId}/schedule`,
-      });
-    }
 
     activeStudents.forEach(s => {
       if (!s.year_level) {
@@ -106,7 +98,7 @@ export function TutorJobsPanel({ tutorId }: { tutorId: string }) {
       return {
         kind: "stored",
         id: j.id,
-        label: (JOB_LABELS[j.job_type] ?? ((n: string) => j.job_type))(j.student_first_name),
+        label: (JOB_LABELS[j.job_type] ?? (() => j.job_type))(j.student_first_name, j),
         to,
       };
     });

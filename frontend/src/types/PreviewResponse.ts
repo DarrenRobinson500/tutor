@@ -7,6 +7,7 @@ export interface MultiStep {
     tolerance?: number;
     format_instruction?: string;
     answer_format?: string;
+    answer_unit?: string;
     choices?: Array<{ text: string; correct: boolean }>;
     multiple_answers?: MultipleAnswerEntry[];
   }>;

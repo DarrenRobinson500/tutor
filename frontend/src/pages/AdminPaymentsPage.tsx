@@ -2,6 +2,109 @@ import { useEffect, useState } from "react";
 import { Layout } from "./components/Layout";
 import { apiFetch } from "../utils/apiFetch";
 
+interface BankDetails {
+  bank_bsb: string;
+  bank_account: string;
+  bank_name: string;
+}
+
+function BankDetailsSection() {
+  const [details, setDetails] = useState<BankDetails | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [bsb, setBsb] = useState("");
+  const [account, setAccount] = useState("");
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    apiFetch("/api/admin-jobs/bank_details/")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d) {
+          setDetails(d);
+          setBsb(d.bank_bsb ?? "");
+          setAccount(d.bank_account ?? "");
+          setName(d.bank_name ?? "");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  async function handleSave() {
+    if (!bsb.trim() || !account.trim()) {
+      setError("BSB and account number are required.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await apiFetch("/api/admin-jobs/bank_details/", {
+        method: "POST",
+        body: JSON.stringify({ bank_bsb: bsb.trim(), bank_account: account.trim(), bank_name: name.trim() }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        setError(d.error ?? "Failed to save.");
+      } else {
+        setDetails({ bank_bsb: bsb.trim(), bank_account: account.trim(), bank_name: name.trim() });
+        setEditing(false);
+      }
+    } catch {
+      setError("Network error.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mb-4 p-3 rounded" style={{ background: "#f8f9fa", border: "1px solid #dee2e6" }}>
+      <div className="d-flex align-items-center justify-content-between mb-2">
+        <h6 className="mb-0" style={{ fontSize: "0.9rem", fontWeight: 600 }}>Bank transfer details</h6>
+        {!editing && (
+          <button className="btn btn-sm btn-outline-secondary" style={{ fontSize: "0.8rem" }} onClick={() => setEditing(true)}>
+            Edit
+          </button>
+        )}
+      </div>
+
+      {!editing && details && (details.bank_bsb || details.bank_account) && (
+        <div className="d-flex gap-4" style={{ fontSize: "0.85rem" }}>
+          {details.bank_name && <span><span className="text-muted">Name: </span>{details.bank_name}</span>}
+          {details.bank_bsb && <span><span className="text-muted">BSB: </span><code>{details.bank_bsb}</code></span>}
+          {details.bank_account && <span><span className="text-muted">Account: </span><code>{details.bank_account}</code></span>}
+        </div>
+      )}
+
+      {!editing && (!details || (!details.bank_bsb && !details.bank_account)) && (
+        <p className="text-muted mb-0" style={{ fontSize: "0.85rem" }}>No bank details set.</p>
+      )}
+
+      {editing && (
+        <div className="d-flex flex-column gap-2" style={{ maxWidth: 360 }}>
+          <div>
+            <label className="form-label mb-1" style={{ fontSize: "0.82rem", fontWeight: 600 }}>Account name</label>
+            <input className="form-control form-control-sm" placeholder="e.g. SubjectMatter Pty Ltd" value={name} onChange={e => setName(e.target.value)} />
+          </div>
+          <div>
+            <label className="form-label mb-1" style={{ fontSize: "0.82rem", fontWeight: 600 }}>BSB <span className="text-danger">*</span></label>
+            <input className="form-control form-control-sm" placeholder="e.g. 062-000" value={bsb} onChange={e => setBsb(e.target.value)} />
+          </div>
+          <div>
+            <label className="form-label mb-1" style={{ fontSize: "0.82rem", fontWeight: 600 }}>Account number <span className="text-danger">*</span></label>
+            <input className="form-control form-control-sm" placeholder="e.g. 1234 5678" value={account} onChange={e => setAccount(e.target.value)} />
+          </div>
+          {error && <p className="text-danger mb-0" style={{ fontSize: "0.82rem" }}>{error}</p>}
+          <div className="d-flex gap-2">
+            <button className="btn btn-sm btn-success" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
+            <button className="btn btn-sm btn-outline-secondary" onClick={() => { setEditing(false); setError(""); }} disabled={saving}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface PaymentRow {
   id: number;
   date_tuition: string | null;
@@ -124,6 +227,7 @@ export function AdminPaymentsPage() {
     <Layout>
       <div className="container mt-4" style={{ maxWidth: 1000 }}>
         <h3 className="mb-4">Payments</h3>
+        <BankDetailsSection />
 
         {loading && <p className="text-muted">Loading…</p>}
 

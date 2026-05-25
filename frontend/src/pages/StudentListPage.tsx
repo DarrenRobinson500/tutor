@@ -48,8 +48,7 @@ export function StudentListPage() {
               <div className="col-2">Mobile</div>
               <div className="col-1">Year</div>
               <div className="col-1">Area</div>
-              <div className="col-2">Email</div>
-              <div className="col-2">Actions</div>
+              <div className="col-4">Actions</div>
             </div>
           </li>
 
@@ -74,9 +73,8 @@ export function StudentListPage() {
 
                 <div className="col-1">{s.year_level || ""}</div>
                 <div className="col-1">{s.area_of_study || ""}</div>
-                <div className="col-2">{s.email}</div>
 
-                <div className="col-2 d-flex flex-row gap-2">
+                <div className="col-4 d-flex flex-row gap-2">
                   <Link
                     className={`btn btn-sm ${s.active ? "btn-outline-primary" : "btn-outline-secondary disabled"}`}
                     to={`/students/${s.user_id}`}

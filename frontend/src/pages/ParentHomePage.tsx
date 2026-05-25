@@ -2,8 +2,18 @@ import { useEffect, useState } from "react";
 import { ProgressChart } from "./components/ProgressChart";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../utils/apiFetch";
+import { dashboardPath } from "../utils/dashboardPath";
 import "./ParentHomePage.css";
 import { useYears } from "../utils/useYears";
+
+interface NextBooking {
+  start_iso: string;
+  start_time: string;
+  end_time: string;
+  day_str: string;
+  booking_type: "weekly" | "adhoc";
+  tutor_name: string | null;
+}
 
 interface Child {
   id: number;
@@ -13,6 +23,9 @@ interface Child {
   school_name: string | null;
   test_count: number;
   latest_test_date: string | null;
+  latest_session_date: string | null;
+  tutor_name: string | null;
+  next_booking: NextBooking | null;
 }
 
 interface ParentData {
@@ -92,10 +105,15 @@ export default function ParentHomePage() {
       })
       .finally(() => setLoading(false));
 
-    apiFetch("/api/payments/pending/")
-      .then((r) => r.ok ? r.json() : { payments: [] })
-      .then((d) => setPendingPayments(d.payments || []))
-      .catch(() => {});
+    function fetchPending() {
+      apiFetch("/api/payments/pending/")
+        .then((r) => r.ok ? r.json() : { payments: [] })
+        .then((d) => setPendingPayments(d.payments || []))
+        .catch(() => {});
+    }
+    fetchPending();
+    const interval = setInterval(fetchPending, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   function handleLogout() {
@@ -130,11 +148,32 @@ export default function ParentHomePage() {
     const yearGroup = match ? parseInt(match[0], 10) : undefined;
     navigate(`/parents/${data.parent.id}/find-tutor`, {
       state: {
+        childId: child.id,
         childFirstName: child.first_name,
         yearGroup,
         parentHasDistributor: false,
       },
     });
+  }
+
+  async function handleRemoveTutor(childId: number) {
+    try {
+      const res = await apiFetch("/api/auth/remove_tutor/", {
+        method: "POST",
+        body: JSON.stringify({ child_id: childId }),
+      });
+      if (!res.ok) return;
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              children: prev.children.map((c) =>
+                c.id === childId ? { ...c, tutor_name: null } : c
+              ),
+            }
+          : prev
+      );
+    } catch {}
   }
 
   function onChildAdded(child: Child) {
@@ -175,11 +214,12 @@ export default function ParentHomePage() {
 
       {/* ── Navbar ───────────────────────────────── */}
       <nav className="ph-nav">
-        <Link to="/" className="ph-nav-logo">
+        <Link to={dashboardPath()} className="ph-nav-logo">
           <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" />
         </Link>
         <div className="ph-nav-right">
           <span className="ph-nav-user">{parent.first_name} {parent.last_name}</span>
+          <Link to={`/parents/${parent.id}/bookings`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Bookings</Link>
           <Link to={`/parents/${parent.id}/payments`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Payments</Link>
           <button className="ph-nav-logout" onClick={handleLogout}>Sign out</button>
         </div>
@@ -216,9 +256,11 @@ export default function ParentHomePage() {
               <ChildCard
                 key={child.id}
                 child={child}
+                parentId={parent.id}
                 launching={launchingFor === child.id}
                 onLaunchAssessment={() => handleLaunchAssessment(child.id)}
                 onFindTutor={() => handleFindTutor(child)}
+                onRemoveTutor={() => handleRemoveTutor(child.id)}
               />
             ))}
           </div>
@@ -242,23 +284,40 @@ export default function ParentHomePage() {
 }
 
 /* ── Child card ──────────────────────────────────────────────── */
+function fmtBooking(nb: NextBooking): string {
+  const d = new Date(nb.start_iso);
+  const dateStr = d.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" });
+  const timeStr = d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit", hour12: true });
+  const endD = new Date(nb.start_iso);
+  const [endH, endM] = nb.end_time.split(":").map(Number);
+  endD.setHours(endH, endM);
+  const endStr = endD.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit", hour12: true });
+  return `${dateStr}, ${timeStr} – ${endStr}`;
+}
+
 function ChildCard({
   child,
+  parentId,
   launching,
   onLaunchAssessment,
   onFindTutor,
+  onRemoveTutor,
 }: {
   child: Child;
+  parentId: number;
   launching: boolean;
   onLaunchAssessment: () => void;
   onFindTutor: () => void;
+  onRemoveTutor: () => void;
 }) {
   const initials = `${child.first_name[0] ?? ""}${child.last_name[0] ?? ""}`.toUpperCase();
   const hasTests = child.test_count > 0;
-
-  const statusText = hasTests
-    ? `Last assessed: ${new Date(child.latest_test_date!).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })}`
-    : "No assessment completed yet";
+  const hasTutor = !!child.tutor_name;
+  const displayDate = hasTutor ? child.latest_session_date : child.latest_test_date;
+  const displayLabel = hasTutor ? "Last session" : "Last assessed";
+  const statusText = displayDate
+    ? `${displayLabel}: ${new Date(displayDate).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })}`
+    : hasTutor ? "No sessions yet" : "No assessment completed yet";
 
   return (
     <div className="ph-child-card">
@@ -270,14 +329,51 @@ function ChildCard({
             {child.year_level || "Year not set"}
             {child.school_name ? ` · ${child.school_name}` : ""}
           </div>
+          {child.tutor_name && (
+            <div className="ph-child-tutor">
+              Tutor: {child.tutor_name}
+              <button className="ph-remove-tutor-btn" onClick={onRemoveTutor}>
+                remove
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {hasTests && (
+      {displayDate && (
         <div className="ph-child-status done">
           <div className="ph-status-dot" />
           {statusText}
         </div>
+      )}
+
+      {child.next_booking && (
+        <Link
+          to={`/parents/${parentId}/bookings`}
+          style={{ textDecoration: "none" }}
+        >
+          <div style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "0.6rem",
+            background: "var(--sm-bg-warm, #FFF8F0)",
+            border: "1px solid var(--sm-orange-light, #FFDBB5)",
+            borderRadius: "var(--radius-md, 8px)",
+            padding: "0.65rem 0.85rem",
+            fontSize: 13,
+            cursor: "pointer",
+          }}>
+            <span style={{ fontSize: 16, lineHeight: 1.3, flexShrink: 0 }}>📅</span>
+            <div>
+              <div style={{ fontWeight: 600, color: "var(--sm-text, #2D2D2D)", marginBottom: 1 }}>
+                Next appointment
+              </div>
+              <div style={{ color: "var(--sm-text-secondary, #5A5047)" }}>
+                {fmtBooking(child.next_booking)}
+              </div>
+            </div>
+          </div>
+        </Link>
       )}
 
       <div className="mt-3">
@@ -286,19 +382,26 @@ function ChildCard({
       </div>
 
       <div className="ph-child-actions">
-        <button
-          className="sm-btn-primary"
-          onClick={onLaunchAssessment}
-          disabled={launching}
-        >
-          {launching ? "Starting…" : "Start Free Assessment"}
-        </button>
-        <button className="sm-btn-secondary" disabled>
-          Assisted Assessment $20
-        </button>
-        <button className="sm-btn-secondary" onClick={onFindTutor}>
-          Find Tutor
-        </button>
+        <div className="ph-tooltip-wrap" data-tooltip="Your child works through the assessment on their own (it takes about 30 min). We'll identify their strengths and areas to focus on. No cost, no commitment.">
+          <button
+            className="sm-btn-primary"
+            onClick={onLaunchAssessment}
+            disabled={launching}
+            style={{ width: "100%" }}
+          >
+            {launching ? "Starting…" : "Start Free Assessment"}
+          </button>
+        </div>
+        <div className="ph-tooltip-wrap" data-tooltip="A qualified tutor joins your child in a live session to walk them through each question. Great for younger learners or children who benefit from a little extra support. Book a time that suits you.">
+          <button className="sm-btn-secondary" disabled style={{ width: "100%" }}>
+            Assisted Assessment $20
+          </button>
+        </div>
+        {!child.tutor_name && (
+          <button className="sm-btn-secondary" onClick={onFindTutor}>
+            Find Tutor
+          </button>
+        )}
         {hasTests && (
           <button className="sm-btn-secondary" disabled>
             View Report
@@ -367,6 +470,9 @@ function AddChildForm({
         school_name: d.school_name,
         test_count: 0,
         latest_test_date: null,
+        latest_session_date: null,
+        tutor_name: null,
+        next_booking: null,
       });
     } catch {
       setError("Something went wrong. Please try again.");

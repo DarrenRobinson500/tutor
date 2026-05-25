@@ -142,6 +142,45 @@
   margin: 0;
 }
 
+.pa-copy-row {
+  align-items: center;
+}
+
+.pa-copy-label {
+  flex-shrink: 0;
+}
+
+.pa-copy-value {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pa-copy-btn {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: var(--sm-text-muted, #8A7F74);
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.pa-copy-btn:hover {
+  color: var(--sm-orange, #FF8C42);
+  background: var(--sm-bg-warm, #FFF8F0);
+}
+
+.pa-copied {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #16a34a;
+  white-space: nowrap;
+}
+
 .pa-actions {
   display: flex;
   flex-direction: column;

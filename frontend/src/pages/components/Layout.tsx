@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
 import { apiFetch } from "../../utils/apiFetch";
+import { dashboardPath } from "../../utils/dashboardPath";
 import { IncomingCallBanner } from "./IncomingCallBanner";
 
 const NAV_STYLES = `
@@ -65,13 +66,57 @@ const NAV_STYLES = `
     color: #fff;
     border-color: rgba(255,255,255,0.4);
   }
+  .sm-dev-btn {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    border: 1px solid rgba(255,200,0,0.4);
+    background: rgba(255,200,0,0.12);
+    color: rgba(255,220,80,0.9);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .sm-dev-btn:hover {
+    background: rgba(255,200,0,0.25);
+    color: #ffd700;
+  }
 `;
 
+
+const DEV_USERS = [
+  { label: "Admin",   email: "Darren",  password: "Darren"  },
+  { label: "Parent",  email: "Amanda",  password: "Amanda"  },
+  { label: "Student", email: "Michael", password: "Michael" },
+  { label: "Tutor",   email: "Alex",    password: "Alex"    },
+];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
   const access = localStorage.getItem("access");
+  const isDev = process.env.NODE_ENV === "development";
+
+  async function devLoginAs(email: string, password: string) {
+    const API_URL = (process.env.REACT_APP_API_URL ?? "").replace(/\/$/, "");
+    try {
+      const res = await fetch(`${API_URL}/api/auth/login/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+      localStorage.setItem("access", data.access);
+      localStorage.setItem("refresh", data.refresh);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      const role = data.user?.role;
+      if (role === "parent") window.location.href = `/parents/${data.user.id}`;
+      else if (role === "tutor") window.location.href = `/tutors/${data.user.id}`;
+      else if (role === "student") window.location.href = `/students/${data.user.id}`;
+      else if (role === "admin") window.location.href = "/admin";
+      else window.location.href = "/";
+    } catch { /* ignore */ }
+  }
 
   async function devSwitch(name: string) {
     const res = await fetch("/api/auth/dev_login/", {
@@ -137,7 +182,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Navbar */}
       <nav className="navbar navbar-expand-lg sm-layout-nav">
         <div className="container-fluid px-0">
-          <Link className="navbar-brand" to="/templates">
+          <Link className="navbar-brand" to={dashboardPath()}>
             <img src="/subjectmatter_wordmark_orange.svg" alt="SubjectMatter" />
           </Link>
           <button className="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" style={{ filter: "invert(1)" }}>
@@ -153,6 +198,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <li className="nav-item"><Link className="nav-link" to="/admin/students">Students</Link></li>
                   <li className="nav-item"><Link className="nav-link" to="/admin/payments">Payments</Link></li>
                   <li className="nav-item"><Link className="nav-link" to="/admin/sms">Messages</Link></li>
+                  <li className="nav-item"><Link className="nav-link" to="/admin/emails">Emails</Link></li>
                   <li className="nav-item"><Link className="nav-link" to="/skills">Skills</Link></li>
                   <li className="nav-item"><Link className="nav-link" to="/skills-s6">Skills S6</Link></li>
                   <li className="nav-item"><Link className="nav-link" to="/templates">Templates</Link></li>
@@ -160,7 +206,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <li className="nav-item"><Link className="nav-link" to="/feedback">Feedback</Link></li>
                   <li className="nav-item"><Link className="nav-link" to="/principles">Principles</Link></li>
                   <li className="nav-item"><Link className="nav-link" to="/docs">Docs</Link></li>
-                </>
+</>
               )}
 
               {user?.role === "tutor" && (
@@ -205,6 +251,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
               )}
 
             </ul>
+
+            {isDev && (
+              <div className="d-flex align-items-center gap-1 me-3">
+                {DEV_USERS.map(u => (
+                  <button key={u.label} className="sm-dev-btn" onClick={() => devLoginAs(u.email, u.password)}>
+                    {u.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {user && (
               <div className="d-flex align-items-center gap-2">

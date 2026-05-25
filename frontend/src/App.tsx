@@ -9,6 +9,7 @@ import { NewTemplatePage } from "./pages/NewTemplatePage";
 import { SkillCreatePage } from "./pages/SkillCreatePage";
 import { TutorListPage } from "./pages/TutorListPage";
 import { TutorHomePage } from "./pages/TutorHomePage";
+import TutorSetFeePage from "./pages/TutorSetFeePage";
 import { TutorEditPage } from "./pages/TutorEditPage";
 import { TutorCreatePage } from "./pages/TutorCreatePage";
 import { TutorSchedulePage } from "./pages/TutorSchedulePage";
@@ -17,6 +18,7 @@ import { TutorSMSInboxPage } from "./pages/TutorSMSInboxPage";
 import { TutorSMSConversationPage } from "./pages/TutorSMSConversationPage";
 import { AdminSMSInboxPage } from "./pages/AdminSMSInboxPage";
 import { AdminSMSConversationPage } from "./pages/AdminSMSConversationPage";
+import { AdminEmailPage } from "./pages/AdminEmailPage";
 
 import { StudentListPage } from "./pages/StudentListPage";
 import { StudentEditPage } from "./pages/StudentEditPage";
@@ -29,6 +31,7 @@ import { StudentFocusPage } from "./pages/StudentFocusPage";
 import SkillsPage from "./pages/SkillsPage";
 import SkillsS6Page from "./pages/SkillsS6Page";
 import { SkillOverviewPage } from "./pages/SkillOverviewPage";
+import { SkillParentOverviewPage } from "./pages/SkillParentOverviewPage";
 import { SkillDetailEditPage } from "./pages/SkillDetailEditPage";
 import { TemplateMetadataPage } from "./pages/TemplateMetadataPage";
 import PrinciplesPage from "./pages/PrinciplesPage";
@@ -66,6 +69,7 @@ import { PostTuitionPage } from "./pages/PostTuitionPage";
 import { PostTuitionListPage } from "./pages/PostTuitionListPage";
 import { TutorPaymentsPage } from "./pages/TutorPaymentsPage";
 import { ParentPaymentsPage } from "./pages/ParentPaymentsPage";
+import { ParentBookingsPage } from "./pages/ParentBookingsPage";
 import { AdminPaymentsPage } from "./pages/AdminPaymentsPage";
 import { PaymentAuthorisePage } from "./pages/PaymentAuthorisePage";
 import { PaymentReceiptPage } from "./pages/PaymentReceiptPage";
@@ -156,6 +160,7 @@ function App() {
         {/* PROTECTED — parent */}
         <Route path="/parents/:id" element={<ProtectedRoute><ParentHomePage /></ProtectedRoute>} />
         <Route path="/parents/:id/payments" element={<ProtectedRoute><ParentPaymentsPage /></ProtectedRoute>} />
+        <Route path="/parents/:id/bookings" element={<ProtectedRoute><ParentBookingsPage /></ProtectedRoute>} />
         <Route path="/parents/:id/find-tutor" element={<ProtectedRoute><RequestTutorPage /></ProtectedRoute>} />
 
         {/* PROTECTED — payment flow */}
@@ -180,11 +185,13 @@ function App() {
         <Route path="/skills/:skillId/overview/:grade" element={<ProtectedRoute><SkillOverviewPage /></ProtectedRoute>} />
         <Route path="/skills/:skillId/overview" element={<ProtectedRoute><SkillOverviewPage /></ProtectedRoute>} />
         <Route path="/skills/:skillId/edit-details" element={<ProtectedRoute><SkillDetailEditPage /></ProtectedRoute>} />
+        <Route path="/skill-parents/:parentId/overview" element={<ProtectedRoute><SkillParentOverviewPage /></ProtectedRoute>} />
 
         <Route path="/admin/tutors" element={<ProtectedRoute><TutorListPage /></ProtectedRoute>} />
         <Route path="/admin/tutors/new" element={<ProtectedRoute><TutorCreatePage /></ProtectedRoute>} />
         <Route path="/admin/sms" element={<ProtectedRoute><AdminSMSInboxPage /></ProtectedRoute>} />
         <Route path="/admin/sms/:conversationId" element={<ProtectedRoute><AdminSMSConversationPage /></ProtectedRoute>} />
+        <Route path="/admin/emails" element={<ProtectedRoute><AdminEmailPage /></ProtectedRoute>} />
 
         <Route path="/tutors/:id" element={<ProtectedRoute><TutorHomePage /></ProtectedRoute>} />
         <Route path="/tutors/:id/booking" element={<ProtectedRoute><TutorBookingPage /></ProtectedRoute>} />
@@ -196,6 +203,7 @@ function App() {
         <Route path="/tutors/:id/post-tuition/review" element={<ProtectedRoute><PostTuitionPage /></ProtectedRoute>} />
         <Route path="/tutors/:id/payments" element={<ProtectedRoute><TutorPaymentsPage /></ProtectedRoute>} />
         <Route path="/tutors/:id/billing" element={<ProtectedRoute><TutorBillingPage /></ProtectedRoute>} />
+        <Route path="/tutors/:id/set-fee" element={<ProtectedRoute><TutorSetFeePage /></ProtectedRoute>} />
 
         <Route path="/admin/payments" element={<ProtectedRoute><AdminPaymentsPage /></ProtectedRoute>} />
         <Route path="/admin/students" element={<ProtectedRoute><StudentListPage /></ProtectedRoute>} />

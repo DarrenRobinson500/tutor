@@ -14,6 +14,7 @@ export default function TutorRegisterPage() {
   const [password, setPassword]   = useState("");
   const [confirm, setConfirm]     = useState("");
   const [qualification, setQualification] = useState("");
+  const [university, setUniversity]       = useState("");
   const [yearLevels, setYearLevels] = useState<string[]>([]);
   const [bio, setBio]             = useState("");
 
@@ -33,6 +34,7 @@ export default function TutorRegisterPage() {
     if (!password) return "Please choose a password.";
     if (password !== confirm) return "Passwords do not match.";
     if (!qualification.trim()) return "Please enter what you are currently studying.";
+    if (!university.trim()) return "Please enter your university.";
     if (yearLevels.length === 0) return "Please select at least one year level you can tutor.";
     if (bio.length > BIO_MAX) return `Bio must be ${BIO_MAX} characters or fewer.`;
     return null;
@@ -59,6 +61,7 @@ export default function TutorRegisterPage() {
           last_name: lastName.trim(),
           mobile: mobile.trim(),
           qualification: qualification.trim(),
+          university: university.trim(),
           year_levels: yearLevels,
           bio: bio.trim(),
         }),
@@ -162,46 +165,48 @@ export default function TutorRegisterPage() {
 
             <hr className="reg-section-divider" />
 
-            {/* ── Teaching details ───────────────────── */}
+            {/* ── Tutor details ───────────────────── */}
             <div className="reg-section">
               <div className="reg-section-header">
                 <div className="reg-section-badge">2</div>
-                <h2 className="reg-section-title">Teaching details</h2>
+                <h2 className="reg-section-title">Tutor details</h2>
               </div>
 
               <div className="sm-form-group">
                 <label htmlFor="t-qual">What are you currently studying?</label>
                 <input id="t-qual" type="text" className="sm-input"
-                  placeholder="e.g. B.Sc. Mathematics, University of Sydney"
+                  placeholder="e.g. B.Sc. Mathematics"
                   value={qualification} onChange={(e) => setQualification(e.target.value)} required />
+              </div>
+
+              <div className="sm-form-group">
+                <label htmlFor="t-university">University</label>
+                <input id="t-university" type="text" className="sm-input"
+                  placeholder="e.g. University of Sydney"
+                  value={university} onChange={(e) => setUniversity(e.target.value)} required />
               </div>
 
               <div className="sm-form-group">
                 <label>Year levels you can tutor</label>
                 <div className="reg-checkboxes">
                   {years.map((y) => (
-                    <>
-                      <label key={y.code} className="reg-checkbox-item">
-                        <input
-                          type="checkbox"
-                          checked={yearLevels.includes(y.code)}
-                          onChange={() => toggleYear(y.code)}
-                        />
-                        {y.label}
-                      </label>
-                      {y.code === "10" && (
-                        <button
-                          key="all-years"
-                          type="button"
-                          className="reg-checkbox-item"
-                          style={{ background: "none", border: "1px dashed var(--sm-border)", cursor: "pointer", fontWeight: 600 }}
-                          onClick={() => setYearLevels(years.map((y) => y.code))}
-                        >
-                          All years
-                        </button>
-                      )}
-                    </>
+                    <label key={y.code} className="reg-checkbox-item">
+                      <input
+                        type="checkbox"
+                        checked={yearLevels.includes(y.code)}
+                        onChange={() => toggleYear(y.code)}
+                      />
+                      {y.label}
+                    </label>
                   ))}
+                  <button
+                    type="button"
+                    className="reg-checkbox-item"
+                    style={{ background: "none", border: "1px dashed var(--sm-border)", cursor: "pointer", fontWeight: 600 }}
+                    onClick={() => setYearLevels(years.map((y) => y.code))}
+                  >
+                    All years
+                  </button>
                 </div>
               </div>
 

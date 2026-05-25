@@ -74,6 +74,7 @@ interface LearnQuestion {
   difficulty: string;
   loop: number;
   loop_remaining: number;
+  loop_total?: number;
   loop1_correct: number;
   loop1_total: number;
   mode: string;

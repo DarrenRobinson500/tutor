@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { apiFetch } from '../../utils/apiFetch';
 import StepIndicator from './StepIndicator';
 import TutorCard from './TutorCard';
 import './RequestTutorFlow.css';
@@ -8,6 +9,16 @@ import './RequestTutorFlow.css';
 export interface TutorSlot {
   day: 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
   timeOfDay: 'Morning' | 'Afternoon' | 'Evening';
+  startTime?: string;  // "HH:MM"
+  endTime?: string;    // "HH:MM"
+}
+
+export interface BookableSlot {
+  weekday: number;
+  day: string;
+  dayFull: string;
+  startTime: string;  // "HH:MM"
+  endTime: string;    // "HH:MM"
 }
 
 export interface Tutor {
@@ -15,8 +26,9 @@ export interface Tutor {
   firstName: string;
   lastInitial: string;
   university: string;
-  yearOfStudy: number;
-  specialisations: string[];
+  qualification?: string;
+  yearOfStudy?: number;
+  specialisations?: string[];
   availability: TutorSlot[];
   hourlyRate: number;
   rating?: number;
@@ -32,6 +44,7 @@ export interface TutorSelection {
   requestedDays: string[];
   requestedTimesOfDay: string[];
   frequency: 'once' | 'twice' | 'flexible';
+  slot?: BookableSlot;
 }
 
 interface RequestTutorFlowProps {
@@ -40,7 +53,10 @@ interface RequestTutorFlowProps {
   diagnosticFocusAreas?: string[];
   parentHasDistributor: boolean;
   tutors?: Tutor[];
+  confirming?: boolean;
+  requestingMobile?: boolean;
   onConfirm: (selection: TutorSelection) => void;
+  onRequestMobile?: (tutorId: string) => void;
   onCancel?: () => void;
 }
 
@@ -178,9 +194,7 @@ const FREQ_OPTIONS = [
   { value: 'flexible' as const, label: 'Flexible / as needed' },
 ];
 
-const STEP_LABELS = ['Child & Subject', 'Availability', 'Choose Tutor'];
-
-const YEAR_RANGE = Array.from({ length: 10 }, (_, i) => i + 3); // 3–12
+const STEP_LABELS = ['Availability', 'Choose Tutor'];
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -226,6 +240,15 @@ function sessionCost(rate: number, hasDistributor: boolean): number {
   return rate + 6.5 + (hasDistributor ? 5.0 : 0);
 }
 
+function formatTime(hhmm: string): string {
+  const [hStr, mStr] = hhmm.split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  const period = h < 12 ? 'am' : 'pm';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return m === 0 ? `${h12}${period}` : `${h12}:${mStr}${period}`;
+}
+
 function buildSlots(days: string[], times: string[]): TutorSlot[] {
   const slots: TutorSlot[] = [];
   for (const day of days as TutorSlot['day'][]) {
@@ -256,18 +279,19 @@ const RequestTutorFlow: React.FC<RequestTutorFlowProps> = ({
   diagnosticFocusAreas = [],
   parentHasDistributor,
   tutors = MOCK_TUTORS,
+  confirming = false,
+  requestingMobile = false,
   onConfirm,
+  onRequestMobile,
   onCancel,
 }) => {
   // Navigation
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<2 | 3>(2);
 
-  // Step 1
-  const [childName, setChildName] = useState(initName);
-  const [yearGroup, setYearGroup] = useState<number | ''>(initYear ?? '');
-  const [focusAreas, setFocusAreas] = useState<string[]>(diagnosticFocusAreas.slice(0, 3));
-  const [shakingPill, setShakingPill] = useState<string | null>(null);
-  const [err1, setErr1] = useState<{ name?: string; year?: string }>({});
+  // Step 1 (year group known from props)
+  const [childName] = useState(initName);
+  const [yearGroup] = useState<number | ''>(initYear ?? '');
+  const [focusAreas] = useState<string[]>(diagnosticFocusAreas.slice(0, 3));
 
   // Step 2
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
@@ -278,39 +302,28 @@ const RequestTutorFlow: React.FC<RequestTutorFlowProps> = ({
   // Step 3
   const [sortBy, setSortBy] = useState<'best' | 'price' | 'rating'>('best');
   const [pendingTutor, setPendingTutor] = useState<Tutor | null>(null);
+  const [bookableSlots, setBookableSlots] = useState<BookableSlot[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<BookableSlot | null>(null);
+  const [slotErr, setSlotErr] = useState(false);
+
+  useEffect(() => {
+    if (!pendingTutor) { setBookableSlots([]); setSelectedSlot(null); return; }
+    setSlotsLoading(true);
+    apiFetch(`/api/tutors/${pendingTutor.id}/available_slots/`)
+      .then(r => r.json())
+      .then((data: BookableSlot[]) => setBookableSlots(data))
+      .catch(() => setBookableSlots([]))
+      .finally(() => setSlotsLoading(false));
+  }, [pendingTutor]);
 
   const displayName = childName.trim() || 'your child';
-
-  // ── Pill toggle ────────────────────────────────────────────
-
-  const toggleFocusArea = useCallback((area: string) => {
-    setFocusAreas(prev => {
-      if (prev.includes(area)) return prev.filter(a => a !== area);
-      if (prev.length >= 3) {
-        setShakingPill(area);
-        setTimeout(() => setShakingPill(null), 400);
-        return prev;
-      }
-      return [...prev, area];
-    });
-  }, []);
 
   const toggleDay = useCallback((d: string) =>
     setSelectedDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]), []);
 
   const toggleTime = useCallback((t: TutorSlot['timeOfDay']) =>
     setSelectedTimes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]), []);
-
-  // ── Step 1 submit ──────────────────────────────────────────
-
-  const submitStep1 = () => {
-    const e: typeof err1 = {};
-    if (!childName.trim()) e.name = "Please enter your child's name.";
-    if (!yearGroup) e.year = 'Please select a year group.';
-    if (Object.keys(e).length) { setErr1(e); return; }
-    setErr1({});
-    setStep(2);
-  };
 
   // ── Step 2 submit ──────────────────────────────────────────
 
@@ -344,14 +357,20 @@ const RequestTutorFlow: React.FC<RequestTutorFlowProps> = ({
 
   const confirmSelection = () => {
     if (!pendingTutor || !yearGroup || !frequency) return;
+    if (bookableSlots.length > 0 && !selectedSlot) {
+      setSlotErr(true);
+      return;
+    }
+    setSlotErr(false);
     onConfirm({
       tutor: pendingTutor,
       childName: childName.trim(),
       yearGroup: yearGroup as number,
       focusAreas: focusAreas.length ? focusAreas : ['General catch-up / multiple areas'],
-      requestedDays: selectedDays,
-      requestedTimesOfDay: selectedTimes,
+      requestedDays: selectedSlot ? [selectedSlot.day] : selectedDays,
+      requestedTimesOfDay: selectedSlot ? [] : selectedTimes,
       frequency: frequency as TutorSelection['frequency'],
+      slot: selectedSlot ?? undefined,
     });
   };
 
@@ -365,90 +384,7 @@ const RequestTutorFlow: React.FC<RequestTutorFlowProps> = ({
     <div className="rtf-outer">
       <div className={step === 3 ? 'rtf-container--wide' : 'rtf-container'}>
 
-        <StepIndicator currentStep={step} steps={STEP_LABELS} />
-
-        {/* ══════════════════════ STEP 1 ══════════════════════ */}
-        {step === 1 && (
-          <div>
-            <h1 className="rtf-step-heading">
-              Let's find the right tutor for {displayName}.
-            </h1>
-
-            {/* Name */}
-            <div className="rtf-section">
-              <label className="rtf-section-label" htmlFor="rtf-child-name">
-                Child's first name
-              </label>
-              <input
-                id="rtf-child-name"
-                className="sm-input"
-                type="text"
-                placeholder="e.g. Sophie"
-                value={childName}
-                onChange={e => {
-                  setChildName(e.target.value);
-                  if (err1.name) setErr1(p => ({ ...p, name: undefined }));
-                }}
-              />
-              {err1.name && <p className="rtf-field-error">{err1.name}</p>}
-            </div>
-
-            {/* Year group */}
-            <div className="rtf-section">
-              <label className="rtf-section-label" htmlFor="rtf-year-group">
-                Year group
-              </label>
-              <select
-                id="rtf-year-group"
-                className="sm-input"
-                value={yearGroup}
-                onChange={e => {
-                  setYearGroup(e.target.value ? Number(e.target.value) : '');
-                  if (err1.year) setErr1(p => ({ ...p, year: undefined }));
-                }}
-              >
-                <option value="">Select year group</option>
-                {YEAR_RANGE.map(y => (
-                  <option key={y} value={y}>Year {y}</option>
-                ))}
-              </select>
-              {err1.year && <p className="rtf-field-error">{err1.year}</p>}
-            </div>
-
-            {/* Focus areas */}
-            <div className="rtf-section">
-              <span className="rtf-section-label">Focus areas</span>
-              <div className="rtf-pills">
-                {FOCUS_OPTIONS.map(area => (
-                  <button
-                    key={area}
-                    type="button"
-                    className={[
-                      'rtf-pill',
-                      focusAreas.includes(area) ? 'selected' : '',
-                      shakingPill === area ? 'shaking' : '',
-                    ].filter(Boolean).join(' ')}
-                    onClick={() => toggleFocusArea(area)}
-                  >
-                    {area}
-                  </button>
-                ))}
-              </div>
-              <p className="rtf-hint">
-                Choose up to 3 areas — or select General catch-up if you're not sure.
-              </p>
-            </div>
-
-            <div className="rtf-actions">
-              <button className="sm-btn-primary" onClick={submitStep1}>
-                Find tutors for {childName.trim() || 'your child'}
-              </button>
-              {onCancel && (
-                <button className="sm-btn-ghost" onClick={onCancel}>Cancel</button>
-              )}
-            </div>
-          </div>
-        )}
+        <StepIndicator currentStep={step - 1} steps={STEP_LABELS} />
 
         {/* ══════════════════════ STEP 2 ══════════════════════ */}
         {step === 2 && (
@@ -527,7 +463,7 @@ const RequestTutorFlow: React.FC<RequestTutorFlowProps> = ({
               <button className="sm-btn-primary" onClick={submitStep2}>
                 Show available tutors
               </button>
-              <button className="sm-btn-ghost" onClick={() => setStep(1)}>← Back</button>
+              {onCancel && <button className="sm-btn-ghost" onClick={onCancel}>Cancel</button>}
             </div>
           </div>
         )}
@@ -536,48 +472,79 @@ const RequestTutorFlow: React.FC<RequestTutorFlowProps> = ({
         {step === 3 && (
           <div>
             {pendingTutor ? (
-              /* ── Confirmation panel ── */
+              /* ── Time picker panel ── */
               <div className="rtf-confirmation">
                 <h1 className="rtf-confirmation-heading">
-                  You're requesting {pendingTutor.firstName} {pendingTutor.lastInitial}. for{' '}
-                  {childName.trim() || 'your child'}
+                  Choose a time with {pendingTutor.firstName} {pendingTutor.lastInitial}.
                 </h1>
                 <p className="rtf-confirmation-sub">
-                  {joinList(selectedDays.map(d => DAY_SINGLE[d] ?? d))}
-                  {selectedTimes.length > 0 && ` · ${selectedTimes.map(t => TIME_LABEL[t]).join(' / ')}`}
-                  {freqLabel && ` · ${freqLabel}`}
+                  Select one of {pendingTutor.firstName}'s available times for{' '}
+                  {childName.trim() || 'your child'}
                 </p>
 
-                <div className="rtf-fee-breakdown">
-                  <p className="rtf-fee-title">Session cost</p>
-                  <div className="rtf-fee-row">
-                    <span>Tutor fee</span>
-                    <span>${pendingTutor.hourlyRate.toFixed(2)}</span>
-                  </div>
-                  <div className="rtf-fee-row">
-                    <span>Platform fee</span>
-                    <span>$6.50</span>
-                  </div>
-                  {parentHasDistributor && (
-                    <div className="rtf-fee-row">
-                      <span>Distributor fee</span>
-                      <span>$5.00</span>
-                    </div>
-                  )}
-                  <div className="rtf-fee-total">
-                    <span>Total per session</span>
-                    <span>${sessionCost(pendingTutor.hourlyRate, parentHasDistributor).toFixed(2)}</span>
-                  </div>
-                </div>
+                {slotsLoading ? (
+                  <p className="rtf-confirmation-sub">Loading available times…</p>
+                ) : bookableSlots.length > 0 ? (
+                  (() => {
+                    const byDay = bookableSlots.reduce<Record<string, BookableSlot[]>>((acc, s) => {
+                      (acc[s.dayFull] = acc[s.dayFull] || []).push(s);
+                      return acc;
+                    }, {});
+                    return (
+                      <div className="rtf-slot-days">
+                        {Object.entries(byDay).map(([day, slots]) => (
+                          <div key={day} className="rtf-slot-day-group">
+                            <div className="rtf-slot-day-label">{day}</div>
+                            <div className="rtf-slot-grid">
+                              {slots.map(slot => {
+                                const isSelected = selectedSlot?.day === slot.day && selectedSlot?.startTime === slot.startTime;
+                                return (
+                                  <div
+                                    key={`${slot.day}-${slot.startTime}`}
+                                    role="button"
+                                    tabIndex={0}
+                                    className={`rtf-slot-btn${isSelected ? ' selected' : ''}`}
+                                    onClick={() => { setSelectedSlot(slot); setSlotErr(false); }}
+                                    onKeyDown={e => e.key === 'Enter' && (setSelectedSlot(slot), setSlotErr(false))}
+                                  >
+                                    {formatTime(slot.startTime)}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <p className="rtf-confirmation-sub">
+                    No available times found — we'll be in touch to arrange a time.
+                  </p>
+                )}
+
+                {slotErr && <p className="rtf-field-error">Please select a time to continue.</p>}
 
                 <div className="rtf-actions">
-                  <button className="sm-btn-primary" onClick={confirmSelection}>
-                    Confirm &amp; Set Up Payment
+                  <button className="sm-btn-primary" onClick={confirmSelection} disabled={confirming}>
+                    {confirming ? 'Saving…' : 'Confirm first session'}
                   </button>
-                  <button className="sm-btn-ghost" onClick={() => setPendingTutor(null)}>
+                  {onRequestMobile && (
+                    <button
+                      className="sm-btn-secondary"
+                      onClick={() => onRequestMobile(pendingTutor.id)}
+                      disabled={requestingMobile || confirming}
+                    >
+                      {requestingMobile ? 'Sending…' : `Request ${pendingTutor.firstName}'s mobile`}
+                    </button>
+                  )}
+                  <button className="sm-btn-ghost" onClick={() => { setPendingTutor(null); setSelectedSlot(null); setBookableSlots([]); setSlotErr(false); }}>
                     ← Go back
                   </button>
                 </div>
+                <p className="rtf-consent-note">
+                  By pressing Confirm first session you agree for your details to be sent to {pendingTutor.firstName} {pendingTutor.lastInitial}.
+                </p>
               </div>
             ) : (
               /* ── Tutor list ── */
@@ -606,22 +573,32 @@ const RequestTutorFlow: React.FC<RequestTutorFlowProps> = ({
                   ))}
                 </div>
 
-                {sorted.length === 0 ? (
+                {tutors.length === 0 ? (
                   <div className="rtf-empty-state">
-                    <h3>No exact match — but these tutors are close.</h3>
-                    <p>You can adjust your availability or choose from these tutors.</p>
+                    <h3>No tutors available</h3>
+                    <p>We don't have any tutors available right now.</p>
+                    <button className="sm-btn-primary" onClick={onCancel}>
+                      Please call me to arrange a tutor
+                    </button>
                   </div>
                 ) : (
-                  sorted.map(({ tutor, quality }) => (
-                    <TutorCard
-                      key={tutor.id}
-                      tutor={tutor}
-                      requestedSlots={requestedSlots}
-                      parentHasDistributor={parentHasDistributor}
-                      matchQuality={quality}
-                      onSelect={setPendingTutor}
-                    />
-                  ))
+                  <>
+                    {sorted.length === 0 && (
+                      <div className="rtf-empty-state">
+                        <p>No tutors match your exact schedule — showing all available tutors.</p>
+                      </div>
+                    )}
+                    {(sorted.length > 0 ? sorted : tutors.map(t => ({ tutor: t, quality: 'partial' as const }))).map(({ tutor, quality }) => (
+                      <TutorCard
+                        key={tutor.id}
+                        tutor={tutor}
+                        requestedSlots={requestedSlots}
+                        parentHasDistributor={parentHasDistributor}
+                        matchQuality={quality}
+                        onSelect={setPendingTutor}
+                      />
+                    ))}
+                  </>
                 )}
 
                 <div className="rtf-actions">

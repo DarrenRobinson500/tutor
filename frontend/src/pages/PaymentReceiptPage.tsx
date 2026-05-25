@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { dashboardPath } from "../utils/dashboardPath";
 import { apiFetch } from "../utils/apiFetch";
 
 interface PaymentDetail {
@@ -32,6 +33,7 @@ function fmtSettlement(iso: string | null) {
     weekday: "long", day: "numeric", month: "long",
   });
 }
+
 
 export function PaymentReceiptPage() {
   const { id } = useParams<{ id: string }>();
@@ -123,12 +125,11 @@ export function PaymentReceiptPage() {
           {/* Settlement note */}
           <div style={{ background: "var(--sm-success-bg, #E8F5E9)", border: "1px solid #A5D6A7", borderRadius: 8, padding: "1rem 1.25rem", marginBottom: "1.5rem" }}>
             <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--sm-success, #2E7D32)" }}>
-              Your tutor will receive their payment by{" "}
-              <strong>{fmtSettlement(payment.expected_settlement_date)}</strong>.
+              Your tutor will receive their payment immediately.
             </p>
           </div>
 
-          <Link to="/" className="sm-btn-primary" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
+          <Link to={dashboardPath()} className="sm-btn-primary" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
             Back to dashboard
           </Link>
         </div>

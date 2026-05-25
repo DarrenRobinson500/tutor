@@ -6,9 +6,13 @@ interface LatexProps {
   children: string;
 }
 
+const KATEX_MACROS: Record<string, string> = {
+  "\\tab": "\\quad",
+};
+
 function renderInlineMath(content: string, key: number | string) {
   try {
-    const html = katex.renderToString(content, { displayMode: false, throwOnError: true });
+    const html = katex.renderToString(content, { displayMode: false, throwOnError: true, macros: KATEX_MACROS });
     return <span key={key} dangerouslySetInnerHTML={{ __html: html }} />;
   } catch (err: any) {
     return <span key={key} style={{ color: "red", fontFamily: "monospace" }}>LaTeX error: {err.message}</span>;
@@ -17,7 +21,7 @@ function renderInlineMath(content: string, key: number | string) {
 
 function renderDisplayMath(content: string, key: number | string) {
   try {
-    const html = katex.renderToString(content, { displayMode: true, throwOnError: true });
+    const html = katex.renderToString(content, { displayMode: true, throwOnError: true, macros: KATEX_MACROS });
     return <div key={key} className="katex-display-left" dangerouslySetInnerHTML={{ __html: html }} />;
   } catch (err: any) {
     return <span key={key} style={{ color: "red", fontFamily: "monospace" }}>LaTeX error: {err.message}</span>;
@@ -160,6 +164,16 @@ function isSeparatorRow(cells: string[]): boolean {
   return cells.length > 0 && cells.every(c => /^:?-+:?$/.test(c));
 }
 
+function parseColumnAlignments(cells: string[]): Array<React.CSSProperties["textAlign"]> {
+  return cells.map(c => {
+    const left = c.startsWith(":");
+    const right = c.endsWith(":");
+    if (left && right) return "center";
+    if (right) return "right";
+    return "left";
+  });
+}
+
 export function Latex({ children }: LatexProps) {
   // Split into segments: consecutive "* item" lines become bullet lists,
   // consecutive "| ... |" lines become tables;
@@ -176,11 +190,15 @@ export function Latex({ children }: LatexProps) {
   for (let li = 0; li < lines.length; li++) {
     const line = lines[li];
     if (/^\s*\*\s+/.test(line)) {
+      const firstContent = line.replace(/^\s*\*\s+/, "");
+      // YAML > folding joins "* item1\n* item2" into "* item1 * item2".
+      // Split on " * " (single asterisk, not "**") to recover all items.
+      const items = firstContent.split(/ \*(?!\*) /);
       const last = segments[segments.length - 1];
       if (last?.type === "bullets") {
-        last.items.push(line.replace(/^\s*\*\s+/, ""));
+        items.forEach(item => last.items.push(item));
       } else {
-        segments.push({ type: "bullets", items: [line.replace(/^\s*\*\s+/, "")] });
+        segments.push({ type: "bullets", items });
       }
     } else if (/^\s*\d+\.\s+/.test(line)) {
       const last = segments[segments.length - 1];
@@ -250,16 +268,17 @@ export function Latex({ children }: LatexProps) {
           const sepIdx = rows.findIndex(isSeparatorRow);
           const headerRows = sepIdx > 0 ? rows.slice(0, sepIdx) : [];
           const bodyRows = sepIdx >= 0 ? rows.slice(sepIdx + 1) : rows;
-          const cellStyle: React.CSSProperties = {
+          const alignments = sepIdx >= 0 ? parseColumnAlignments(rows[sepIdx]) : [];
+          const cellStyle = (ci: number): React.CSSProperties => ({
             border: "1px solid #d0d0d0",
             padding: "5px 10px",
-            textAlign: "left",
-          };
-          const headStyle: React.CSSProperties = {
-            ...cellStyle,
+            textAlign: alignments[ci] ?? "left",
+          });
+          const headStyle = (ci: number): React.CSSProperties => ({
+            ...cellStyle(ci),
             background: "#f0f0f0",
             fontWeight: 600,
-          };
+          });
           return (
             <table key={i} style={{ borderCollapse: "collapse", fontSize: "inherit", marginBottom: 8, marginTop: 4 }}>
               {headerRows.length > 0 && (
@@ -267,7 +286,7 @@ export function Latex({ children }: LatexProps) {
                   {headerRows.map((row, ri) => (
                     <tr key={ri}>
                       {row.map((cell, ci) => (
-                        <th key={ci} style={headStyle}><Latex>{cell}</Latex></th>
+                        <th key={ci} style={headStyle(ci)}><Latex>{cell}</Latex></th>
                       ))}
                     </tr>
                   ))}
@@ -277,7 +296,7 @@ export function Latex({ children }: LatexProps) {
                 {bodyRows.map((row, ri) => (
                   <tr key={ri} style={ri % 2 === 1 ? { background: "#fafafa" } : {}}>
                     {row.map((cell, ci) => (
-                      <td key={ci} style={cellStyle}><Latex>{cell}</Latex></td>
+                      <td key={ci} style={cellStyle(ci)}><Latex>{cell}</Latex></td>
                     ))}
                   </tr>
                 ))}

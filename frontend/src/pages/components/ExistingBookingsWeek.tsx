@@ -22,7 +22,7 @@ interface ExistingBookingsWeekProps {
   handleBookingAction: (
     bookingId: number,
     bookingType: string,
-    action: "confirm" | "delete" | "skip" | "remove_skip" | "edit",
+    action: "confirm" | "delete" | "skip" | "remove_skip" | "edit" | "complete",
     extra?: any
   ) => void;
   editing: { date: string; booking: any; index: number } | null;
@@ -186,6 +186,19 @@ export function ExistingBookingsWeek({
                       onClick={() => navigate(`/session/t${tutorId}-s${b.student_id}`)}
                     >
                       Join Session
+                    </button>
+                  )}
+
+                  {/* Complete button — past days only */}
+                  {day.day_status === "past" && b.id && (
+                    <button
+                      className="btn btn-outline-secondary btn-sm w-100 mt-1"
+                      style={{ fontSize: "0.75rem" }}
+                      onClick={() =>
+                        handleBookingAction(b.id!, b.booking_type, "complete", { date: dateStr })
+                      }
+                    >
+                      Complete
                     </button>
                   )}
 

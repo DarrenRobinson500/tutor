@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { PaymentSetup } from "../components/PaymentSetup/PaymentSetup";
 import { apiFetch } from "../utils/apiFetch";
+import { dashboardPath } from "../utils/dashboardPath";
 
 export function PaymentRetryPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,7 +24,7 @@ export function PaymentRetryPage() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--sm-bg, #FFFBF5)", fontFamily: "Inter, system-ui, sans-serif" }}>
       <nav style={{ display: "flex", alignItems: "center", padding: "0 2rem", height: 60, background: "#fff", borderBottom: "1px solid var(--sm-border, #E8E0D6)" }}>
-        <Link to="/">
+        <Link to={dashboardPath()}>
           <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" style={{ height: 28 }} />
         </Link>
       </nav>

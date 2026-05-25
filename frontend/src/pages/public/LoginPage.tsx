@@ -2,6 +2,13 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 
+const DEV_USERS = [
+  { label: "Admin",   email: "Darren",  password: "Darren"  },
+  { label: "Parent",  email: "Amanda",  password: "Amanda"  },
+  { label: "Student", email: "Michael", password: "Michael" },
+  { label: "Tutor",   email: "Alex",    password: "Alex"    },
+];
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -10,17 +17,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const isDev = process.env.NODE_ENV === "development";
+
+  async function doLogin(loginEmail: string, loginPassword: string) {
     setError("");
     setLoading(true);
-
     const API_URL = (process.env.REACT_APP_API_URL ?? "").replace(/\/$/, "");
     try {
       const res = await fetch(`${API_URL}/api/auth/login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -47,6 +54,11 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await doLogin(email, password);
   }
 
   if (forgotSent) {
@@ -141,6 +153,34 @@ export default function LoginPage() {
               Don't have an account?{" "}
               <Link to="/register/parent">Register here</Link>
             </div>
+
+            {isDev && (
+              <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px dashed #ccc" }}>
+                <div style={{ fontSize: 11, color: "#999", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+                  Dev quick-login
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {DEV_USERS.map(u => (
+                    <button
+                      key={u.label}
+                      type="button"
+                      style={{
+                        padding: "4px 12px",
+                        fontSize: 13,
+                        border: "1px solid #ccc",
+                        borderRadius: 4,
+                        background: "#f8f9fa",
+                        cursor: "pointer",
+                      }}
+                      disabled={loading}
+                      onClick={() => doLogin(u.email, u.password)}
+                    >
+                      {u.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>

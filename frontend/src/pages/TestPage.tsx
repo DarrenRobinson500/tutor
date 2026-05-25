@@ -51,6 +51,7 @@ const RESULT_COLOR: Record<string, string> = {
   medium: "#d1ecf1",
   easy: "#fff3cd",
   none: "#f8d7da",
+  untested: "#f8f9fa",
 };
 
 const RESULT_LABEL: Record<string, string> = {
@@ -58,7 +59,8 @@ const RESULT_LABEL: Record<string, string> = {
   hard:     "Advanced",
   medium:   "Proficient",
   easy:     "Developing",
-  none:     "Not attempted",
+  none:     "Untested",
+  untested: "Untested",
 };
 
 // ── Inline metadata editor ────────────────────────────────────────────────────
@@ -320,6 +322,7 @@ export function TestPage() {
   const [showCalculator, setShowCalculator] = useState(false);
   const questionStartRef = useState<number>(() => Date.now())[0];
   const questionStartTime = useState<number>(Date.now());
+  const [showQuitModal, setShowQuitModal] = useState(false);
   const [learnComplete, setLearnComplete] = useState<{
     starsBefore: number | null;
     starsAfter: number | null;
@@ -409,6 +412,20 @@ export function TestPage() {
       setStatus("error");
     }
   }, [sessionId, question, questionStartTime]);
+
+  async function handleQuitEarly() {
+    if (!sessionId) return;
+    setShowQuitModal(false);
+    try {
+      const res = await apiFetch(`/api/tests/${sessionId}/quit_early/`, { method: "POST" });
+      const data = await res.json();
+      if (data.skill_progress) setSkillProgress(data.skill_progress);
+      setStatus("complete");
+    } catch (e: any) {
+      setErrorMsg(e.message || "Unexpected error");
+      setStatus("error");
+    }
+  }
 
   if (status === "loading") {
     return (
@@ -575,7 +592,12 @@ export function TestPage() {
               Loop {(question as any).loop ?? 1} of 2
             </span>
             <span className="text-muted" style={{ fontSize: 13 }}>
-              {(question as any).loop_remaining ?? 0} question{(question as any).loop_remaining !== 1 ? "s" : ""} left in this loop
+              {(() => {
+                const remaining = (question as any).loop_remaining ?? 0;
+                const total = (question as any).loop_total ?? remaining;
+                const position = total - remaining + 1;
+                return `Question ${position} of ${total}`;
+              })()}
             </span>
           </div>
         )}
@@ -593,12 +615,6 @@ export function TestPage() {
             <span className="fw-semibold" style={{ fontSize: 15 }}>
               {question.skill_description}
             </span>
-            <span
-              className={`badge bg-${DIFFICULTY_BADGE[question.difficulty] || "secondary"} ms-2`}
-              style={{ fontSize: 11 }}
-            >
-              {question.difficulty}
-            </span>
           </div>
           <span className="text-muted" style={{ fontSize: 13 }}>
             Skill {doneSkills + 1} of {totalSkills}
@@ -606,12 +622,55 @@ export function TestPage() {
         </div>
 
         {/* Progress bar */}
-        <div className="progress mb-3" style={{ height: 6 }}>
+        <div className="progress mb-1" style={{ height: 6 }}>
           <div
             className="progress-bar bg-success"
             style={{ width: `${progressPct}%`, transition: "width 0.4s" }}
           />
         </div>
+        {mode !== "learning" && (
+          <div className="d-flex justify-content-end mb-3">
+            <button
+              className="btn btn-link btn-sm text-danger p-0"
+              style={{ fontSize: 12 }}
+              onClick={() => setShowQuitModal(true)}
+            >
+              I've had enough
+            </button>
+          </div>
+        )}
+
+        {showQuitModal && (
+          <div
+            style={{
+              position: "fixed", inset: 0, zIndex: 1050,
+              background: "rgba(0,0,0,0.45)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+            onClick={() => setShowQuitModal(false)}
+          >
+            <div
+              style={{
+                background: "#fff", borderRadius: 12, padding: "2rem",
+                maxWidth: 400, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <h5 className="mb-2">End the test?</h5>
+              <p className="text-muted mb-4" style={{ fontSize: 14 }}>
+                Your results so far will be saved, but any remaining skills will be marked as untested.
+              </p>
+              <div className="d-flex gap-2 justify-content-end">
+                <button className="btn btn-outline-secondary" onClick={() => setShowQuitModal(false)}>
+                  Keep going
+                </button>
+                <button className="btn btn-danger" onClick={handleQuitEarly}>
+                  End test
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Question */}
         <PreviewPanel

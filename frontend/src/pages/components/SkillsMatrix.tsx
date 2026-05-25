@@ -129,9 +129,10 @@ export function SkillsMatrix({ courseSet, prefKey = "skills.selected_grade" }: S
                 <tr
                   key={skill.id}
                   className={skill.children_count > 0 ? "parent-row" : ""}
-                  style={{ cursor: skill.children_count === 0 ? "pointer" : undefined }}
+                  style={{ cursor: (skill.children_count === 0 || skill.parent_id === null) ? "pointer" : undefined }}
                   onClick={() => {
-                    if (skill.children_count === 0) navigate(`/skills/${skill.id}/overview`);
+                    if (skill.parent_id === null && skill.children_count > 0) navigate(`/skill-parents/${skill.id}/overview`);
+                    else if (skill.children_count === 0) navigate(`/skills/${skill.id}/overview`);
                   }}
                 >
                   <td style={{ paddingLeft: `${skill.depth * 16 + 8}px`, whiteSpace: "nowrap", position: "sticky", left: 0, zIndex: 1, background: skill.children_count > 0 ? "#f0f0f0" : "#fff" }} title={skill.detail || undefined}>
@@ -253,9 +254,10 @@ export function SkillsMatrix({ courseSet, prefKey = "skills.selected_grade" }: S
                     <tr
                       key={skill.id}
                       className={isParent ? "parent-row" : ""}
-                      style={{ cursor: isParent ? undefined : "pointer" }}
+                      style={{ cursor: (!isParent || skill.parent_id === null) ? "pointer" : undefined }}
                       onClick={() => {
-                        if (!isParent) navigate(`/skills/${skill.id}/overview/${gradeStr}`);
+                        if (isParent && skill.parent_id === null) navigate(`/skill-parents/${skill.id}/overview?grade=${gradeStr}`);
+                        else if (!isParent) navigate(`/skills/${skill.id}/overview/${gradeStr}`);
                       }}
                     >
                       <td style={{ paddingLeft: `${skill.depth * 20 + 10}px` }} title={skill.detail || undefined}>

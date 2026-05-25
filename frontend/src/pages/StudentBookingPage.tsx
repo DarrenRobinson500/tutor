@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Layout } from "./components/Layout";
 import { apiFetch } from "../utils/apiFetch";
 import { WeeklyBookingCalendar } from "./components/WeeklyBookingCalendar";
+import { PauseButton } from "./components/PausePicker";
 
 export function StudentBookingPage() {
   const { id } = useParams();
@@ -89,7 +90,10 @@ export function StudentBookingPage() {
 
       if (action === "create") setMessage("Booking created.");
       else if (action === "delete") setMessage("Booking deleted.");
-      else if (action === "skip") setMessage("Booking skipped.");
+      else if (action === "skip") {
+        const w = extra?.weeks ?? 1;
+        setMessage(`Appointment paused for ${w} ${w === 1 ? "week" : "weeks"}.`);
+      }
       else if (action === "remove_skip") setMessage("Skip removed.");
       else if (action === "edit") setMessage("Booking updated.");
 
@@ -178,15 +182,13 @@ export function StudentBookingPage() {
           )}
 
           {student.booking_mode === "weekly_booking" && (
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() =>
-                handleBookingAction(booking.id, "weekly", "skip")
+            <PauseButton
+              disabled={!booking.student_can_edit}
+              loading={actionLoading}
+              onConfirm={(weeks) =>
+                handleBookingAction(booking.id, "weekly", "skip", { weeks })
               }
-              disabled={actionLoading || !booking.student_can_edit}
-            >
-              Pause my appointment for one week
-            </button>
+            />
           )}
 
           {student.booking_mode === "weekly_booking_but_paused" && (
@@ -197,7 +199,7 @@ export function StudentBookingPage() {
               }
               disabled={actionLoading || !booking.student_can_edit}
             >
-              Remove one week pause
+              Remove pause
             </button>
           )}
         </div>
@@ -214,7 +216,7 @@ export function StudentBookingPage() {
         )}
 
         <div className="mt-3 text-muted" style={{ fontSize: "1rem" }}>
-          If you have any questions about your appointment, call or text {student.tutor_name} on {student.tutor_mobile}.
+          If you have any questions about your appointment, call or text {student.tutor_name} on {student.tutor_mobile?.replace(/\D/g, "").replace(/^(\d{4})(\d{3})(\d{3})$/, "$1 $2 $3") ?? student.tutor_mobile}.
         </div>
       </div>
     );

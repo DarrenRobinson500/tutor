@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { apiFetch } from "../utils/apiFetch";
+import { dashboardPath } from "../utils/dashboardPath";
 import "./TutorBillingPage.css";
 
 interface PaymentRow {
@@ -139,7 +140,7 @@ export function TutorBillingPage() {
   return (
     <div className="tb-page">
       <nav className="tb-nav">
-        <Link to="/" className="tb-nav-logo">
+        <Link to={dashboardPath()} className="tb-nav-logo">
           <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" />
         </Link>
         <span className="tb-nav-title">Billing</span>

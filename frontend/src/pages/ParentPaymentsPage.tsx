@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { apiFetch } from "../utils/apiFetch";
+import { dashboardPath } from "../utils/dashboardPath";
+import "./ParentHomePage.css";
 
 interface PaymentRow {
   id: number;
@@ -110,6 +112,16 @@ export function ParentPaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const storedUser = (() => { try { return JSON.parse(localStorage.getItem("user") ?? "{}"); } catch { return {}; } })();
+  const parentName = [storedUser.first_name, storedUser.last_name].filter(Boolean).join(" ");
+
+  function handleLogout() {
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+    localStorage.removeItem("user");
+    navigate("/login?tab=parent");
+  }
+
   useEffect(() => {
     apiFetch(`/api/parents/${id}/payments/`)
       .then((r) => {
@@ -139,15 +151,27 @@ export function ParentPaymentsPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--sm-bg, #FFFBF5)", fontFamily: "Inter, system-ui, sans-serif" }}>
-      <nav style={{ display: "flex", alignItems: "center", gap: "1.5rem", padding: "0 2rem", height: 60, background: "#fff", borderBottom: "1px solid var(--sm-border, #E8E0D6)" }}>
-        <Link to="/">
-          <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" style={{ height: 28 }} />
+    <div className="ph-page">
+
+      <nav className="ph-nav">
+        <Link to={dashboardPath()} className="ph-nav-logo">
+          <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" />
         </Link>
-        <span style={{ fontWeight: 600 }}>Payments</span>
+        <div className="ph-nav-right">
+          {parentName && <span className="ph-nav-user">{parentName}</span>}
+          <Link to={`/parents/${id}`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Dashboard</Link>
+          <Link to={`/parents/${id}/bookings`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Bookings</Link>
+          <button className="ph-nav-logout" onClick={handleLogout}>Sign out</button>
+        </div>
       </nav>
 
-      <main style={{ maxWidth: 900, margin: "0 auto", padding: "2rem 1.5rem" }}>
+      <header className="ph-header">
+        <div className="ph-header-inner">
+          <h1 className="ph-greeting">Payments</h1>
+        </div>
+      </header>
+
+      <main className="ph-body" style={{ maxWidth: 900 }}>
 
         {/* Pending */}
         <section style={{ marginBottom: "2.5rem" }}>

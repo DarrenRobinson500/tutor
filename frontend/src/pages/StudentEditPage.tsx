@@ -17,6 +17,7 @@ export function StudentEditPage() {
   const [mobile, setMobile] = useState("");
   const [address, setAddress] = useState("");
   const [language, setLanguage] = useState("en");
+  const [minQuestionsPerSkill, setMinQuestionsPerSkill] = useState(0);
 
   const LANGUAGE_OPTIONS = [
     { code: "en", label: "English" },
@@ -50,6 +51,7 @@ useEffect(() => {
       setAddress(data.address || "");
       setActive(data.active);
       setLanguage(data.language || "en");
+      setMinQuestionsPerSkill(data.min_questions_per_skill ?? 0);
     })
     .catch((err) => {
       console.error("Error fetching", url, err);
@@ -69,6 +71,7 @@ useEffect(() => {
           address: address,
           active: active,
           language: language,
+          min_questions_per_skill: minQuestionsPerSkill,
         },
       }),
     });
@@ -127,6 +130,18 @@ useEffect(() => {
           ))}
         </select>
         <div className="form-text">Questions will be shown in this language during learning sessions.</div>
+      </div>
+
+      <div className="mb-3">
+        <label className="form-label">Questions per Skill</label>
+        <input
+          type="number"
+          className="form-control"
+          min={0}
+          value={minQuestionsPerSkill}
+          onChange={(e) => setMinQuestionsPerSkill(Math.max(0, parseInt(e.target.value) || 0))}
+        />
+        <div className="form-text">Minimum questions asked per skill in a learning session. Set to 0 for no minimum (uses all available templates).</div>
       </div>
 
       <div className="form-check mb-3">

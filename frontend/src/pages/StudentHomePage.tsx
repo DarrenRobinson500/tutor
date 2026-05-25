@@ -300,8 +300,15 @@ export function StudentHomePage() {
               }
             }
 
+            const rowClickable = templateCount !== null && templateCount > 0 && (hasTemplatesAtDifficulty || lockedUntil);
+
             return (
-              <tr key={skill.id} className={isParent ? "parent-row" : ""}>
+              <tr
+                key={skill.id}
+                className={isParent ? "parent-row" : ""}
+                onClick={rowClickable ? () => navigate(`/students/${id}/test/${skill.id}`) : undefined}
+                style={rowClickable ? { cursor: "pointer" } : undefined}
+              >
 
                 <td style={{ paddingLeft: `${skill.depth * 20 + 10}px` }}>
                   {skill.description}
@@ -320,7 +327,7 @@ export function StudentHomePage() {
                   {templateCount !== null && templateCount > 0 && (
                     hasTemplatesAtDifficulty || lockedUntil ? (
                       <button
-                        className={lockedUntil ? "btn btn-sm btn-outline-warning" : "btn btn-sm btn-outline-primary"}
+                        className="btn btn-sm btn-outline-primary"
                         onClick={() => navigate(`/students/${id}/test/${skill.id}`)}
                         title={lockedUntil ? `Next star available ${lockedUntil.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}` : undefined}
                       >

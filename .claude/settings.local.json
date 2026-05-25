@@ -30,7 +30,21 @@
       "PowerShell(npm show *)",
       "Bash(pip install *)",
       "Bash(Remove-Item *)",
-      "Bash(simplified '}} *)"
+      "Bash(simplified '}} *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\" -Recurse -Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\" -Recurse -Directory)",
+      "Bash(Select-Object -First 20 FullName)",
+      "Bash(.venv\\\\Scripts\\\\python manage.py makemigrations)",
+      "Bash(.venv\\\\Scripts\\\\python manage.py migrate)",
+      "PowerShell($python = \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\backend\\\\.venv\\\\Scripts\\\\python.exe\"; & $python \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\backend\\\\manage.py\" makemigrations; & $python \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\backend\\\\manage.py\" migrate)",
+      "PowerShell(python --version 2>&1; where python 2>&1)",
+      "PowerShell(python \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\backend\\\\manage.py\" makemigrations 2>&1)",
+      "PowerShell(python \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\backend\\\\manage.py\" migrate 2>&1)",
+      "Bash(dir \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\")",
+      "Bash(del *)",
+      "Bash(.venv/Scripts/python manage.py migrate backend 0063)",
+      "PowerShell(& \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\backend\\\\.venv\\\\Scripts\\\\python.exe\" \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\backend\\\\manage.py\" migrate backend 0063 2>&1)",
+      "PowerShell(& \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\.venv\\\\Scripts\\\\python.exe\" \"C:\\\\Users\\\\darre\\\\PycharmProjects\\\\tutor\\\\backend\\\\manage.py\" migrate backend 0063 2>&1)"
     ]
   }
 }

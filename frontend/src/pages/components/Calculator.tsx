@@ -1,38 +1,31 @@
 import { useState, useRef, useEffect } from "react";
 
-type Op = "+" | "-" | "×" | "÷" | "^" | null;
-
 export function Calculator({ onClose }: { onClose?: () => void } = {}) {
-  const [display, setDisplay]           = useState("0");
-  const [prevValue, setPrevValue]       = useState<number | null>(null);
-  const [operator, setOperator]         = useState<Op>(null);
-  const [waitingForNew, setWaitingForNew] = useState(false);
-  const [showSci, setShowSci]           = useState(false);
+  // Expression-based model: `expr` accumulates the expression string before
+  // the number currently shown in `display`. On = we evaluate expr + display.
+  const [display, setDisplay]         = useState("0");
+  const [expr, setExpr]               = useState("");
+  const [openParens, setOpenParens]   = useState(0);
+  const [typing, setTyping]           = useState(false);
+  const [showSci, setShowSci]         = useState(false);
+
+  // ── Number entry ────────────────────────────────────────────────────────────
 
   function inputDigit(d: string) {
-    if (waitingForNew) {
-      setDisplay(d);
-      setWaitingForNew(false);
-    } else {
+    if (typing) {
       setDisplay(prev => prev === "0" ? d : prev.length < 12 ? prev + d : prev);
+    } else {
+      setDisplay(d);
+      setTyping(true);
     }
   }
 
   function inputDecimal() {
-    if (waitingForNew) { setDisplay("0."); setWaitingForNew(false); return; }
+    if (!typing) { setDisplay("0."); setTyping(true); return; }
     if (!display.includes(".")) setDisplay(prev => prev + ".");
   }
 
-  function compute(a: number, b: number, op: Op): number {
-    switch (op) {
-      case "+": return a + b;
-      case "-": return a - b;
-      case "×": return a * b;
-      case "÷": return b !== 0 ? a / b : NaN;
-      case "^": return Math.pow(a, b);
-      default:  return b;
-    }
-  }
+  // ── Evaluation ──────────────────────────────────────────────────────────────
 
   function clean(n: number): string {
     if (!isFinite(n)) return "Error";
@@ -40,38 +33,84 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
     return String(r);
   }
 
-  function pressOperator(op: Op) {
-    const cur = parseFloat(display);
-    if (prevValue !== null && operator && !waitingForNew) {
-      const result = compute(prevValue, cur, operator);
-      setDisplay(clean(result));
-      setPrevValue(result);
-    } else {
-      setPrevValue(cur);
+  function evaluate(fullExpr: string): string {
+    try {
+      const js = fullExpr.replace(/×/g, "*").replace(/÷/g, "/").replace(/\^/g, "**");
+      // eslint-disable-next-line no-new-func
+      const result = Function('"use strict"; return (' + js + ')')() as number;
+      return clean(result);
+    } catch {
+      return "Error";
     }
-    setOperator(op);
-    setWaitingForNew(true);
+  }
+
+  // ── Operators ───────────────────────────────────────────────────────────────
+
+  function pressOperator(op: string) {
+    // If no new number was typed since the last operator, just swap the operator
+    if (!typing && /[+\-×÷^]$/.test(expr)) {
+      setExpr(prev => prev.slice(0, -1) + op);
+    } else {
+      setExpr(prev => prev + display + op);
+      setDisplay("0");
+      setTyping(false);
+    }
+  }
+
+  function pressOpenParen() {
+    if (typing && display !== "0") {
+      // Implicit multiplication: 5( → 5×(
+      setExpr(prev => prev + display + "×(");
+    } else {
+      setExpr(prev => prev + "(");
+    }
+    setDisplay("0");
+    setTyping(false);
+    setOpenParens(prev => prev + 1);
+  }
+
+  function pressCloseParen() {
+    if (openParens === 0) return;
+    setExpr(prev => prev + display + ")");
+    setDisplay("0");
+    setTyping(false);
+    setOpenParens(prev => prev - 1);
   }
 
   function pressEquals() {
-    if (prevValue === null || !operator) return;
-    const result = compute(prevValue, parseFloat(display), operator);
-    setDisplay(clean(result));
-    setPrevValue(null);
-    setOperator(null);
-    setWaitingForNew(true);
+    const fullExpr = expr + display;
+    if (!fullExpr || fullExpr === "0") return;
+    const closed = fullExpr + ")".repeat(openParens);
+    const result = evaluate(closed);
+    setDisplay(result);
+    setExpr("");
+    setOpenParens(0);
+    setTyping(false);
   }
+
+  // ── Utility ─────────────────────────────────────────────────────────────────
 
   function pressClear() {
     setDisplay("0");
-    setPrevValue(null);
-    setOperator(null);
-    setWaitingForNew(false);
+    setExpr("");
+    setOpenParens(0);
+    setTyping(false);
   }
 
   function pressBackspace() {
-    if (waitingForNew) return;
-    setDisplay(prev => prev.length > 1 ? prev.slice(0, -1) : "0");
+    if (typing) {
+      if (display.length > 1) {
+        setDisplay(prev => prev.slice(0, -1));
+      } else {
+        setDisplay("0");
+        setTyping(false);
+      }
+    } else if (expr.length > 0) {
+      const last = expr[expr.length - 1];
+      if (last === "(") setOpenParens(prev => Math.max(0, prev - 1));
+      if (last === ")") setOpenParens(prev => prev + 1);
+      setExpr(prev => prev.slice(0, -1));
+    }
   }
 
   function pressNegate() {
@@ -83,29 +122,34 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
 
   function pressPercent() {
     setDisplay(prev => clean(parseFloat(prev) / 100));
-    setWaitingForNew(false);
+    setTyping(false);
   }
 
-  // ── Scientific / unary functions ─────────────────────────────────────────────
+  // ── Scientific / unary ───────────────────────────────────────────────────────
 
-  function pressSquare()  { setDisplay(clean(Math.pow(parseFloat(display), 2)));  setWaitingForNew(true); }
-  function pressSqrt()    { const n = parseFloat(display); setDisplay(n < 0 ? "Error" : clean(Math.sqrt(n))); setWaitingForNew(true); }
-  function pressPi()      { setDisplay(clean(Math.PI)); setWaitingForNew(false); }
-  function pressE()       { setDisplay(clean(Math.E));  setWaitingForNew(false); }
+  function applyUnary(fn: (n: number) => number | "Error") {
+    const n = parseFloat(display);
+    const r = fn(n);
+    setDisplay(r === "Error" ? "Error" : clean(r as number));
+    setTyping(false);
+  }
 
-  function pressSin()  { setDisplay(clean(Math.sin(parseFloat(display) * Math.PI / 180))); setWaitingForNew(true); }
-  function pressCos()  { setDisplay(clean(Math.cos(parseFloat(display) * Math.PI / 180))); setWaitingForNew(true); }
-  function pressTan()  { const r = Math.tan(parseFloat(display) * Math.PI / 180); setDisplay(Math.abs(r) > 1e10 ? "Error" : clean(r)); setWaitingForNew(true); }
-  function pressAsin() { const n = parseFloat(display); setDisplay(n < -1 || n > 1 ? "Error" : clean(Math.asin(n) * 180 / Math.PI)); setWaitingForNew(true); }
-  function pressAcos() { const n = parseFloat(display); setDisplay(n < -1 || n > 1 ? "Error" : clean(Math.acos(n) * 180 / Math.PI)); setWaitingForNew(true); }
-  function pressAtan() { setDisplay(clean(Math.atan(parseFloat(display)) * 180 / Math.PI)); setWaitingForNew(true); }
+  function pressSquare()  { applyUnary(n => Math.pow(n, 2)); }
+  function pressSqrt()    { applyUnary(n => n < 0 ? "Error" : Math.sqrt(n)); }
+  function pressPi()      { setDisplay(clean(Math.PI)); setTyping(false); }
+  function pressE()       { setDisplay(clean(Math.E));  setTyping(false); }
+  function pressSin()     { applyUnary(n => Math.sin(n * Math.PI / 180)); }
+  function pressCos()     { applyUnary(n => Math.cos(n * Math.PI / 180)); }
+  function pressTan()     { applyUnary(n => { const r = Math.tan(n * Math.PI / 180); return Math.abs(r) > 1e10 ? "Error" : r; }); }
+  function pressAsin()    { applyUnary(n => n < -1 || n > 1 ? "Error" : Math.asin(n) * 180 / Math.PI); }
+  function pressAcos()    { applyUnary(n => n < -1 || n > 1 ? "Error" : Math.acos(n) * 180 / Math.PI); }
+  function pressAtan()    { applyUnary(n => Math.atan(n) * 180 / Math.PI); }
+  function pressLog()     { applyUnary(n => n <= 0 ? "Error" : Math.log10(n)); }
+  function pressLn()      { applyUnary(n => n <= 0 ? "Error" : Math.log(n)); }
+  function pressExpX()    { applyUnary(n => Math.exp(n)); }
+  function pressTenPow()  { applyUnary(n => Math.pow(10, n)); }
 
-  function pressLog()    { const n = parseFloat(display); setDisplay(n <= 0 ? "Error" : clean(Math.log10(n))); setWaitingForNew(true); }
-  function pressLn()     { const n = parseFloat(display); setDisplay(n <= 0 ? "Error" : clean(Math.log(n)));   setWaitingForNew(true); }
-  function pressExpX()   { setDisplay(clean(Math.exp(parseFloat(display)))); setWaitingForNew(true); }
-  function pressTenPow() { setDisplay(clean(Math.pow(10, parseFloat(display)))); setWaitingForNew(true); }
-
-  // ── Physical keyboard support ────────────────────────────────────────────────
+  // ── Keyboard support ─────────────────────────────────────────────────────────
 
   const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
   keyHandlerRef.current = (e: KeyboardEvent) => {
@@ -115,16 +159,18 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
       case "0": case "1": case "2": case "3": case "4":
       case "5": case "6": case "7": case "8": case "9":
         e.preventDefault(); inputDigit(e.key); break;
-      case ".": e.preventDefault(); inputDecimal(); break;
-      case "+": e.preventDefault(); pressOperator("+"); break;
-      case "-": e.preventDefault(); pressOperator("-"); break;
-      case "*": e.preventDefault(); pressOperator("×"); break;
-      case "/": e.preventDefault(); pressOperator("÷"); break;
-      case "^": e.preventDefault(); pressOperator("^"); break;
-      case "Enter": case "=": e.preventDefault(); pressEquals(); break;
+      case ".":         e.preventDefault(); inputDecimal();         break;
+      case "+":         e.preventDefault(); pressOperator("+");     break;
+      case "-":         e.preventDefault(); pressOperator("-");     break;
+      case "*":         e.preventDefault(); pressOperator("×");     break;
+      case "/":         e.preventDefault(); pressOperator("÷");     break;
+      case "^":         e.preventDefault(); pressOperator("^");     break;
+      case "(":         e.preventDefault(); pressOpenParen();       break;
+      case ")":         e.preventDefault(); pressCloseParen();      break;
+      case "Enter": case "=": e.preventDefault(); pressEquals();    break;
       case "Backspace": case "Delete": e.preventDefault(); pressBackspace(); break;
-      case "Escape": e.preventDefault(); pressClear(); break;
-      case "%": e.preventDefault(); pressPercent(); break;
+      case "Escape":    e.preventDefault(); pressClear();           break;
+      case "%":         e.preventDefault(); pressPercent();         break;
     }
   };
   useEffect(() => {
@@ -135,9 +181,9 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
 
   // ── Styling helpers ──────────────────────────────────────────────────────────
 
-  const isActiveOp = (op: Op) => operator === op && waitingForNew;
-  const opColor    = (op: Op) => isActiveOp(op) ? "#fff"    : "#ff9f0a";
-  const opText     = (op: Op) => isActiveOp(op) ? "#ff9f0a" : "#fff";
+  const isActiveOp = (op: string) => !typing && expr.endsWith(op);
+  const opColor    = (op: string) => isActiveOp(op) ? "#fff"    : "#ff9f0a";
+  const opText     = (op: string) => isActiveOp(op) ? "#ff9f0a" : "#fff";
 
   const btn = (
     label: string,
@@ -190,6 +236,9 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
     </button>
   );
 
+  // Expression label: show pending expr with open-paren indicator
+  const exprLabel = expr + (openParens > 0 ? " " + "·)".repeat(openParens) : "");
+
   return (
     <div style={{
       background: "#1c1c1e",
@@ -219,13 +268,26 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
       <div style={{
         background: "#000",
         borderRadius: 10,
-        padding: "10px 14px",
+        padding: "8px 14px 10px",
         marginBottom: 10,
-        minHeight: 56,
+        minHeight: 64,
         display: "flex",
+        flexDirection: "column",
         alignItems: "flex-end",
         justifyContent: "flex-end",
       }}>
+        {/* Pending expression context */}
+        <span style={{
+          color: "#666",
+          fontSize: 12,
+          minHeight: 16,
+          wordBreak: "break-all",
+          textAlign: "right",
+          width: "100%",
+        }}>
+          {exprLabel}
+        </span>
+        {/* Current number */}
         <span style={{
           color: "#fff",
           fontSize: display.length > 9 ? 20 : 32,
@@ -260,16 +322,16 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
 
         {/* Scientific row */}
-        {btn("xʸ",  () => pressOperator("^"), { color: isActiveOp("^") ? "#fff" : "#3a3a3c", text: isActiveOp("^") ? "#ff9f0a" : "#fff", fontSize: 18 })}
+        {btn("xʸ", () => pressOperator("^"), { color: isActiveOp("^") ? "#fff" : "#3a3a3c", text: isActiveOp("^") ? "#ff9f0a" : "#fff", fontSize: 18 })}
         {btn("x²",  pressSquare,              { color: "#3a3a3c" })}
         {btn("√x",  pressSqrt,               { color: "#3a3a3c" })}
         {btn("Sci", () => setShowSci(v => !v), { color: showSci ? "#0a84ff" : "#3a3a3c", fontSize: 16 })}
 
         {/* Utility row */}
-        {btn("AC",  pressClear,   { color: "#a5a5a5", text: "#000" })}
-        {btn("+/−", pressNegate,  { color: "#a5a5a5", text: "#000" })}
-        {btn("%",   pressPercent, { color: "#a5a5a5", text: "#000" })}
-        {btn("÷",   () => pressOperator("÷"), { color: opColor("÷"), text: opText("÷") })}
+        {btn("AC", pressClear,               { color: "#a5a5a5", text: "#000" })}
+        {btn("(",  pressOpenParen,           { color: "#a5a5a5", text: "#000", fontSize: 22 })}
+        {btn(")",  pressCloseParen,          { color: "#a5a5a5", text: "#000", fontSize: 22 })}
+        {btn("÷",  () => pressOperator("÷"), { color: opColor("÷"), text: opText("÷") })}
 
         {/* Digit rows */}
         {btn("7", () => inputDigit("7"))}
@@ -297,7 +359,7 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
 }
 
 export function DraggableCalculator({ onClose }: { onClose: () => void }) {
-  const [pos, setPos] = useState({ x: window.innerWidth - 310, y: 80 });
+  const [pos, setPos] = useState({ x: window.innerWidth / 2 + 1.5 * (96 / 2.54), y: 140 });
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
 
   function onDragStart(e: React.MouseEvent) {

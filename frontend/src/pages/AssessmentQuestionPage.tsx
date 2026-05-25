@@ -145,10 +145,7 @@ export function AssessmentQuestionPage() {
 
         <div className="row justify-content-center align-items-start">
           <div className="col-md-5">
-            <h2 className="mb-0">{skillName}</h2>
-            <p className="text-muted mb-3" style={{ fontSize: 13 }}>
-              {competence}{mastery !== null ? ` · ${mastery} ★` : ""}
-            </p>
+            <h2 className="mb-3">{skillName}</h2>
             <hr />
             <PreviewPanel
               preview={current}

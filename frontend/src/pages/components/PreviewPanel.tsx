@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Latex } from "./Latex";
+import katex from "katex";
 import "katex/dist/katex.min.css";
 import { apiFetch } from "../../utils/apiFetch";
 import type { PreviewResponse, StudentRecordResponse, KnowledgeItem, InlineKnowledge, MultipleAnswerEntry } from "../../types/PreviewResponse";
@@ -83,7 +84,7 @@ function KnowledgeCallout({ k }: { k: InlineKnowledge }) {
       )}
       {k.diagram_svg && (
         <div style={{ display: "flex", justifyContent: "center", width: "100%", margin: "8px 0" }}>
-          <div dangerouslySetInnerHTML={{ __html: k.diagram_svg }} />
+          <div dangerouslySetInnerHTML={{ __html: k.diagram_svg.replace("<svg ", '<svg style="width:90%;height:auto;display:block;" ') }} />
         </div>
       )}
       {k.text_2 && (
@@ -120,6 +121,7 @@ export function PreviewPanel({
   const [textInput, setTextInput] = useState("");
   const [surdCoeff, setSurdCoeff] = useState("");
   const [surdRadicand, setSurdRadicand] = useState("");
+  const [logInput, setLogInput] = useState("");
   const navigate = useNavigate();
   const [formatError, setFormatError] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
@@ -154,6 +156,7 @@ export function PreviewPanel({
     setTextInput("");
     setSurdCoeff("");
     setSurdRadicand("");
+    setLogInput("");
     setFormatError(null);
     setMultiStepIndex(0);
     setCompletedSteps([]);
@@ -584,6 +587,45 @@ export function PreviewPanel({
     const na = parseFraction(a) ?? parseMixedNumber(a);
     const nb = parseFraction(b) ?? parseMixedNumber(b);
     if (na !== null && nb !== null) return Math.abs(na - nb) <= tolerance;
+
+    // Parse log_b(x) or log(x, b) expressions and evaluate numerically.
+    const parseLog = (s: string): number | null => {
+      const t = s.replace(/\s/g, "");
+      // log_2(10) or log_2(10) with optional underscore
+      const m1 = t.match(/^log_?(\d+(?:\.\d+)?)\((-?[\d.]+(?:\/[\d.]+)?)\)$/i);
+      if (m1) {
+        const base = parseFloat(m1[1]);
+        const argStr = m1[2];
+        const argVal = argStr.includes("/")
+          ? parseInt(argStr.split("/")[0]) / parseInt(argStr.split("/")[1])
+          : parseFloat(argStr);
+        if (base > 0 && base !== 1 && argVal > 0) return Math.log(argVal) / Math.log(base);
+      }
+      // log(x, b) — Python-style
+      const m2 = t.match(/^log\((-?[\d.]+(?:\/[\d.]+)?),(-?[\d.]+(?:\/[\d.]+)?)\)$/i);
+      if (m2) {
+        const argStr = m2[1], baseStr = m2[2];
+        const argVal = argStr.includes("/")
+          ? parseInt(argStr.split("/")[0]) / parseInt(argStr.split("/")[1])
+          : parseFloat(argStr);
+        const base = baseStr.includes("/")
+          ? parseInt(baseStr.split("/")[0]) / parseInt(baseStr.split("/")[1])
+          : parseFloat(baseStr);
+        if (base > 0 && base !== 1 && argVal > 0) return Math.log(argVal) / Math.log(base);
+      }
+      // log10(x)
+      const m3 = t.match(/^log10\((-?[\d.]+(?:\/[\d.]+)?)\)$/i);
+      if (m3) {
+        const argVal = parseFloat(m3[1]);
+        if (argVal > 0) return Math.log10(argVal);
+      }
+      return null;
+    };
+    const la = parseLog(input), lb = parseLog(correct) ?? parseFraction(b);
+    // Log values stored by the backend use 6 sig-figs (%g), so the string-to-float
+    // rounding error can be ~5e-9.  Use at least 1e-6 to absorb that noise.
+    if (la !== null && lb !== null) return Math.abs(la - lb) <= Math.max(tolerance, 1e-6);
+
     return false;
   }
 
@@ -609,11 +651,11 @@ export function PreviewPanel({
     const decimalNMatch = format.match(/^decimal_(\d+)$/);
     if (decimalNMatch) {
       const n = parseInt(decimalNMatch[1]);
-      if (!/^-?\d+(\.\d+)?$/.test(s))
+      if (!/^-?(\d+(\.\d+)?|\.\d+)$/.test(s))
         return `Please enter a decimal number, e.g. ${(1).toFixed(n)}`;
       const dotIdx = s.indexOf(".");
       const actualDp = dotIdx === -1 ? 0 : s.length - dotIdx - 1;
-      if (actualDp !== n)
+      if (actualDp !== 0 && actualDp !== n)
         return `Please give your answer to ${n} decimal place${n === 1 ? "" : "s"}, e.g. ${(1).toFixed(n)}`;
     }
     if (format === "ratio" && !/^\d+(\s*:\s*\d+)+$/.test(s))
@@ -632,6 +674,13 @@ export function PreviewPanel({
     }
     if (format === "equation" && !/^[A-Za-z0-9]+(\^-?[A-Za-z0-9]+)?$|^\d+\/[A-Za-z][A-Za-z0-9]*(\^[0-9]+)?$/.test(s))
       return "Please enter a base and optional power, e.g. x^-3 or 1/x^3";
+    if (format === "log") {
+      const t = s.replace(/\s/g, "");
+      const valid = /^log_?\d+(\.\d+)?\(-?[\d.]+(?:\/[\d.]+)?\)$/i.test(t)
+        || /^log\(-?[\d.]+(?:\/[\d.]+)?,-?[\d.]+(?:\/[\d.]+)?\)$/i.test(t)
+        || /^log10\(-?[\d.]+(?:\/[\d.]+)?\)$/i.test(t);
+      if (!valid) return "Enter as log_2(10) or log_10(100) — use the base and argument boxes";
+    }
     if (format === "surd") {
       const t = s.replace(/\s+/g, "");
       const valid = /^\d+$/.test(t)
@@ -766,6 +815,84 @@ export function PreviewPanel({
     }
     setFormatError(null);
     const effectiveInput = radicand === 1 ? String(coeff) : `${coeff}*sqrt(${radicand})`;
+
+    // Multi-step mode
+    const multiStep = preview?.multi_step;
+    if (multiStep?.steps?.length) {
+      const step = multiStep.steps[multiStepIndex];
+      const correct = answersMatch(effectiveInput, step.answer, step.tolerance ?? 1e-9);
+      setSelected(0);
+      setIsCorrect(correct);
+      if (mode === "student") onImmediateAnswer?.(effectiveInput, correct);
+      if (correct) {
+        const isLastStep = multiStepIndex === multiStep.steps.length - 1;
+        if (!isLastStep) {
+          setTimeout(() => { advanceMultiStep(step.question ?? "", effectiveInput, true); }, 800);
+        } else {
+          if (mode === "student") {
+            const result = await recordAttempt({ text: effectiveInput }, true);
+            setTimeout(() => { onStudentNext?.(result); }, 2000);
+          }
+          if (mode === "editor") setTimeout(() => { loadNextEditorPreview(); }, 1000);
+        }
+      }
+      return;
+    }
+
+    // Single-answer mode
+    if (!correctInputAnswer) return;
+    const correct = answersMatch(effectiveInput, correctInputAnswer.text, answerTolerance);
+    const answerObj = { text: effectiveInput };
+    setSelected(0);
+    setIsCorrect(correct);
+    if (mode === "student") {
+      onImmediateAnswer?.(effectiveInput, correct);
+      const result = await recordAttempt(answerObj, correct);
+      if (correct) {
+        setTimeout(() => { onStudentNext?.(result); }, 2000);
+      } else {
+        setShowIncorrectFeedback(true);
+        setBackendResult(result);
+      }
+    }
+    if (mode === "editor" && correct) {
+      setTimeout(() => { loadNextEditorPreview(); }, 1000);
+    }
+  }
+
+  async function handleLogSubmit() {
+    const effectiveInput = logInput.trim();
+    const m = effectiveInput.replace(/\s/g, "").match(/^log_?(\d+(?:\.\d+)?)\((.+)\)$/i);
+    if (!m) {
+      setFormatError("Enter as log_2(10) — include the base and argument");
+      return;
+    }
+    setFormatError(null);
+
+    // Multi-step mode
+    const multiStep = preview?.multi_step;
+    if (multiStep?.steps?.length) {
+      const step = multiStep.steps[multiStepIndex];
+      const correct = answersMatch(effectiveInput, step.answer, step.tolerance ?? 1e-9);
+      setSelected(0);
+      setIsCorrect(correct);
+      if (mode === "student") onImmediateAnswer?.(effectiveInput, correct);
+      if (correct) {
+        const isLastStep = multiStepIndex === multiStep.steps.length - 1;
+        if (!isLastStep) {
+          setTimeout(() => { advanceMultiStep(step.question ?? "", effectiveInput, true); }, 800);
+        } else {
+          if (mode === "student") {
+            const result = await recordAttempt({ text: effectiveInput }, true);
+            setTimeout(() => { onStudentNext?.(result); }, 2000);
+          }
+          if (mode === "editor") setTimeout(() => { loadNextEditorPreview(); }, 1000);
+        }
+      }
+      return;
+    }
+
+    // Single-answer mode
     if (!correctInputAnswer) return;
     const correct = answersMatch(effectiveInput, correctInputAnswer.text, answerTolerance);
     const answerObj = { text: effectiveInput };
@@ -885,6 +1012,7 @@ export function PreviewPanel({
   const correctInputAnswer = answers.find((a: any) => a?.correct);
   const inputAnswerMeta = answers.find((a: any) => a?.input_type === "text");
   const answerFormat = (isMultiStep ? activeStep?.answer_format : null) ?? inputAnswerMeta?.answer_format ?? null;
+  const answerUnit = (isMultiStep ? activeStep?.answer_unit : null) ?? (inputAnswerMeta as any)?.answer_unit ?? null;
   const DEFAULT_FORMAT_INSTRUCTIONS: Record<string, string> = {
     fraction:        "Enter as a fraction, e.g. 3/5",
     integer:         "Enter a whole number, e.g. 42",
@@ -893,6 +1021,7 @@ export function PreviewPanel({
     percent:         "Enter as a percentage, e.g. 35%",
     equation:        "Enter e.g. x^-3 or 1/x^3 — press ^ or xⁿ for the power, / for a fraction",
     proper_fraction: "Enter as a whole number, proper fraction (e.g. 3/4), or mixed number (e.g. 2 1/3)",
+    log:             "Enter your answer in the form: log_2(10)",
   };
   const formatInstruction = activeStep?.format_instruction
     ?? inputAnswerMeta?.format_instruction
@@ -923,15 +1052,24 @@ export function PreviewPanel({
       ))}
 
       {diagramSvg && (
-        <div
-          dangerouslySetInnerHTML={{
-            __html: diagramSvg.replace(
-              "<svg ",
-              '<svg style="width:100%;height:auto;display:block;" '
-            ),
-          }}
-          style={{ width: "100%", marginBottom: 8 }}
-        />
+        preview?.diagram_code?.startsWith("UnitCircle(") ? (
+          <iframe
+            srcDoc={diagramSvg}
+            sandbox="allow-scripts"
+            style={{ width: "100%", height: 440, border: "none", display: "block", marginBottom: 8 }}
+            title="Unit circle diagram"
+          />
+        ) : (
+          <div
+            dangerouslySetInnerHTML={{
+              __html: diagramSvg.replace(
+                "<svg ",
+                '<svg style="width:100%;height:auto;display:block;" '
+              ),
+            }}
+            style={{ width: "100%", marginBottom: 8 }}
+          />
+        )
       )}
 
       {stepQuestion && (
@@ -965,12 +1103,15 @@ export function PreviewPanel({
             })}
           </div>
           {selected === null && (
-            <button
-              className="btn btn-outline-secondary btn-sm mt-2"
-              onClick={handleIDontKnowMultiStep}
-            >
-              I don't know
-            </button>
+            <div className="d-flex gap-2 align-items-center mt-2">
+              <button
+                className="btn btn-outline-secondary btn-sm"
+                onClick={handleIDontKnowMultiStep}
+              >
+                I don't know
+              </button>
+              {extraInputActions}
+            </div>
           )}
           </>
         ) : isInputMode ? (
@@ -990,6 +1131,22 @@ export function PreviewPanel({
                   onSubmit={handleTextSubmit}
                   disabled={inputsDisabled}
                   autoFocus={mode === "student"}
+                />
+              ) : answerFormat === "log" ? (
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. log_2(10)"
+                  value={logInput}
+                  onChange={e => {
+                    setLogInput(e.target.value);
+                    setFormatError(null);
+                    if (isCorrect === false) { setSelected(null); setIsCorrect(null); }
+                  }}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleLogSubmit(); } }}
+                  disabled={inputsDisabled}
+                  autoFocus={mode === "student"}
+                  style={{ width: 160, textAlign: "center", backgroundColor: inputsDisabled ? "#f8f9fa" : "#fff9c4" }}
                 />
               ) : answerFormat === "surd" ? (
                 <>
@@ -1045,9 +1202,16 @@ export function PreviewPanel({
                 ref={textInputRef}
               />
               )}
+              {answerUnit && (
+                <span style={{ fontSize: 16, userSelect: "none" }}>
+                  {answerUnit.split("^").map((part: string, i: number) =>
+                    i === 0 ? part : <sup key={i}>{part}</sup>
+                  )}
+                </span>
+              )}
               <button
                 className="btn btn-primary btn-sm"
-                onClick={answerFormat === "surd" ? handleSurdSubmit : handleTextSubmit}
+                onClick={answerFormat === "surd" ? handleSurdSubmit : answerFormat === "log" ? handleLogSubmit : handleTextSubmit}
                 disabled={inputsDisabled}
               >
                 Submit
@@ -1069,6 +1233,7 @@ export function PreviewPanel({
                   I don't know
                 </button>
               )}
+              {extraInputActions}
             </div>
             {formatError && (
               <div className="text-danger mt-1" style={{ fontSize: 18 }}>{formatError}</div>
@@ -1078,6 +1243,19 @@ export function PreviewPanel({
                 Input format: <code>{formatInstruction}</code>
               </div>
             )}
+            {answerFormat === "log" && (() => {
+              const t = logInput.replace(/\s/g, "");
+              const m = t.match(/^log_?(\d+(?:\.\d+)?)\((.+)\)$/i);
+              if (!m) return null;
+              let html = "";
+              try { html = katex.renderToString(`\\boldsymbol{\\log_{${m[1]}}(${m[2]})}`, { throwOnError: false }); }
+              catch { return null; }
+              return (
+                <div className="mt-1" style={{ fontSize: 18 }}>
+                  Your answer: <span dangerouslySetInnerHTML={{ __html: html }} />
+                </div>
+              );
+            })()}
           </div>
         ) : (
           <>
@@ -1127,6 +1305,7 @@ export function PreviewPanel({
                 I don't know
               </button>
             )}
+            {selected === null && extraInputActions}
           </div>
           </>
         )
@@ -1181,6 +1360,7 @@ export function PreviewPanel({
             >
               I don't know
             </button>
+            {extraInputActions}
           </div>
         </div>
       )}
@@ -1251,7 +1431,7 @@ export function PreviewPanel({
                   )}
                   {k.diagram_svg && (
                     <div style={{ display: "flex", justifyContent: "center", width: "100%", margin: "8px 0" }}>
-                      <div dangerouslySetInnerHTML={{ __html: k.diagram_svg }} />
+                      <div dangerouslySetInnerHTML={{ __html: k.diagram_svg.replace("<svg ", '<svg style="width:90%;height:auto;display:block;" ') }} />
                     </div>
                   )}
                   {k.text_2 && (
@@ -1306,10 +1486,6 @@ export function PreviewPanel({
         <div className="alert alert-info mt-2 p-2">
           Added to tutor review list
         </div>
-      )}
-
-      {extraInputActions && (
-        <div className="mt-3">{extraInputActions}</div>
       )}
 
       {mode === "student" && effectiveTemplateId && (

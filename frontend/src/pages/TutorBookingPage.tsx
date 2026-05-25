@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { ExistingBookingsWeek } from "./components/ExistingBookingsWeek";
 import { apiFetch } from "../utils/apiFetch";
@@ -24,6 +24,7 @@ interface WeekData {
 
 export function TutorBookingPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [students, setStudents] = useState<StudentInfo[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [week1, setWeek1] = useState<WeekData | null>(null);
@@ -121,7 +122,7 @@ export function TutorBookingPage() {
   const handleBookingAction = async (
     bookingId: number,
     bookingType: string,
-    action: "create" | "confirm" | "delete" | "skip" | "remove_skip" | "edit",
+    action: "create" | "confirm" | "delete" | "skip" | "remove_skip" | "edit" | "complete",
     extra: any = {}
   ) => {
     try {
@@ -132,7 +133,7 @@ export function TutorBookingPage() {
           id: bookingId,
           type: bookingType,
           action,
-          ...extra,   // <‑‑ weekly/adhoc edit fields go here
+          ...extra,
         }),
       });
 
@@ -140,6 +141,11 @@ export function TutorBookingPage() {
 
       if (!data.ok) {
         setMessage(data.error || "Action failed.");
+        return;
+      }
+
+      if (action === "complete" && data.job_id) {
+        navigate(`/tutors/${id}/post-tuition/review?student_id=${data.student_id}&job_id=${data.job_id}`);
         return;
       }
 
@@ -154,7 +160,8 @@ export function TutorBookingPage() {
       } else if (action === "remove_skip") {
         setMessage("Skip removed.");
       } else if (action === "edit") {
-        setMessage("Booking updated.");
+        const name = data.student_name;
+        setMessage(name ? `A confirmation message has been sent to ${name}.` : "Booking updated.");
       }
       setEditing(null);
 

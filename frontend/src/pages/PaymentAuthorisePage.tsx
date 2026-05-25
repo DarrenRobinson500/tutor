@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { apiFetch } from "../utils/apiFetch";
+import { dashboardPath } from "../utils/dashboardPath";
 import "./PaymentAuthorisePage.css";
 
 interface PaymentDetail {
@@ -17,7 +18,9 @@ interface PaymentDetail {
   distributor_amount: string;
   total_amount: string;
   rating: number | null;
-  card_info: { brand: string; last4: string } | null;
+  bank_bsb: string;
+  bank_account: string;
+  bank_name: string;
 }
 
 function fmtDate(iso: string) {
@@ -51,6 +54,20 @@ function StarRating({ value, onChange }: { value: number; onChange: (n: number) 
   );
 }
 
+function paymentRef(childName: string) {
+  const parts = childName.trim().split(/\s+/);
+  return `TUT_${(parts[0] + (parts[1]?.[0] ?? "")).toUpperCase()}`;
+}
+
+function CopyIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
 export function PaymentAuthorisePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -63,6 +80,14 @@ export function PaymentAuthorisePage() {
   const [comment, setComment] = useState("");
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState("");
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  function copyField(key: string, value: string) {
+    navigator.clipboard.writeText(value).then(() => {
+      setCopiedField(key);
+      setTimeout(() => setCopiedField((cur) => cur === key ? null : cur), 1500);
+    });
+  }
 
   useEffect(() => {
     apiFetch(`/api/payments/${id}/`)
@@ -92,8 +117,6 @@ export function PaymentAuthorisePage() {
 
     if (res.ok && data.success) {
       navigate(`/payments/${id}/receipt`);
-    } else if (res.status === 402) {
-      setPayError("Your card was declined. Please update your payment details.");
     } else {
       setPayError(data.message || data.error || "Something went wrong.");
     }
@@ -123,7 +146,7 @@ export function PaymentAuthorisePage() {
   return (
     <div className="pa-page">
       <nav className="pa-nav">
-        <Link to="/" className="pa-nav-logo">
+        <Link to={dashboardPath()} className="pa-nav-logo">
           <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" />
         </Link>
       </nav>
@@ -200,29 +223,63 @@ export function PaymentAuthorisePage() {
                 <span>{currency(payment.total_amount)}</span>
               </div>
             </div>
+          </div>
 
-            {payment.card_info && (
-              <p className="pa-card-note">
-                Charged to {payment.card_info.brand.charAt(0).toUpperCase() + payment.card_info.brand.slice(1)} ···· {payment.card_info.last4}
-              </p>
-            )}
+          {/* Bank transfer instructions */}
+          <div className="pa-section">
+            <div className="pa-label">Bank transfer details</div>
+            <p style={{ marginBottom: "0.75rem", fontSize: 14, color: "var(--sm-text-muted)" }}>
+              Please transfer {currency(payment.total_amount)} to the account below, then click
+              "I've paid" to confirm.
+            </p>
+            <div className="pa-breakdown">
+              <div className="pa-breakdown-row pa-copy-row">
+                <span className="pa-copy-label">Account name</span>
+                <span className="pa-copy-value">
+                  <span style={{ fontWeight: 600 }}>{payment.bank_name || "SubjectMatter"}</span>
+                  <button className="pa-copy-btn" onClick={() => copyField("name", payment.bank_name || "SubjectMatter")} aria-label="Copy account name">
+                    {copiedField === "name" ? <span className="pa-copied">Copied!</span> : <CopyIcon />}
+                  </button>
+                </span>
+              </div>
+              {payment.bank_bsb && (
+                <div className="pa-breakdown-row pa-copy-row">
+                  <span className="pa-copy-label">BSB</span>
+                  <span className="pa-copy-value">
+                    <span style={{ fontWeight: 600, fontFamily: "monospace" }}>{payment.bank_bsb}</span>
+                    <button className="pa-copy-btn" onClick={() => copyField("bsb", payment.bank_bsb)} aria-label="Copy BSB">
+                      {copiedField === "bsb" ? <span className="pa-copied">Copied!</span> : <CopyIcon />}
+                    </button>
+                  </span>
+                </div>
+              )}
+              {payment.bank_account && (
+                <div className="pa-breakdown-row pa-copy-row">
+                  <span className="pa-copy-label">Account number</span>
+                  <span className="pa-copy-value">
+                    <span style={{ fontWeight: 600, fontFamily: "monospace" }}>{payment.bank_account}</span>
+                    <button className="pa-copy-btn" onClick={() => copyField("account", payment.bank_account)} aria-label="Copy account number">
+                      {copiedField === "account" ? <span className="pa-copied">Copied!</span> : <CopyIcon />}
+                    </button>
+                  </span>
+                </div>
+              )}
+              <div className="pa-breakdown-row pa-copy-row">
+                <span className="pa-copy-label">Reference</span>
+                <span className="pa-copy-value">
+                  <span style={{ fontWeight: 600, fontFamily: "monospace" }}>{paymentRef(payment.child_name)}</span>
+                  <button className="pa-copy-btn" onClick={() => copyField("ref", paymentRef(payment.child_name))} aria-label="Copy reference">
+                    {copiedField === "ref" ? <span className="pa-copied">Copied!</span> : <CopyIcon />}
+                  </button>
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Errors */}
           {payError && (
             <div className="sm-alert sm-alert-error" style={{ marginBottom: "1rem" }}>
               {payError}
-              {payError.includes("declined") && (
-                <div style={{ marginTop: 8 }}>
-                  <button
-                    className="sm-btn-secondary"
-                    style={{ fontSize: 13 }}
-                    onClick={() => navigate(`/payments/${id}/retry`)}
-                  >
-                    Update card
-                  </button>
-                </div>
-              )}
             </div>
           )}
 
@@ -233,7 +290,7 @@ export function PaymentAuthorisePage() {
               onClick={handlePay}
               disabled={paying}
             >
-              {paying ? "Processing…" : `Pay ${currency(payment.total_amount)}`}
+              {paying ? "Confirming…" : "I've paid"}
             </button>
             <button
               className="sm-btn-ghost"
