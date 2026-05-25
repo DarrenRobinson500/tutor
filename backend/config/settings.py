@@ -193,11 +193,32 @@ LOGGING = {
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Celery
+from celery.schedules import crontab
+
 CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 CELERY_TIMEZONE = "Australia/Sydney"
 CELERY_ENABLE_UTC = False
+
+CELERY_BEAT_SCHEDULE = {
+    'run-sms-jobs': {
+        'task': 'backend.tasks.run_sms_jobs',
+        'schedule': 60.0,
+    },
+    'create-post-session-jobs': {
+        'task': 'backend.tasks.create_post_session_jobs',
+        'schedule': 300.0,
+    },
+    'create-weekly-session-jobs': {
+        'task': 'backend.tasks.create_weekly_session_jobs',
+        'schedule': crontab(hour=20, minute=0),  # 8pm UTC = 6am AEST
+    },
+    'record-weekly-progress-snapshots': {
+        'task': 'backend.tasks.record_weekly_progress_snapshots',
+        'schedule': crontab(hour=12, minute=0, day_of_week='sunday'),  # 12pm UTC = 10pm AEST Sunday
+    },
+}
 
 # Email
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")

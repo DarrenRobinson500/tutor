@@ -1,6 +1,4 @@
 from django.contrib import admin
-from django_celery_beat.models import PeriodicTasks
-
 from .models import *
 
 admin.site.register([User, ])
@@ -8,7 +6,7 @@ admin.site.register([BookingWeekly, WeeklyProgressSnapshot, Payment])
 admin.site.register([TutorAvailability, TutorProfile, TutorStudent, StudentProfile, DistributorProfile])
 admin.site.register([TeacherProfile, TeacherClass, TeacherClassStudent])
 admin.site.register([ClassAssessment, AssessmentStudentResult])
-admin.site.register([Skill, Note, Year, PeriodicTasks])
+admin.site.register([Skill, Note, Year])
 
 @admin.register(Template)
 class TemplateAdmin(admin.ModelAdmin):
