@@ -31,6 +31,9 @@ COPY backend/ /app/backend/
 RUN mkdir -p /app/backend/staticfiles/frontend && \
     cp -r /app/frontend/build/. /app/backend/staticfiles/frontend/
 
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 WORKDIR /app/backend
 RUN python manage.py collectstatic --noinput
 
