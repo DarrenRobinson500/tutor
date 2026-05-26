@@ -156,15 +156,15 @@ export function AssessmentQuestionPage() {
               sessionTemplateIds={sessionTemplateIds}
               onStudentNext={handleStudentNext}
               disableOnWrong
+              extraInputActions={
+                <button
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() => setShowCalculator(v => !v)}
+                >
+                  {showCalculator ? "Hide calculator" : "Show calculator"}
+                </button>
+              }
             />
-            <div className="mt-3">
-              <button
-                className="btn btn-outline-secondary btn-sm"
-                onClick={() => setShowCalculator(v => !v)}
-              >
-                {showCalculator ? "Hide calculator" : "Show calculator"}
-              </button>
-            </div>
             {showCalculator && (
               <DraggableCalculator onClose={() => setShowCalculator(false)} />
             )}

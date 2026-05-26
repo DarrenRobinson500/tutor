@@ -5728,7 +5728,7 @@ class TestViewSet(viewsets.ViewSet):
                 .filter(is_detail=False)
                 .annotate(non_detail_children=_Count('children', filter=_Q(children__is_detail=False)))
                 .filter(non_detail_children=0)
-                .order_by('code')
+                .order_by('order_index')
             )
             if year_level:
                 skill_codes = [s.code for s in all_leaf if _skill_matches_year(s, year_level)]

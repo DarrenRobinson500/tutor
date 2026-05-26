@@ -84,6 +84,176 @@ function PendingPaymentBanner({ payments, onPay }: { payments: PendingPayment[];
   );
 }
 
+/* ── Assessments tab ─────────────────────────────────────────── */
+
+interface SkillResult {
+  skill_description: string;
+  highest_difficulty_reached: string;
+  questions_asked: number;
+  questions_correct: number;
+}
+
+interface TestSession {
+  id: number;
+  started_at: string;
+  completed_at: string | null;
+  status: string;
+  test_type?: string;
+  skill_results: SkillResult[];
+}
+
+const DIFFICULTY_COLOR: Record<string, string> = {
+  easy: "#198754", medium: "#fd7e14", hard: "#dc3545", none: "#adb5bd",
+};
+
+const TYPE_BADGE: Record<string, [string, string]> = {
+  easy: ["bg-success", "Easy"], medium: ["bg-primary", "Moderate"], hard: ["bg-danger", "Hard"],
+};
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+}
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" });
+}
+function duration(start: string, end: string | null) {
+  if (!end) return "";
+  const mins = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000);
+  return mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
+
+function AssessmentsTab({ children }: { children: Child[] }) {
+  const [sessions, setSessions] = useState<Record<number, TestSession[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<number | null>(null);
+  const [downloading, setDownloading] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (children.length === 0) { setLoading(false); return; }
+    Promise.all(
+      children.map(c =>
+        apiFetch(`/api/tests/past/?student_id=${c.id}`)
+          .then(r => r.json())
+          .then((data: TestSession[]) => ({ id: c.id, data }))
+      )
+    ).then(results => {
+      const map: Record<number, TestSession[]> = {};
+      results.forEach(r => { map[r.id] = r.data; });
+      setSessions(map);
+      setLoading(false);
+    });
+  }, [children]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function downloadReport(sessionId: number) {
+    setDownloading(sessionId);
+    try {
+      const res = await apiFetch(`/api/tests/${sessionId}/report/`);
+      if (!res.ok) { alert("Failed to generate report"); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `progress_report_${sessionId}.pdf`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } finally { setDownloading(null); }
+  }
+
+  if (loading) return (
+    <div className="d-flex justify-content-center py-5">
+      <div className="spinner-border text-primary" role="status" />
+    </div>
+  );
+
+  const hasAny = children.some(c => (sessions[c.id] ?? []).length > 0);
+  if (!hasAny) return <p style={{ color: "var(--sm-text-muted)" }}>No completed assessments yet.</p>;
+
+  return (
+    <div className="d-flex flex-column gap-4">
+      {children.map(child => {
+        const childSessions = sessions[child.id] ?? [];
+        if (childSessions.length === 0) return null;
+        return (
+          <section key={child.id}>
+            <h3 style={{ fontFamily: "var(--font-display, Lora, serif)", fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.75rem" }}>
+              {child.first_name} {child.last_name}
+            </h3>
+            <div className="d-flex flex-column gap-2">
+              {childSessions.map(s => {
+                const isOpen = expanded === s.id;
+                const correct = s.skill_results.reduce((n, r) => n + r.questions_correct, 0);
+                const asked   = s.skill_results.reduce((n, r) => n + r.questions_asked, 0);
+                return (
+                  <div key={s.id} className="card">
+                    <button
+                      className="card-header border-0 bg-white d-flex justify-content-between align-items-center w-100 text-start"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => setExpanded(isOpen ? null : s.id)}
+                    >
+                      <div>
+                        <span className="fw-semibold">{fmtDate(s.started_at)}</span>
+                        <span className="text-muted ms-2" style={{ fontSize: 13 }}>{fmtTime(s.started_at)}</span>
+                        {s.completed_at && (
+                          <span className="text-muted ms-2" style={{ fontSize: 13 }}>· {duration(s.started_at, s.completed_at)}</span>
+                        )}
+                        {s.test_type && TYPE_BADGE[s.test_type] && (
+                          <span className={`badge ${TYPE_BADGE[s.test_type][0]} ms-2`} style={{ fontSize: 11 }}>{TYPE_BADGE[s.test_type][1]}</span>
+                        )}
+                        {s.status === "abandoned" && (
+                          <span className="badge bg-secondary ms-2" style={{ fontSize: 11 }}>Abandoned</span>
+                        )}
+                      </div>
+                      <div className="d-flex align-items-center gap-3">
+                        <span className="text-muted" style={{ fontSize: 13 }}>
+                          {correct}/{asked} correct · {s.skill_results.length} skill{s.skill_results.length !== 1 ? "s" : ""}
+                        </span>
+                        <button
+                          className="btn btn-outline-primary btn-sm"
+                          style={{ fontSize: 12, padding: "2px 8px" }}
+                          disabled={downloading === s.id}
+                          onClick={e => { e.stopPropagation(); downloadReport(s.id); }}
+                        >
+                          {downloading === s.id ? "…" : "PDF"}
+                        </button>
+                        <span>{isOpen ? "▲" : "▼"}</span>
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div className="card-body p-0">
+                        <table className="table table-sm mb-0">
+                          <thead className="table-light">
+                            <tr>
+                              <th>Skill</th>
+                              <th style={{ width: 110 }}>Difficulty</th>
+                              <th style={{ width: 110 }}>Score</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {s.skill_results.map((r, i) => (
+                              <tr key={i}>
+                                <td style={{ fontSize: 13 }}>{r.skill_description || "—"}</td>
+                                <td>
+                                  <span className="badge" style={{ background: DIFFICULTY_COLOR[r.highest_difficulty_reached] ?? "#adb5bd", fontSize: 11 }}>
+                                    {r.highest_difficulty_reached || "none"}
+                                  </span>
+                                </td>
+                                <td style={{ fontSize: 13 }}>{r.questions_correct}/{r.questions_asked}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ParentHomePage() {
   const navigate = useNavigate();
   const [data, setData] = useState<ParentData | null>(null);
@@ -93,6 +263,7 @@ export default function ParentHomePage() {
   const [launchingFor, setLaunchingFor] = useState<number | null>(null);
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
+  const [tab, setTab] = useState<"overview" | "assessments">("overview");
 
   useEffect(() => {
     apiFetch("/api/auth/parent_home/")
@@ -216,6 +387,7 @@ export default function ParentHomePage() {
   }
 
   const { parent, children } = data;
+  const hasTutor = children.some(c => c.tutor_name);
 
   return (
     <div className="ph-page">
@@ -228,8 +400,8 @@ export default function ParentHomePage() {
           </Link>
           <div className="ph-nav-links">
             <Link to={`/parents/${parent.id}`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Dashboard</Link>
-            <Link to={`/parents/${parent.id}/bookings`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Bookings</Link>
-            <Link to={`/parents/${parent.id}/payments`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Payments</Link>
+            {hasTutor && <Link to={`/parents/${parent.id}/bookings`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Bookings</Link>}
+            {hasTutor && <Link to={`/parents/${parent.id}/payments`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Payments</Link>}
           </div>
         </div>
         <div className="ph-nav-right">
@@ -245,51 +417,78 @@ export default function ParentHomePage() {
         </div>
       </header>
 
+      {/* ── Tabs ─────────────────────────────────── */}
+      <div className="ph-body" style={{ paddingBottom: 0 }}>
+        <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--sm-border-light, #E8E0D6)" }}>
+          {(["overview", "assessments"] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                padding: "0.6rem 1.25rem",
+                fontFamily: "var(--font-body, Inter, sans-serif)",
+                fontSize: "0.9rem", fontWeight: tab === t ? 600 : 400,
+                color: tab === t ? "var(--sm-orange, #FF8C42)" : "var(--sm-text-muted, #8A7F74)",
+                borderBottom: tab === t ? "2px solid var(--sm-orange, #FF8C42)" : "2px solid transparent",
+                marginBottom: "-2px",
+              }}
+            >
+              {t === "overview" ? "Overview" : "Assessments"}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ── Body ─────────────────────────────────── */}
       <main className="ph-body">
 
-        {/* Pending payment banner */}
-        <PendingPaymentBanner
-          payments={pendingPayments}
-          onPay={(id) => navigate(`/payments/${id}/authorise`)}
-        />
-
-        {/* Children section */}
-        <div className="ph-section-heading">
-          <h2 className="ph-section-title">Your children</h2>
-        </div>
-
-        {children.length === 0 ? (
-          <p style={{ color: "var(--sm-text-muted)", marginBottom: "var(--space-6)" }}>
-            No children registered yet. Add one below.
-          </p>
-        ) : (
-          <div className="ph-children-grid">
-            {children.map((child) => (
-              <ChildCard
-                key={child.id}
-                child={child}
-                parentId={parent.id}
-                launching={launchingFor === child.id}
-                onLaunchAssessment={() => handleLaunchAssessment(child.id)}
-                onFindTutor={() => handleFindTutor(child)}
-                onRemoveTutor={() => handleRemoveTutor(child.id)}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Add child */}
-        {!showAddChild ? (
-          <button className="ph-add-child-btn" onClick={() => setShowAddChild(true)}>
-            + Register another child
-          </button>
-        ) : (
-          <AddChildForm
-            onAdded={onChildAdded}
-            onCancel={() => setShowAddChild(false)}
+        {tab === "overview" && <>
+          {/* Pending payment banner */}
+          <PendingPaymentBanner
+            payments={pendingPayments}
+            onPay={(id) => navigate(`/payments/${id}/authorise`)}
           />
-        )}
+
+          {/* Children section */}
+          <div className="ph-section-heading">
+            <h2 className="ph-section-title">Your children</h2>
+          </div>
+
+          {children.length === 0 ? (
+            <p style={{ color: "var(--sm-text-muted)", marginBottom: "var(--space-6)" }}>
+              No children registered yet. Add one below.
+            </p>
+          ) : (
+            <div className="ph-children-grid">
+              {children.map((child) => (
+                <ChildCard
+                  key={child.id}
+                  child={child}
+                  parentId={parent.id}
+                  launching={launchingFor === child.id}
+                  onLaunchAssessment={() => handleLaunchAssessment(child.id)}
+                  onFindTutor={() => handleFindTutor(child)}
+                  onRemoveTutor={() => handleRemoveTutor(child.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Add child */}
+          {!showAddChild ? (
+            <button className="ph-add-child-btn" onClick={() => setShowAddChild(true)}>
+              + Register another child
+            </button>
+          ) : (
+            <AddChildForm
+              onAdded={onChildAdded}
+              onCancel={() => setShowAddChild(false)}
+            />
+          )}
+        </>}
+
+        {tab === "assessments" && <AssessmentsTab children={children} />}
 
       </main>
     </div>

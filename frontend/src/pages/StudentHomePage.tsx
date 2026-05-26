@@ -291,6 +291,7 @@ export function StudentHomePage() {
 
             // Time-lock: if the student has at least 1 star, they must wait 6 days
             // from when that level was achieved before they can learn again.
+            const hasMaxStars = Math.round(masteryLevel) >= 6;
             let lockedUntil: Date | null = null;
             if (!isParent && masteryLevel >= 1 && masteryEntry?.updated_at) {
               const updatedAt = new Date(masteryEntry.updated_at);
@@ -329,11 +330,11 @@ export function StudentHomePage() {
                       <button
                         className="btn btn-sm btn-outline-primary"
                         onClick={() => navigate(`/students/${id}/test/${skill.id}`)}
-                        title={lockedUntil ? `Next star available ${lockedUntil.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}` : undefined}
+                        title={lockedUntil && !hasMaxStars ? `Next star available ${lockedUntil.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}` : undefined}
                       >
-                        {lockedUntil
+                        {lockedUntil && !hasMaxStars
                           ? `Practice — next star ${lockedUntil.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`
-                          : "Learn"}
+                          : lockedUntil ? "Practice" : "Learn"}
                       </button>
                     ) : (
                       <button className="btn btn-sm btn-outline-secondary" disabled>

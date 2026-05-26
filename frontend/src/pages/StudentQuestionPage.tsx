@@ -86,7 +86,7 @@ export function StudentQuestionPage() {
         {current && (
           <div className="row justify-content-center align-items-start">
             <div className="col-md-5">
-              <h2>{skillName} ({competence}) {mastery}</h2>
+              <h2>{skillName}</h2>
               <div className="text-muted small">Template #{templateId}</div>
               <hr/>
               <PreviewPanel
@@ -102,7 +102,7 @@ export function StudentQuestionPage() {
                     return;
                   }
                   if (!result.next_question) {
-                    setLoadError("Unable to load the next question. Please go back and try again.");
+                    setLoadError(`Unable to load the next question (Template #${result.template_id ?? templateId}). Please go back and try again.`);
                     return;
                   }
                   const nextId = result.template_id;
