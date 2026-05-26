@@ -60,5 +60,7 @@ export interface StudentRecordResponse {
   correct?: boolean;
   loop_complete?: boolean;
   student_answer?: string;
+  new_star_earned?: boolean;
+  new_star_count?: number;
 }
 

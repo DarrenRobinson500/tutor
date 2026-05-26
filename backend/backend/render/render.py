@@ -794,16 +794,16 @@ def render_template_preview(parsed, template_id=None):
         preview_answers = []
 
     # question-level defaults for all input answers (new unified flat format)
-    _question_level_answer_format = None
-    _question_level_tolerance = None
-    _question_level_format_instruction = None
-    _question_level_answer_unit = None
+    _question_level_answer_format = raw_sub.get("answer_format")
+    _question_level_tolerance = raw_sub.get("tolerance")
+    _question_level_format_instruction = raw_sub.get("format_instruction")
+    _question_level_answer_unit = raw_sub.get("answer_unit")
     _q_block = raw_sub.get("question")
     if isinstance(_q_block, dict):
-        _question_level_answer_format = _q_block.get("answer_format")
-        _question_level_tolerance = _q_block.get("tolerance")
-        _question_level_format_instruction = _q_block.get("format_instruction")
-        _question_level_answer_unit = _q_block.get("answer_unit")
+        _question_level_answer_format = _q_block.get("answer_format") or _question_level_answer_format
+        _question_level_tolerance = _q_block.get("tolerance") or _question_level_tolerance
+        _question_level_format_instruction = _q_block.get("format_instruction") or _question_level_format_instruction
+        _question_level_answer_unit = _q_block.get("answer_unit") or _question_level_answer_unit
 
     answers = []
     for i, ans in enumerate(raw_answers):

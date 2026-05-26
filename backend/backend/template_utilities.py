@@ -644,22 +644,55 @@ def generate_first_question(request):
     print(f"  selected template id={template.id}")
     original_template_id = template.id  # keep for session tracking
 
-    # Translate for the student's preferred language
-    template = get_translated_template(template, user)
-
     # ---------------------------------------------------------
-    # GENERATE PREVIEW FOR THE FIRST QUESTION
+    # GENERATE PREVIEW — retry up to 3 times per template, then try
+    # up to 3 more templates from the pool before giving up.
     # ---------------------------------------------------------
-    preview = generate_preview_from_template_id(template.id)
+    from .models import Note as _Note
 
-    if not preview["ok"]:
+    tried_ids = set()
+    preview = None
+    chosen_original_id = original_template_id
+    render_template = get_translated_template(template, user)
+
+    for _tpl_attempt in range(4):
+        for _render_attempt in range(3):
+            preview = generate_preview_from_template_id(render_template.id)
+            if preview["ok"]:
+                break
+            print(f"  render attempt {_render_attempt + 1} failed for template {render_template.id}:", preview.get("error", "")[:200])
+
+        if preview and preview["ok"]:
+            break
+
+        # This template failed all 3 render attempts — flag it and try another
+        error_detail = preview.get("error", "") if preview else ""
+        print(f"  flagging template {template.id} as faulty after 3 render failures")
+        _Note.objects.get_or_create(
+            template=template,
+            category='auto_error',
+            defaults={"text": f"Failed to evaluate: {error_detail[:300]}" if error_detail else "Failed to evaluate"},
+        )
+        template.validated = False
+        template.save(update_fields=["validated"])
+
+        tried_ids.add(template.id)
+        template = pool_qs.exclude(id__in=tried_ids).order_by("?").first()
+        if not template:
+            break
+        chosen_original_id = template.id
+        render_template = get_translated_template(template, user)
+
+    if not (preview and preview["ok"]):
+        error_detail = preview.get("error", "") if preview else "No templates could be rendered"
+        print(f"  all templates exhausted for skill {skill_id!r}")
         return Response(
-            {"error": preview["error"], "template_id": template.id},
+            {"error": error_detail, "template_id": chosen_original_id},
             status=500
         )
 
     next_question = preview["preview"]
-    next_question["template_id"] = original_template_id  # track by English ID
+    next_question["template_id"] = chosen_original_id  # track by English ID
     next_question["skill"] = skill.description
 
     # ---------------------------------------------------------
@@ -672,7 +705,7 @@ def generate_first_question(request):
     return Response(
         {
             "ok": True,
-            "template_id": original_template_id,  # always the English template ID
+            "template_id": chosen_original_id,  # always the English template ID
             "mastery": comp_level,
             "competence_label": _ltl(comp_level),
             "next_difficulty": difficulty,

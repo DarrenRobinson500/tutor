@@ -55,6 +55,7 @@ interface RequestTutorFlowProps {
   tutors?: Tutor[];
   confirming?: boolean;
   requestingMobile?: boolean;
+  mobileSent?: boolean;
   onConfirm: (selection: TutorSelection) => void;
   onRequestMobile?: (tutorId: string) => void;
   onCancel?: () => void;
@@ -281,6 +282,7 @@ const RequestTutorFlow: React.FC<RequestTutorFlowProps> = ({
   tutors = MOCK_TUTORS,
   confirming = false,
   requestingMobile = false,
+  mobileSent = false,
   onConfirm,
   onRequestMobile,
   onCancel,
@@ -530,13 +532,34 @@ const RequestTutorFlow: React.FC<RequestTutorFlowProps> = ({
                     {confirming ? 'Saving…' : 'Confirm first session'}
                   </button>
                   {onRequestMobile && (
-                    <button
-                      className="sm-btn-secondary"
-                      onClick={() => onRequestMobile(pendingTutor.id)}
-                      disabled={requestingMobile || confirming}
-                    >
-                      {requestingMobile ? 'Sending…' : `Request ${pendingTutor.firstName}'s mobile`}
-                    </button>
+                    mobileSent ? (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.6rem',
+                        padding: '0.6rem 1rem',
+                        borderRadius: '8px',
+                        background: 'var(--sm-success-bg)',
+                        border: '1px solid #a5d6a7',
+                        color: 'var(--sm-success)',
+                        fontFamily: 'var(--font-body)',
+                        fontSize: 'var(--text-sm)',
+                        fontWeight: 500,
+                      }}>
+                        <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>✓</span>
+                        <span>
+                          We've sent {pendingTutor.firstName}'s number to your email.
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        className="sm-btn-secondary"
+                        onClick={() => onRequestMobile(pendingTutor.id)}
+                        disabled={requestingMobile || confirming}
+                      >
+                        {requestingMobile ? 'Sending…' : `Request ${pendingTutor.firstName}'s mobile`}
+                      </button>
+                    )
                   )}
                   <button className="sm-btn-ghost" onClick={() => { setPendingTutor(null); setSelectedSlot(null); setBookableSlots([]); setSlotErr(false); }}>
                     ← Go back

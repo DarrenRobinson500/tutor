@@ -1210,6 +1210,7 @@ class QuestionViewSet(viewsets.ViewSet):
         # RETURN RESPONSE
         # ---------------------------------------------------------
         comp_level = comp.level if comp else 0
+        new_star_earned = comp_level > prev_level
         response_data = {
             "ok": True,
             "question_id": q.id,
@@ -1220,6 +1221,8 @@ class QuestionViewSet(viewsets.ViewSet):
             "template_id": next_template.id if next_template else None,
             "correct": request.data.get("correct", False),
             "loop_complete": loop_complete,
+            "new_star_earned": new_star_earned,
+            "new_star_count": comp_level,
         }
         return Response(response_data, status=201)
 
@@ -1710,6 +1713,19 @@ class TemplateViewSet(viewsets.ModelViewSet):
         if not result.get("ok"):
             return Response({"error": result.get("error", "Preview failed")}, status=400)
         return Response(result.get("preview"))
+
+    @action(detail=True, methods=["post"], url_path="flag_faulty")
+    def flag_faulty(self, request, pk=None):
+        """POST /api/templates/:id/flag_faulty/ — mark a template as unvalidated and add a note."""
+        try:
+            template = Template.objects.get(pk=pk)
+        except Template.DoesNotExist:
+            return Response({"error": "Template not found"}, status=404)
+        template.validated = False
+        template.save(update_fields=["validated"])
+        if not template.notes.filter(text="Faulty template").exists():
+            Note.objects.create(template=template, text="Faulty template")
+        return Response({"ok": True})
 
     @action(detail=False, methods=["post"])
     def preview(self, request):

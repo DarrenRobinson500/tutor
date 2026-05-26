@@ -19,6 +19,7 @@ export default function RequestTutorPage() {
   const [tutors, setTutors] = useState<Tutor[] | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [requestingMobile, setRequestingMobile] = useState(false);
+  const [mobileSent, setMobileSent] = useState(false);
 
   useEffect(() => {
     apiFetch("/api/tutors/available/")
@@ -68,7 +69,7 @@ export default function RequestTutorPage() {
       if (!res.ok) {
         alert(d.error || "Could not send the request. Please try again.");
       } else {
-        alert("Done — we've sent the tutor's number to your email.");
+        setMobileSent(true);
       }
     } catch {
       alert("Something went wrong. Please try again.");
@@ -91,6 +92,7 @@ export default function RequestTutorPage() {
       tutors={tutors}
       confirming={confirming}
       requestingMobile={requestingMobile}
+      mobileSent={mobileSent}
       onConfirm={handleConfirm}
       onRequestMobile={handleRequestMobile}
       onCancel={handleCancel}

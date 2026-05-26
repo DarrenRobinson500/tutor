@@ -1,0 +1,126 @@
+/* ── Overlay ─────────────────────────────────────────────── */
+.sc-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, #fffbf5 0%, #fff5e8 55%, #ffddb0 100%);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── Content ─────────────────────────────────────────────── */
+.sc-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  pointer-events: none;
+}
+
+/* ── Burst container (star + sparkles) ───────────────────── */
+.sc-burst {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── The big star ─────────────────────────────────────────── */
+.sc-star {
+  position: relative;
+  z-index: 1;
+  font-size: 7.5rem;
+  line-height: 1;
+  color: var(--sm-amber);
+  filter:
+    drop-shadow(0 0 12px rgba(255, 202, 58, 0.8))
+    drop-shadow(0 0 28px rgba(255, 140, 66, 0.5));
+  animation: sc-star-pop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+/* ── Sparkles ─────────────────────────────────────────────── */
+.sc-sparkle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 3px;
+  transform-origin: 50% 50%;
+  animation: sc-sparkle-fly 0.85s ease-out var(--sc-delay, 0.15s) both;
+}
+
+/* ── Text ─────────────────────────────────────────────────── */
+.sc-heading {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: 700;
+  color: var(--sm-text);
+  margin: var(--space-2) 0 0;
+  text-align: center;
+  animation: sc-fade-up 0.5s ease 0.65s both;
+}
+
+.sc-count {
+  font-family: var(--font-body);
+  font-size: var(--text-xl);
+  color: var(--sm-text-secondary);
+  margin: 0;
+  text-align: center;
+  animation: sc-fade-up 0.5s ease 0.8s both;
+}
+
+.sc-hint {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--sm-text-muted);
+  margin: var(--space-6) 0 0;
+  text-align: center;
+  animation: sc-fade-up 0.4s ease 1.3s both;
+}
+
+/* ── Keyframes ───────────────────────────────────────────── */
+@keyframes sc-star-pop {
+  from  { transform: scale(0) rotate(-20deg); opacity: 0; }
+  60%   { transform: scale(1.28) rotate(6deg);  opacity: 1; }
+  80%   { transform: scale(0.93) rotate(-2deg); }
+  to    { transform: scale(1)    rotate(0deg);  opacity: 1; }
+}
+
+@keyframes sc-sparkle-fly {
+  from {
+    transform:
+      translateX(-50%)
+      translateY(-50%)
+      rotate(var(--sc-angle, 0deg))
+      translateX(0)
+      scale(1);
+    opacity: 1;
+  }
+  to {
+    transform:
+      translateX(-50%)
+      translateY(-50%)
+      rotate(var(--sc-angle, 0deg))
+      translateX(var(--sc-dist, 85px))
+      scale(0.2);
+    opacity: 0;
+  }
+}
+
+@keyframes sc-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* ── Mobile ──────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .sc-star    { font-size: 5.5rem; }
+  .sc-heading { font-size: var(--text-3xl); }
+  .sc-count   { font-size: var(--text-lg);  }
+  .sc-burst   { width: 140px; height: 140px; }
+}

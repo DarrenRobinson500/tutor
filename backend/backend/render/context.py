@@ -8,6 +8,7 @@ once.
 
 import math as _math
 import re as _re
+from ..maths.fractions import denominator as _denominator, numerator as _numerator
 
 
 # ── Utility helpers ──────────────────────────────────────────────────────────
@@ -436,6 +437,8 @@ MATH_CONTEXT = {
     # Number theory
     "gcd":              _gcd,
     "lcm":              _lcm,
+    "numerator":        _numerator,
+    "denominator":      _denominator,
     "lcm_expr":         _lcm_expr,
     "factorise_expr":   _factorise_expr,
     "factors":          _factors,

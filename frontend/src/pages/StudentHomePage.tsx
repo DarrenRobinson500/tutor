@@ -334,7 +334,7 @@ export function StudentHomePage() {
                       >
                         {lockedUntil && !hasMaxStars
                           ? `Practice — next star ${lockedUntil.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`
-                          : lockedUntil ? "Practice" : "Learn"}
+                          : lockedUntil ? "Practice" : "Practice"}
                       </button>
                     ) : (
                       <button className="btn btn-sm btn-outline-secondary" disabled>

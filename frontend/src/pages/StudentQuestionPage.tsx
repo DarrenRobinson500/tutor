@@ -4,8 +4,17 @@ import { Layout } from "./components/Layout";
 import { apiFetch } from "../utils/apiFetch";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { DraggableCalculator } from "./components/Calculator";
+import { StarCelebration } from "./components/StarCelebration";
 import type { PreviewResponse } from "../types/PreviewResponse";
 import type { StudentRecordResponse } from "../types/PreviewResponse";
+
+async function flagFaultyTemplate(id: number) {
+  try {
+    await apiFetch(`/api/templates/${id}/flag_faulty/`, { method: "POST" });
+  } catch {
+    // best-effort
+  }
+}
 
 export function StudentQuestionPage() {
   const { studentId, skillId } = useParams();
@@ -20,6 +29,7 @@ export function StudentQuestionPage() {
   const [sessionTemplateIds, setSessionTemplateIds] = useState<number[]>([]);
   const [showCalculator, setShowCalculator] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [celebration, setCelebration] = useState<{ starCount: number } | null>(null);
 
   useEffect(() => {
     async function loadInitial() {
@@ -38,7 +48,14 @@ export function StudentQuestionPage() {
       const data = await res.json();
 
       if (!data.next_question) {
-        console.error("No question returned:", data.error ?? data);
+        const faultyId = data.template_id;
+        if (faultyId) flagFaultyTemplate(faultyId);
+        const msg = data.error
+          ? `Unable to load question${faultyId ? ` (Template #${faultyId})` : ""}: ${data.error}`
+          : faultyId
+          ? `Unable to load the next question (Template #${faultyId}). Please go back and try again.`
+          : "Unable to load the next question. Please go back and try again.";
+        setLoadError(msg);
         setLoading(false);
         return;
       }
@@ -61,6 +78,15 @@ export function StudentQuestionPage() {
       <Layout>
         <div className="container mt-4">Loading question…</div>
       </Layout>
+    );
+  }
+
+  if (celebration) {
+    return (
+      <StarCelebration
+        starCount={celebration.starCount}
+        studentId={studentId!}
+      />
     );
   }
 
@@ -98,11 +124,17 @@ export function StudentQuestionPage() {
                 sessionTemplateIds={sessionTemplateIds}
                 onStudentNext={(result: StudentRecordResponse) => {
                   if (result.loop_complete) {
-                    navigate(`/students/${studentId}`);
+                    if (result.new_star_earned) {
+                      setCelebration({ starCount: result.new_star_count ?? result.mastery });
+                    } else {
+                      navigate(`/students/${studentId}`);
+                    }
                     return;
                   }
                   if (!result.next_question) {
-                    setLoadError(`Unable to load the next question (Template #${result.template_id ?? templateId}). Please go back and try again.`);
+                    const faultyId = result.template_id ?? templateId;
+                    if (faultyId) flagFaultyTemplate(faultyId);
+                    setLoadError(`Unable to load the next question (Template #${faultyId}). Please go back and try again.`);
                     return;
                   }
                   const nextId = result.template_id;
