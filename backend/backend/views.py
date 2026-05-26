@@ -88,19 +88,19 @@ def _send_parent_welcome_emails(parent, children_data):
     # Email to parent
     parent_body = (
         f"Hi {parent.first_name},\n\n"
-        f"Welcome to SubjectMatter! We're excited to have you on board.\n\n"
-        f"You can log back in at any time by visiting:\n"
-        f"  {site}\n\n"
-        f"Click \"Sign in\" and choose the Parent option, then enter your email address "
-        f"({parent.email}) and password.\n\n"
-        f"From your dashboard you can view your child's upcoming sessions, manage bookings, "
-        f"and keep track of payments.\n\n"
+        f"Welcome to Subject Matter! You're all set to get started.\n\n"
+        f"Log in any time at subject-matter.com.au — select Parent, then enter your email and password.\n\n"
+        f"From your dashboard you can:\n"
+        f"· View your child's upcoming sessions\n"
+        f"· Manage bookings\n"
+        f"· Track payments\n\n"
         f"If you have any questions, feel free to reply to this email.\n\n"
-        f"The SubjectMatter Team"
+        f"We're glad you're here.\n\n"
+        f"The Subject Matter Team"
     )
     try:
         send_mail(
-            subject="Welcome to SubjectMatter",
+            subject="Welcome to Subject Matter",
             message=parent_body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[parent.email],
@@ -416,7 +416,8 @@ class AuthViewSet(viewsets.ViewSet):
         )
         from .models import AdminJob
         AdminJob.objects.create(job_type='approve_tutor', subject=tutor_user)
-        _send_tutor_welcome_email(tutor_user)
+        import threading
+        threading.Thread(target=_send_tutor_welcome_email, args=(tutor_user,), daemon=True).start()
         TutorJob.objects.create(
             tutor=tutor_user,
             job_type='set_fee',
@@ -711,9 +712,12 @@ class AuthViewSet(viewsets.ViewSet):
             })
 
         if not user.welcome_email_sent:
-            _send_parent_welcome_emails(user, children_data)
             user.welcome_email_sent = True
             user.save(update_fields=["welcome_email_sent"])
+            import threading
+            threading.Thread(
+                target=_send_parent_welcome_emails, args=(user, children_data), daemon=True
+            ).start()
 
         return Response({
             "parent": {
