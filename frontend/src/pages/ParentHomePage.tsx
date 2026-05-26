@@ -92,6 +92,7 @@ export default function ParentHomePage() {
   const [showAddChild, setShowAddChild] = useState(false);
   const [launchingFor, setLaunchingFor] = useState<number | null>(null);
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
+  const [isFirstVisit, setIsFirstVisit] = useState(false);
 
   useEffect(() => {
     apiFetch("/api/auth/parent_home/")
@@ -99,7 +100,14 @@ export default function ParentHomePage() {
         if (!res.ok) throw new Error("Not authorised");
         return res.json();
       })
-      .then((d) => setData(d))
+      .then((d) => {
+        const key = `parent_visited_${d.parent.id}`;
+        if (!localStorage.getItem(key)) {
+          setIsFirstVisit(true);
+          localStorage.setItem(key, "1");
+        }
+        setData(d);
+      })
       .catch(() => {
         setError("Unable to load dashboard. Please try signing in again.");
       })
@@ -214,13 +222,18 @@ export default function ParentHomePage() {
 
       {/* ── Navbar ───────────────────────────────── */}
       <nav className="ph-nav">
-        <Link to={dashboardPath()} className="ph-nav-logo">
-          <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" />
-        </Link>
+        <div className="ph-nav-left">
+          <Link to={dashboardPath()} className="ph-nav-logo">
+            <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" />
+          </Link>
+          <div className="ph-nav-links">
+            <Link to={`/parents/${parent.id}`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Dashboard</Link>
+            <Link to={`/parents/${parent.id}/bookings`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Bookings</Link>
+            <Link to={`/parents/${parent.id}/payments`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Payments</Link>
+          </div>
+        </div>
         <div className="ph-nav-right">
           <span className="ph-nav-user">{parent.first_name} {parent.last_name}</span>
-          <Link to={`/parents/${parent.id}/bookings`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Bookings</Link>
-          <Link to={`/parents/${parent.id}/payments`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Payments</Link>
           <button className="ph-nav-logout" onClick={handleLogout}>Sign out</button>
         </div>
       </nav>
@@ -228,7 +241,7 @@ export default function ParentHomePage() {
       {/* ── Header ───────────────────────────────── */}
       <header className="ph-header">
         <div className="ph-header-inner">
-          <h1 className="ph-greeting">Welcome back, {parent.first_name}.</h1>
+          <h1 className="ph-greeting">{isFirstVisit ? `Welcome ${parent.first_name}.` : `Welcome back, ${parent.first_name}.`}</h1>
         </div>
       </header>
 

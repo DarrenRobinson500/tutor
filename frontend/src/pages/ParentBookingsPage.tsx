@@ -144,12 +144,18 @@ export function ParentBookingsPage() {
   return (
     <div className="ph-page">
       <nav className="ph-nav">
-        <Link to={dashboardPath()} className="ph-nav-logo">
-          <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" />
-        </Link>
+        <div className="ph-nav-left">
+          <Link to={dashboardPath()} className="ph-nav-logo">
+            <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" />
+          </Link>
+          <div className="ph-nav-links">
+            <Link to={`/parents/${id}`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Dashboard</Link>
+            <Link to={`/parents/${id}/bookings`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Bookings</Link>
+            <Link to={`/parents/${id}/payments`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Payments</Link>
+          </div>
+        </div>
         <div className="ph-nav-right">
           {parentName && <span className="ph-nav-user">{parentName}</span>}
-          <Link to={`/parents/${id}`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Dashboard</Link>
           <button className="ph-nav-logout" onClick={handleLogout}>Sign out</button>
         </div>
       </nav>

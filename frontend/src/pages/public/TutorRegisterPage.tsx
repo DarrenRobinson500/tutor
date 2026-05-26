@@ -189,6 +189,14 @@ export default function TutorRegisterPage() {
               <div className="sm-form-group">
                 <label>Year levels you can tutor</label>
                 <div className="reg-checkboxes">
+                  <button
+                    type="button"
+                    className="reg-checkbox-item"
+                    style={{ background: "none", border: "1px dashed var(--sm-border)", cursor: "pointer", fontWeight: 600 }}
+                    onClick={() => setYearLevels(years.map((y) => y.code))}
+                  >
+                    All years
+                  </button>
                   {years.map((y) => (
                     <label key={y.code} className="reg-checkbox-item">
                       <input
@@ -199,14 +207,6 @@ export default function TutorRegisterPage() {
                       {y.label}
                     </label>
                   ))}
-                  <button
-                    type="button"
-                    className="reg-checkbox-item"
-                    style={{ background: "none", border: "1px dashed var(--sm-border)", cursor: "pointer", fontWeight: 600 }}
-                    onClick={() => setYearLevels(years.map((y) => y.code))}
-                  >
-                    All years
-                  </button>
                 </div>
               </div>
 

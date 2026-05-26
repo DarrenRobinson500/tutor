@@ -49,6 +49,92 @@ class SuperuserRoleTokenView(TokenObtainPairView):
 from .message import *
 from .booking import *
 
+
+def _send_tutor_welcome_email(tutor):
+    from django.core.mail import send_mail
+    from django.conf import settings
+
+    site = (getattr(settings, "FRONTEND_URL", "") or "").rstrip("/") or "https://subject-matter.com.au"
+
+    body = (
+        f"Hi {tutor.first_name},\n\n"
+        f"Welcome to SubjectMatter! Thank you for registering as a tutor.\n\n"
+        f"Your application is currently under review and we will be in touch shortly to advise you of your approval.\n\n"
+        f"Once approved, you can log in at any time by visiting:\n"
+        f"  {site}\n\n"
+        f"Click \"Sign in\" and choose the Tutor option, then enter your email address "
+        f"({tutor.email}) and password.\n\n"
+        f"If you have any questions in the meantime, feel free to reply to this email.\n\n"
+        f"The SubjectMatter Team"
+    )
+    try:
+        send_mail(
+            subject="Welcome to SubjectMatter — application received",
+            message=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[tutor.email],
+            fail_silently=True,
+        )
+    except Exception:
+        pass
+
+
+def _send_parent_welcome_emails(parent, children_data):
+    from django.core.mail import send_mail
+    from django.conf import settings
+
+    site = (getattr(settings, "FRONTEND_URL", "") or "").rstrip("/") or "https://subject-matter.com.au"
+
+    # Email to parent
+    parent_body = (
+        f"Hi {parent.first_name},\n\n"
+        f"Welcome to SubjectMatter! We're excited to have you on board.\n\n"
+        f"You can log back in at any time by visiting:\n"
+        f"  {site}\n\n"
+        f"Click \"Sign in\" and choose the Parent option, then enter your email address "
+        f"({parent.email}) and password.\n\n"
+        f"From your dashboard you can view your child's upcoming sessions, manage bookings, "
+        f"and keep track of payments.\n\n"
+        f"If you have any questions, feel free to reply to this email.\n\n"
+        f"The SubjectMatter Team"
+    )
+    try:
+        send_mail(
+            subject="Welcome to SubjectMatter",
+            message=parent_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[parent.email],
+            fail_silently=True,
+        )
+    except Exception:
+        pass
+
+    # Email to each child that has an email address
+    for child_data in children_data:
+        child_email = child_data.get("email") or ""
+        child_first = child_data.get("first_name", "")
+        if not child_email:
+            continue
+        child_body = (
+            f"Hi {child_first},\n\n"
+            f"Welcome to SubjectMatter! Your parent has set up an account for you.\n\n"
+            f"You can log in at any time by visiting:\n"
+            f"  {site}\n\n"
+            f"Click \"Sign in\" and choose the Student option, then enter your email address "
+            f"({child_email}) and password.\n\n"
+            f"The SubjectMatter Team"
+        )
+        try:
+            send_mail(
+                subject="Welcome to SubjectMatter",
+                message=child_body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[child_email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+
 @method_decorator(csrf_exempt, name='dispatch')
 class AuthViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -330,6 +416,7 @@ class AuthViewSet(viewsets.ViewSet):
         )
         from .models import AdminJob
         AdminJob.objects.create(job_type='approve_tutor', subject=tutor_user)
+        _send_tutor_welcome_email(tutor_user)
         TutorJob.objects.create(
             tutor=tutor_user,
             job_type='set_fee',
@@ -613,6 +700,7 @@ class AuthViewSet(viewsets.ViewSet):
                 "id": child.id,
                 "first_name": child.first_name,
                 "last_name": child.last_name,
+                "email": child.email,
                 "year_level": profile.year_level if profile else None,
                 "school_name": profile.school_name if profile else None,
                 "test_count": test_count,
@@ -621,6 +709,11 @@ class AuthViewSet(viewsets.ViewSet):
                 "tutor_name": tutor_name,
                 "next_booking": child.next_booking(),
             })
+
+        if not user.welcome_email_sent:
+            _send_parent_welcome_emails(user, children_data)
+            user.welcome_email_sent = True
+            user.save(update_fields=["welcome_email_sent"])
 
         return Response({
             "parent": {
@@ -7207,6 +7300,35 @@ def admin_feedback(request):
             'paid_at': p.paid_at.isoformat() if p.paid_at else None,
         })
     return Response(result)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_activity(request):
+    if getattr(request.user, 'role', '') != 'admin':
+        return Response({'error': 'Forbidden'}, status=403)
+
+    def fmt(users):
+        return [
+            {
+                'id': u.id,
+                'first_name': u.first_name,
+                'last_name': u.last_name,
+                'email': u.email,
+                'date_joined': u.date_joined.isoformat(),
+            }
+            for u in users
+        ]
+
+    parents  = User.objects.filter(role='parent').order_by('-date_joined')[:50]
+    students = User.objects.filter(role='student').order_by('-date_joined')[:50]
+    tutors   = User.objects.filter(role='tutor').order_by('-date_joined')[:50]
+
+    return Response({
+        'parents':  fmt(parents),
+        'students': fmt(students),
+        'tutors':   fmt(tutors),
+    })
 
 
 @api_view(['GET'])

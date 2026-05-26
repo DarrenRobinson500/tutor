@@ -17,8 +17,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
 
-  const isDev = process.env.NODE_ENV === "development";
-
   async function doLogin(loginEmail: string, loginPassword: string) {
     setError("");
     setLoading(true);
@@ -154,8 +152,7 @@ export default function LoginPage() {
               <Link to="/register/parent">Register here</Link>
             </div>
 
-            {isDev && (
-              <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px dashed #ccc" }}>
+            <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px dashed #ccc" }}>
                 <div style={{ fontSize: 11, color: "#999", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
                   Dev quick-login
                 </div>
@@ -180,7 +177,7 @@ export default function LoginPage() {
                   ))}
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </main>

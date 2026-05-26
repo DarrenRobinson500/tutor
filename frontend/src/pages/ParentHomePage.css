@@ -22,6 +22,16 @@
 }
 .ph-nav a { text-decoration: none; }
 .ph-nav-logo img { height: 32px; width: auto; }
+.ph-nav-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+.ph-nav-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
 .ph-nav-right {
   display: flex;
   align-items: center;

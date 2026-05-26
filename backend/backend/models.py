@@ -60,6 +60,13 @@ class User(AbstractUser):
     objects = UserManager()
     active = models.BooleanField(default=True)
     account_details = models.CharField(max_length=500, blank=True, default="")
+    welcome_email_sent = models.BooleanField(default=False)
+
+    def __str__(self):
+        full_name = f"{self.first_name} {self.last_name}".strip()
+        if full_name:
+            return f"{full_name} ({self.username})"
+        return self.username
 
     def get_student_profile(self):
         if self.role == "student":

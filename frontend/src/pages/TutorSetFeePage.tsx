@@ -69,7 +69,7 @@ export default function TutorSetFeePage() {
           </div>
 
           <div style={{ background: "#fff8f0", border: "1px solid #fed7aa", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1.5rem", fontSize: "0.82rem", color: "#92400e", lineHeight: 1.5 }}>
-            Parents pay your rate plus a $6.50 platform fee per session.
+            Parents pay your rate plus a $5 platform fee per session.
           </div>
 
           {error && (

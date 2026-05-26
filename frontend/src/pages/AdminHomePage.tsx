@@ -324,8 +324,85 @@ function FeedbackTab() {
   );
 }
 
+interface ActivityUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  date_joined: string;
+}
+
+interface ActivityData {
+  parents: ActivityUser[];
+  students: ActivityUser[];
+  tutors: ActivityUser[];
+}
+
+function ActivityTab() {
+  const [data, setData] = useState<ActivityData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch("/api/admin/activity/")
+      .then(r => r.json())
+      .then(setData)
+      .catch(() => setData({ parents: [], students: [], tutors: [] }))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <p className="text-muted">Loading…</p>;
+  if (!data) return null;
+
+  function fmtDate(iso: string) {
+    return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function UserList({ users, emptyMsg }: { users: ActivityUser[]; emptyMsg: string }) {
+    if (users.length === 0) return <p className="text-muted" style={{ fontSize: 13 }}>{emptyMsg}</p>;
+    return (
+      <div style={{ overflowX: "auto", borderRadius: 8, border: "1px solid #dee2e6" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+          <thead>
+            <tr style={{ background: "#f8f9fa", borderBottom: "1px solid #dee2e6" }}>
+              {["Name", "Email", "Joined"].map(h => (
+                <th key={h} style={{ padding: "0.5rem 0.9rem", textAlign: "left", fontWeight: 600, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em", color: "#6c757d" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u, i) => (
+              <tr key={u.id} style={{ background: i % 2 === 0 ? "#fff" : "#f8f9fa", borderBottom: "1px solid #dee2e6" }}>
+                <td style={{ padding: "0.55rem 0.9rem", fontWeight: 500 }}>{u.first_name} {u.last_name}</td>
+                <td style={{ padding: "0.55rem 0.9rem", color: "#555" }}>{u.email}</td>
+                <td style={{ padding: "0.55rem 0.9rem", color: "#888", whiteSpace: "nowrap" }}>{fmtDate(u.date_joined)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  return (
+    <div className="d-flex flex-column gap-4">
+      <section>
+        <h5 className="mb-2">Parents <span className="text-muted fw-normal" style={{ fontSize: "0.85rem" }}>({data.parents.length})</span></h5>
+        <UserList users={data.parents} emptyMsg="No parents yet." />
+      </section>
+      <section>
+        <h5 className="mb-2">Students <span className="text-muted fw-normal" style={{ fontSize: "0.85rem" }}>({data.students.length})</span></h5>
+        <UserList users={data.students} emptyMsg="No students yet." />
+      </section>
+      <section>
+        <h5 className="mb-2">Tutors <span className="text-muted fw-normal" style={{ fontSize: "0.85rem" }}>({data.tutors.length})</span></h5>
+        <UserList users={data.tutors} emptyMsg="No tutors yet." />
+      </section>
+    </div>
+  );
+}
+
 export default function AdminHomePage() {
-  const [tab, setTab] = useState<"jobs" | "feedback">("jobs");
+  const [tab, setTab] = useState<"jobs" | "feedback" | "activity">("jobs");
 
   return (
     <Layout>
@@ -343,10 +420,16 @@ export default function AdminHomePage() {
               Feedback
             </button>
           </li>
+          <li className="nav-item">
+            <button className={`nav-link ${tab === "activity" ? "active" : ""}`} onClick={() => setTab("activity")}>
+              Activity
+            </button>
+          </li>
         </ul>
 
         {tab === "jobs" && <PendingJobsTab />}
         {tab === "feedback" && <FeedbackTab />}
+        {tab === "activity" && <ActivityTab />}
       </div>
     </Layout>
   );
