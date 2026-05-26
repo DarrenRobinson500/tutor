@@ -17,11 +17,12 @@ interface TutorCardProps {
   requestedSlots: TutorSlot[];
   parentHasDistributor: boolean;
   matchQuality: 'full' | 'partial';
+  platformFee?: number;
   onSelect: (tutor: Tutor) => void;
 }
 
-function sessionCost(rate: number, hasDistributor: boolean): number {
-  return rate + 6.5 + (hasDistributor ? 5.0 : 0);
+function sessionCost(rate: number, hasDistributor: boolean, platformFee: number): number {
+  return rate + platformFee + (hasDistributor ? 5.0 : 0);
 }
 
 function ordinal(n: number): string {
@@ -36,9 +37,10 @@ const TutorCard: React.FC<TutorCardProps> = ({
   requestedSlots,
   parentHasDistributor,
   matchQuality,
+  platformFee = 6.5,
   onSelect,
 }) => {
-  const total = sessionCost(tutor.hourlyRate, parentHasDistributor);
+  const total = sessionCost(tutor.hourlyRate, parentHasDistributor, platformFee);
   const isPerfect = matchQuality === 'full';
 
   const matchedSlots = requestedSlots.filter(rs =>

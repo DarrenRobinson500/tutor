@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../utils/apiFetch";
 
@@ -11,6 +11,14 @@ export default function TutorSetFeePage() {
   const [rate, setRate] = useState("70");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [platformFee, setPlatformFee] = useState<number | null>(null);
+
+  useEffect(() => {
+    apiFetch('/api/settings/')
+      .then(r => r.json())
+      .then((d: { platform_fee: number }) => { if (d.platform_fee != null) setPlatformFee(d.platform_fee); })
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,7 +77,7 @@ export default function TutorSetFeePage() {
           </div>
 
           <div style={{ background: "#fff8f0", border: "1px solid #fed7aa", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1.5rem", fontSize: "0.82rem", color: "#92400e", lineHeight: 1.5 }}>
-            Parents pay your rate plus a $5 platform fee per session.
+            Parents pay your rate plus a ${platformFee != null ? platformFee.toFixed(2) : '…'} platform fee per session.
           </div>
 
           {error && (

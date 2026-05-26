@@ -76,6 +76,7 @@ import { PaymentReceiptPage } from "./pages/PaymentReceiptPage";
 import { PaymentRetryPage } from "./pages/PaymentRetryPage";
 import { TutorBillingPage } from "./pages/TutorBillingPage";
 import { TELanguagesPage } from "./pages/TELanguagesPage";
+import { VariablesPage } from "./pages/VariablesPage";
 import { apiFetch } from "./utils/apiFetch";
 import { usePreferenceStore } from "./utils/pref";
 
@@ -206,6 +207,7 @@ function App() {
         <Route path="/tutors/:id/set-fee" element={<ProtectedRoute><TutorSetFeePage /></ProtectedRoute>} />
 
         <Route path="/admin/payments" element={<ProtectedRoute><AdminPaymentsPage /></ProtectedRoute>} />
+        <Route path="/admin/variables" element={<ProtectedRoute><VariablesPage /></ProtectedRoute>} />
         <Route path="/admin/students" element={<ProtectedRoute><StudentListPage /></ProtectedRoute>} />
         <Route path="/admin/students/new" element={<ProtectedRoute><StudentCreatePage /></ProtectedRoute>} />
 

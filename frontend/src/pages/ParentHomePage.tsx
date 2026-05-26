@@ -538,7 +538,7 @@ function ChildCard({
         <div>
           <div className="ph-child-name">{child.first_name} {child.last_name}</div>
           <div className="ph-child-meta">
-            {child.year_level || "Year not set"}
+            {child.year_level ? `Year ${child.year_level.replace(/^year\s*/i, "")}` : "Year not set"}
             {child.school_name ? ` · ${child.school_name}` : ""}
           </div>
           {child.tutor_name && (

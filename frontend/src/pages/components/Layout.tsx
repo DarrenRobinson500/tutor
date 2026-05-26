@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { apiFetch } from "../../utils/apiFetch";
 import { dashboardPath } from "../../utils/dashboardPath";
 import { IncomingCallBanner } from "./IncomingCallBanner";
@@ -83,7 +83,7 @@ const NAV_STYLES = `
 `;
 
 
-const DEV_USERS = [
+const DEFAULT_DEV_USERS = [
   { label: "Admin",   email: "Darren",  password: "Darren"  },
   { label: "Parent",  email: "Amanda",  password: "Amanda"  },
   { label: "Student", email: "Michael", password: "Michael" },
@@ -94,6 +94,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
   const access = localStorage.getItem("access");
+  const [devUsers, setDevUsers] = useState(DEFAULT_DEV_USERS);
+
+  useEffect(() => {
+    fetch(`${(process.env.REACT_APP_API_URL ?? "").replace(/\/$/, "")}/api/settings/`)
+      .then(r => r.json())
+      .then((d: { dev_users?: typeof DEFAULT_DEV_USERS }) => {
+        if (Array.isArray(d.dev_users) && d.dev_users.length) setDevUsers(d.dev_users);
+      })
+      .catch(() => {});
+  }, []);
   async function devLoginAs(email: string, password: string) {
     const API_URL = (process.env.REACT_APP_API_URL ?? "").replace(/\/$/, "");
     try {
@@ -204,6 +214,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <li className="nav-item"><Link className="nav-link" to="/feedback">Feedback</Link></li>
                   <li className="nav-item"><Link className="nav-link" to="/principles">Principles</Link></li>
                   <li className="nav-item"><Link className="nav-link" to="/docs">Docs</Link></li>
+                  <li className="nav-item"><Link className="nav-link" to="/admin/variables">Variables</Link></li>
 </>
               )}
 
@@ -251,7 +262,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </ul>
 
             <div className="d-flex align-items-center gap-1 me-3">
-              {DEV_USERS.map(u => (
+              {devUsers.map(u => (
                 <button key={u.label} className="sm-dev-btn" onClick={() => devLoginAs(u.email, u.password)}>
                   {u.label}
                 </button>

@@ -237,10 +237,6 @@ function scheduleLine(days: string[], times: string[]): string {
   return [d, t].filter(Boolean).join(' · ');
 }
 
-function sessionCost(rate: number, hasDistributor: boolean): number {
-  return rate + 6.5 + (hasDistributor ? 5.0 : 0);
-}
-
 function formatTime(hhmm: string): string {
   const [hStr, mStr] = hhmm.split(':');
   const h = parseInt(hStr, 10);
@@ -308,6 +304,14 @@ const RequestTutorFlow: React.FC<RequestTutorFlowProps> = ({
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<BookableSlot | null>(null);
   const [slotErr, setSlotErr] = useState(false);
+  const [platformFee, setPlatformFee] = useState(6.5);
+
+  useEffect(() => {
+    apiFetch('/api/settings/')
+      .then(r => r.json())
+      .then((d: { platform_fee: number }) => { if (d.platform_fee != null) setPlatformFee(d.platform_fee); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!pendingTutor) { setBookableSlots([]); setSelectedSlot(null); return; }
@@ -618,6 +622,7 @@ const RequestTutorFlow: React.FC<RequestTutorFlowProps> = ({
                         requestedSlots={requestedSlots}
                         parentHasDistributor={parentHasDistributor}
                         matchQuality={quality}
+                        platformFee={platformFee}
                         onSelect={setPendingTutor}
                       />
                     ))}

@@ -63,6 +63,8 @@ export function PostTuitionPage() {
 
   const [studentName, setStudentName] = useState<string | null>(null);
   const [yearLevel, setYearLevel] = useState<string | null>(null);
+  const [studentGender, setStudentGender] = useState<string | null>(null);
+  const [genderLoading, setGenderLoading] = useState(false);
   // Step 1: progress message
   const [sessionProductive, setSessionProductive] = useState<boolean | null>(null);
   const [message, setMessage] = useState<string>("");
@@ -93,9 +95,21 @@ export function PostTuitionPage() {
       .then((d) => {
         setStudentName(d.first_name ? `${d.first_name} ${d.last_name ?? ""}`.trim() : null);
         setYearLevel(d.year_level ?? null);
+        setStudentGender(d.gender || null);
       })
       .catch(() => {});
   }, [studentId]);
+
+  async function handleGenderSelect(g: string) {
+    if (!studentId) return;
+    setGenderLoading(true);
+    await apiFetch(`/api/students/${studentId}/edit/`, {
+      method: "POST",
+      body: JSON.stringify({ fields: { gender: g } }),
+    }).catch(() => {});
+    setStudentGender(g);
+    setGenderLoading(false);
+  }
 
   useEffect(() => {
     if (!jobId || sessionProductive === null) return;
@@ -268,7 +282,36 @@ export function PostTuitionPage() {
             {messageSent && <span className="badge bg-primary ms-auto">Sent</span>}
           </div>
           <div className="card-body">
-            {sessionProductive === null ? (
+            {!studentGender ? (
+              <>
+                <p className="mb-3">
+                  Is <strong>{studentName || "the student"}</strong> male or female?
+                </p>
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-outline-primary"
+                    onClick={() => handleGenderSelect("male")}
+                    disabled={genderLoading}
+                  >
+                    Male
+                  </button>
+                  <button
+                    className="btn btn-outline-primary"
+                    onClick={() => handleGenderSelect("female")}
+                    disabled={genderLoading}
+                  >
+                    Female
+                  </button>
+                  <button
+                    className="btn btn-outline-secondary"
+                    onClick={() => handleGenderSelect("other")}
+                    disabled={genderLoading}
+                  >
+                    Other
+                  </button>
+                </div>
+              </>
+            ) : sessionProductive === null ? (
               <>
                 <p className="mb-3">Was this session productive?</p>
                 <div className="d-flex gap-2">
