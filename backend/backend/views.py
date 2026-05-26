@@ -3272,12 +3272,21 @@ class TutorJobViewSet(viewsets.ViewSet):
         # --- Build the message ---
         student_name = student.first_name or "Your child"
 
-        # Year level
+        # Year level and gender
         try:
             sp = StudentProfile.objects.get(user=student)
             year_level = sp.year_level or "?"
+            gender = (sp.gender or "").lower()
         except StudentProfile.DoesNotExist:
             year_level = "?"
+            gender = ""
+
+        if gender == "male":
+            pronoun = "He"
+        elif gender == "female":
+            pronoun = "She"
+        else:
+            pronoun = "They"
 
         # Session date (Monday of that week for tutoring_done_week lookup)
         session_date = outcome.date if outcome else None
@@ -3296,42 +3305,38 @@ class TutorJobViewSet(viewsets.ViewSet):
         else:
             session_focus = StudentFocusArea.objects.none()
 
-        focus_names = [fa.skill.description for fa in session_focus if fa.skill]
-        if not focus_names:
+        from .competency import level_to_label as _level_to_label
+        focus_items = [(fa.skill.description, fa.skill_id) for fa in session_focus if fa.skill]
+        if focus_items:
+            skill_ids = [sid for _, sid in focus_items]
+            level_map = {
+                c.skill_id: c.level
+                for c in StudentSkillCompetency.objects.filter(
+                    student=student, skill_id__in=skill_ids
+                )
+            }
+            focus_parts = [
+                f"{name} ({_level_to_label(level_map.get(sid, 0))})"
+                for name, sid in focus_items
+            ]
+            if len(focus_parts) == 1:
+                focus_text = focus_parts[0]
+            elif len(focus_parts) == 2:
+                focus_text = f"{focus_parts[0]} and {focus_parts[1]}"
+            else:
+                focus_text = ", ".join(focus_parts[:-1]) + f", and {focus_parts[-1]}"
+        else:
             focus_text = "various topics"
-        elif len(focus_names) == 1:
-            focus_text = focus_names[0]
-        elif len(focus_names) == 2:
-            focus_text = f"{focus_names[0]} and {focus_names[1]}"
-        else:
-            focus_text = ", ".join(focus_names[:-1]) + f", and {focus_names[-1]}"
 
-        # Syllabus completion
-        year_skills = Skill.objects.filter(is_detail=True)
-        if year_level and year_level != "?":
-            # Filter to skills that include this year level
-            year_skills = [s for s in year_skills if year_level in [str(g) for g in s.get_grade_list()]]
-        else:
-            year_skills = list(year_skills)
+        # Syllabus completion — same formula as student home page
+        from .competency import get_student_score as _get_student_score
+        from .models import WeeklyProgressSnapshot
 
-        total_skills = len(year_skills)
-        if total_skills > 0:
-            year_skill_ids = [s.id for s in year_skills]
-            completed_ids = set(
-                StudentSkillCompetency.objects.filter(
-                    student=student, skill_id__in=year_skill_ids, level__gt=0
-                ).values_list('skill_id', flat=True)
-            )
-            current_pct = round(len(completed_ids) / total_skills * 100)
-
-            # Estimate previous %: skills newly mastered this session
-            # = focus areas done this session where level_before_learning was 0 and now level > 0
-            newly_mastered = session_focus.filter(
-                level_before_learning=0,
-                skill_id__in=completed_ids,
-            ).count()
-            prev_completed = max(len(completed_ids) - newly_mastered, 0)
-            prev_pct = round(prev_completed / total_skills * 100)
+        grade_key = str(year_level).strip().lower().replace("year", "").strip() if year_level and year_level != "?" else None
+        if grade_key:
+            current_pct = round(_get_student_score(student, grade_key) * 100)
+            prev_snap = WeeklyProgressSnapshot.objects.filter(student=student).order_by('-recorded_at').first()
+            prev_pct = min(round(prev_snap.score) if prev_snap else 0, current_pct)
         else:
             current_pct = 0
             prev_pct = 0
@@ -3340,17 +3345,17 @@ class TutorJobViewSet(viewsets.ViewSet):
         parent_mobile = _get_parent_mobile(student)
 
         # Build message
-        if current_pct != prev_pct:
+        if current_pct > prev_pct:
             pct_line = (
                 f"has now completed {current_pct}% of the Year {year_level} Maths syllabus"
-                f" — up from {prev_pct}% last week"
+                f" — up from {prev_pct}% last session"
             )
         else:
             pct_line = f"has now completed {current_pct}% of the Year {year_level} Maths syllabus"
 
         message = (
             f"Great news! {student_name} had a productive session today. "
-            f"They worked through {focus_text}, and {pct_line}. "
+            f"{pronoun} worked through {focus_text}, and {pct_line}. "
             f"Keep up the encouragement at home! 🎉"
         )
 
@@ -4116,7 +4121,7 @@ class StudentViewSet(viewsets.ModelViewSet):
 
         student.save()
 
-        profile_fields = ["year_level", "area_of_study", "mobile", "address", "min_questions_per_skill"]
+        profile_fields = ["year_level", "area_of_study", "mobile", "address", "min_questions_per_skill", "gender"]
         changed = False
 
         for key, value in fields.items():

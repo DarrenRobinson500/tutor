@@ -616,6 +616,7 @@ class StudentProfile(models.Model):
     hourly_rate = models.DecimalField(max_digits=8, decimal_places=2, default=70)
     plain_password = models.CharField(max_length=50, blank=True, null=True)
     min_questions_per_skill = models.IntegerField(default=0)
+    gender = models.CharField(max_length=20, blank=True, null=True)
 
     def __str__(self): return f"Profile {self.user} {self.id}"
 
@@ -647,6 +648,7 @@ class StudentProfile(models.Model):
             "mobile": self.mobile,
             "address": self.address,
             "min_questions_per_skill": self.min_questions_per_skill,
+            "gender": self.gender,
 
             # Tutor details (flattened for convenience)
             "tutor_id": tutor_user.id if tutor_user else None,

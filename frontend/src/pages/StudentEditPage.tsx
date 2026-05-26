@@ -13,6 +13,7 @@ export function StudentEditPage() {
   const returnTo = params.get("returnTo") || `/student/${studentId}`;
 
   const [yearLevel, setYearLevel] = useState("");
+  const [gender, setGender] = useState("");
   const [active, setActive] = useState(true);
   const [mobile, setMobile] = useState("");
   const [address, setAddress] = useState("");
@@ -47,6 +48,7 @@ useEffect(() => {
       console.log("Parsed JSON from", url, data);
 
       setYearLevel(data.year_level || "");
+      setGender(data.gender || "");
       setMobile(data.mobile || "");
       setAddress(data.address || "");
       setActive(data.active);
@@ -67,6 +69,7 @@ useEffect(() => {
       body: JSON.stringify({
         fields: {
           year_level: yearLevel,
+          gender: gender,
           mobile: mobile,
           address: address,
           active: active,
@@ -96,6 +99,20 @@ useEffect(() => {
           {years.map((y) => (
             <option key={y.code} value={y.code}>{y.label}</option>
           ))}
+        </select>
+      </div>
+
+      <div className="mb-3">
+        <label className="form-label">Gender</label>
+        <select
+          className="form-select"
+          value={gender}
+          onChange={(e) => setGender(e.target.value)}
+        >
+          <option value="">— not specified —</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
         </select>
       </div>
 
