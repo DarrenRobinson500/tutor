@@ -2,8 +2,18 @@ from django.core.management.base import BaseCommand
 from backend.models import GlobalSetting
 
 DEFAULTS = {
+    # Pricing / booking rules
     'platform_fee': '6.50',
     'cancellation_notice_hours': '24',
+    # Quick-login test accounts
+    'dev_admin_email': 'Darren',
+    'dev_admin_password': 'Darren',
+    'dev_parent_email': 'Amanda',
+    'dev_parent_password': 'Amanda',
+    'dev_student_email': 'Michael',
+    'dev_student_password': 'Michael',
+    'dev_tutor_email': 'Alex',
+    'dev_tutor_password': 'Alex',
 }
 
 

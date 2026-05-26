@@ -5082,8 +5082,37 @@ class KnowledgeViewSet(viewsets.ModelViewSet):
 @permission_classes([AllowAny])
 def system_settings(request):
     """Return public system configuration values used by the frontend."""
-    platform_fee = get_decimal('platform_fee', '6.50')
-    return Response({'platform_fee': float(platform_fee)})
+    return Response({
+        'platform_fee': float(get_decimal('platform_fee', '6.50')),
+        'dev_users': [
+            {'label': 'Admin',   'email': GlobalSetting.get('dev_admin_email', 'Darren'),   'password': GlobalSetting.get('dev_admin_password', 'Darren')},
+            {'label': 'Parent',  'email': GlobalSetting.get('dev_parent_email', 'Amanda'),   'password': GlobalSetting.get('dev_parent_password', 'Amanda')},
+            {'label': 'Student', 'email': GlobalSetting.get('dev_student_email', 'Michael'), 'password': GlobalSetting.get('dev_student_password', 'Michael')},
+            {'label': 'Tutor',   'email': GlobalSetting.get('dev_tutor_email', 'Alex'),      'password': GlobalSetting.get('dev_tutor_password', 'Alex')},
+        ],
+    })
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def admin_variables(request):
+    """GET: list all GlobalSettings. POST: update/create one by key."""
+    if getattr(request.user, 'role', '') != 'admin':
+        return Response({'error': 'Forbidden'}, status=403)
+
+    if request.method == 'GET':
+        settings = GlobalSetting.objects.all().order_by('key')
+        return Response([{'key': s.key, 'value': s.value} for s in settings])
+
+    key = request.data.get('key', '').strip()
+    value = request.data.get('value', '')
+    if not key:
+        return Response({'error': 'key required'}, status=400)
+    # Invalidate cache so callers pick up the new value immediately
+    from django.core.cache import cache
+    cache.delete(f'global_setting_{key}')
+    GlobalSetting.set(key, str(value))
+    return Response({'ok': True})
 
 
 @api_view(["GET"])
