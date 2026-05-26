@@ -94,8 +94,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
   const access = localStorage.getItem("access");
-  const isDev = process.env.NODE_ENV === "development";
-
   async function devLoginAs(email: string, password: string) {
     const API_URL = (process.env.REACT_APP_API_URL ?? "").replace(/\/$/, "");
     try {
@@ -252,15 +250,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
             </ul>
 
-            {isDev && (
-              <div className="d-flex align-items-center gap-1 me-3">
-                {DEV_USERS.map(u => (
-                  <button key={u.label} className="sm-dev-btn" onClick={() => devLoginAs(u.email, u.password)}>
-                    {u.label}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="d-flex align-items-center gap-1 me-3">
+              {DEV_USERS.map(u => (
+                <button key={u.label} className="sm-dev-btn" onClick={() => devLoginAs(u.email, u.password)}>
+                  {u.label}
+                </button>
+              ))}
+            </div>
 
             {user && (
               <div className="d-flex align-items-center gap-2">

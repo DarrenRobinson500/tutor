@@ -81,14 +81,15 @@ export function ProgressChart({ studentId }: { studentId: number | string }) {
       {hasSnapshots && (
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            Score over time
+            Percent of Year 7 Complete
           </div>
+          <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 4 }}>Goal: 100% by end of year</div>
           <ResponsiveContainer width="100%" height={140}>
             <LineChart data={snapshots} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="date" tick={{ fontSize: 10 }} />
               <YAxis domain={[0, 100]} ticks={[0, 50, 100]} tickFormatter={(v: number) => `${v}%`} tick={{ fontSize: 10 }} width={34} />
-              <Tooltip formatter={(v: any) => [`${v}%`, "Score"]} />
+              <Tooltip formatter={(v: any) => [`${v}%`, "Percent"]} />
               <Line type="monotone" dataKey="score" stroke="#FF8C42" strokeWidth={2} dot={{ r: 3 }} connectNulls />
             </LineChart>
           </ResponsiveContainer>
