@@ -476,8 +476,6 @@ const createAdhoc = () => {
 <table className="table table-striped">
   <thead>
     <tr>
-      <th>Direction</th>
-      <th>Student</th>
       <th>Body</th>
       <th>Created</th>
       <th>Sent At</th>
@@ -486,8 +484,6 @@ const createAdhoc = () => {
   <tbody>
     {smsMessages.map(msg => (
       <tr key={msg.id}>
-        <td>{msg.direction}</td>
-        <td>{msg.student_name}</td>
         <td>{msg.body}</td>
         <td>{new Date(msg.created_at).toLocaleString()}</td>
         <td>{msg.sent_at ? new Date(msg.sent_at).toLocaleString() : "-"}</td>

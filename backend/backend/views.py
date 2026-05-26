@@ -766,7 +766,7 @@ class AuthViewSet(viewsets.ViewSet):
         if weekday is not None and start_time and end_time:
             h_s, m_s = map(int, start_time.split(":"))
             h_e, m_e = map(int, end_time.split(":"))
-            BookingWeekly.objects.create(
+            booking = BookingWeekly.objects.create(
                 tutor=tutor,
                 student=child,
                 weekday=int(weekday),
@@ -774,6 +774,7 @@ class AuthViewSet(viewsets.ViewSet):
                 end_time=dtime(h_e, m_e),
                 confirmed=True,
             )
+            update_booking_caches(booking, "create")
 
         # Send confirmation emails in background
         import threading
@@ -824,6 +825,29 @@ class AuthViewSet(viewsets.ViewSet):
                 recipient_list=[tutor.email],
                 fail_silently=True,
             )
+            # SMS to tutor
+            try:
+                from .models import TutorProfile, SMSSendJob
+                from .message import get_or_create_conversation, process_sms_jobs
+                from django.utils import timezone as _tz
+                tutor_profile = TutorProfile.objects.filter(tutor=tutor).first()
+                tutor_mobile = tutor_profile.mobile if tutor_profile else None
+                if tutor_mobile:
+                    session_sms = f" Your first session is {session_line}." if session_line else ""
+                    body = (
+                        f"Hi {tutor.first_name}, you have a new student: {child_full}.{session_sms}"
+                        f" Please contact their parent to confirm the details."
+                    )
+                    conversation = get_or_create_conversation(tutor=tutor, student=child)
+                    SMSSendJob.objects.create(
+                        conversation=conversation,
+                        to_number=tutor_mobile,
+                        body=body,
+                        scheduled_for=_tz.now(),
+                    )
+                    process_sms_jobs()
+            except Exception as _e:
+                print("Failed to send booking SMS to tutor:", _e)
 
         threading.Thread(target=_send_emails, daemon=True).start()
 

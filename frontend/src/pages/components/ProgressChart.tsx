@@ -62,7 +62,7 @@ export function ProgressChart({ studentId }: { studentId: number | string }) {
   if (!data) return <p style={{ fontSize: 13, color: "#8A7F74", margin: 0 }}>Could not load progress.</p>;
 
   const { snapshots, competency, focus_areas } = data;
-  const hasSnapshots = snapshots.length > 0;
+  const hasSnapshots = snapshots.length >= 2;
   const hasCompetency = competency.total_skills > 0;
   const hasFocusAreas = focus_areas.length > 0;
 

@@ -386,15 +386,15 @@ function ActivityTab() {
   return (
     <div className="d-flex flex-column gap-4">
       <section>
-        <h5 className="mb-2">Parents <span className="text-muted fw-normal" style={{ fontSize: "0.85rem" }}>({data.parents.length})</span></h5>
+        <h5 className="mb-2">New Parents <span className="text-muted fw-normal" style={{ fontSize: "0.85rem" }}>({data.parents.length})</span></h5>
         <UserList users={data.parents} emptyMsg="No parents yet." />
       </section>
       <section>
-        <h5 className="mb-2">Students <span className="text-muted fw-normal" style={{ fontSize: "0.85rem" }}>({data.students.length})</span></h5>
+        <h5 className="mb-2">New Students <span className="text-muted fw-normal" style={{ fontSize: "0.85rem" }}>({data.students.length})</span></h5>
         <UserList users={data.students} emptyMsg="No students yet." />
       </section>
       <section>
-        <h5 className="mb-2">Tutors <span className="text-muted fw-normal" style={{ fontSize: "0.85rem" }}>({data.tutors.length})</span></h5>
+        <h5 className="mb-2">New Tutors <span className="text-muted fw-normal" style={{ fontSize: "0.85rem" }}>({data.tutors.length})</span></h5>
         <UserList users={data.tutors} emptyMsg="No tutors yet." />
       </section>
     </div>

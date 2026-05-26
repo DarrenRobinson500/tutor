@@ -260,7 +260,9 @@ export function StudentHomePage() {
             <div className="mb-2">
               <strong>Overall: </strong>
               <SkillStars level={Math.round(overallAvg)} />
-              <span className="text-muted ms-2">{overallAvg.toFixed(1)}</span>
+              <span className="text-muted ms-2">
+                {overallAvg.toFixed(1)} ({Math.round((overallAvg / 4) * 100)}%)
+              </span>
             </div>
 
       <table className="skills-matrix">

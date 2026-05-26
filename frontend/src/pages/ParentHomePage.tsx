@@ -604,11 +604,13 @@ function ChildCard({
             {launching ? "Starting…" : "Start Free Assessment"}
           </button>
         </div>
-        <div className="ph-tooltip-wrap" data-tooltip="A qualified tutor joins your child in a live session to walk them through each question. Great for younger learners or children who benefit from a little extra support. Book a time that suits you.">
-          <button className="sm-btn-secondary" disabled style={{ width: "100%" }}>
-            Assisted Assessment $20
-          </button>
-        </div>
+        {!child.tutor_name && (
+          <div className="ph-tooltip-wrap" data-tooltip="A qualified tutor joins your child in a live session to walk them through each question. Great for younger learners or children who benefit from a little extra support. Book a time that suits you.">
+            <button className="sm-btn-secondary" disabled style={{ width: "100%" }}>
+              Assisted Assessment $20
+            </button>
+          </div>
+        )}
         {!child.tutor_name && (
           <button className="sm-btn-secondary" onClick={onFindTutor}>
             Find Tutor
