@@ -64,6 +64,7 @@ export function PostTuitionPage() {
   const [studentName, setStudentName] = useState<string | null>(null);
   const [yearLevel, setYearLevel] = useState<string | null>(null);
   // Step 1: progress message
+  const [sessionProductive, setSessionProductive] = useState<boolean | null>(null);
   const [message, setMessage] = useState<string>("");
   const [parentMobile, setParentMobile] = useState<string | null>(null);
   const [messageLoading, setMessageLoading] = useState(false);
@@ -97,9 +98,9 @@ export function PostTuitionPage() {
   }, [studentId]);
 
   useEffect(() => {
-    if (!jobId) return;
+    if (!jobId || sessionProductive === null) return;
     setMessageLoading(true);
-    apiFetch(`/api/jobs/${jobId}/progress_message/`)
+    apiFetch(`/api/jobs/${jobId}/progress_message/?productive=${sessionProductive}`)
       .then((r) => r.json())
       .then((d) => {
         setMessage(d.message ?? "");
@@ -107,7 +108,10 @@ export function PostTuitionPage() {
       })
       .catch(() => setMessageError("Failed to load message."))
       .finally(() => setMessageLoading(false));
+  }, [jobId, sessionProductive]);
 
+  useEffect(() => {
+    if (!jobId) return;
     setPaymentLoading(true);
     apiFetch(`/api/jobs/${jobId}/payment_summary/`)
       .then((r) => r.json())
@@ -264,48 +268,70 @@ export function PostTuitionPage() {
             {messageSent && <span className="badge bg-primary ms-auto">Sent</span>}
           </div>
           <div className="card-body">
-            <p className="text-muted mb-3">
-              Review the session summary message below, edit if needed, then send it to the parent.
-            </p>
-            {messageLoading ? (
-              <div className="text-center py-3">
-                <div className="spinner-border spinner-border-sm text-secondary" role="status" />
-              </div>
-            ) : (
+            {sessionProductive === null ? (
               <>
-                <textarea
-                  className="form-control mb-2"
-                  rows={5}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  disabled={messageSending || messageSent}
-                />
-                {parentMobile && (
-                  <div className="text-muted mb-2" style={{ fontSize: 13 }}>
-                    Will be sent to: {parentMobile}
-                  </div>
-                )}
-                {messageError && (
-                  <div className="alert alert-danger py-2 mb-2" style={{ fontSize: 13 }}>
-                    {messageError}
-                  </div>
-                )}
+                <p className="mb-3">Was this session productive?</p>
                 <div className="d-flex gap-2">
                   <button
-                    className="btn btn-outline-secondary btn-sm"
-                    onClick={handleSaveMessage}
-                    disabled={messageSaving || !message.trim() || messageSent}
+                    className="btn btn-success"
+                    onClick={() => setSessionProductive(true)}
                   >
-                    {messageSaving ? "Saving…" : "Save Draft"}
+                    Yes
                   </button>
                   <button
-                    className="btn btn-primary btn-sm"
-                    onClick={handleSendMessage}
-                    disabled={messageSending || !message.trim() || messageSent}
+                    className="btn btn-outline-secondary"
+                    onClick={() => setSessionProductive(false)}
                   >
-                    {messageSent ? "Sent" : messageSending ? "Sending…" : "Send to Parent"}
+                    No
                   </button>
                 </div>
+              </>
+            ) : (
+              <>
+                <p className="text-muted mb-3">
+                  Review the session summary message below, edit if needed, then send it to the parent.
+                </p>
+                {messageLoading ? (
+                  <div className="text-center py-3">
+                    <div className="spinner-border spinner-border-sm text-secondary" role="status" />
+                  </div>
+                ) : (
+                  <>
+                    <textarea
+                      className="form-control mb-2"
+                      rows={5}
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      disabled={messageSending || messageSent}
+                    />
+                    {parentMobile && (
+                      <div className="text-muted mb-2" style={{ fontSize: 13 }}>
+                        Will be sent to: {parentMobile}
+                      </div>
+                    )}
+                    {messageError && (
+                      <div className="alert alert-danger py-2 mb-2" style={{ fontSize: 13 }}>
+                        {messageError}
+                      </div>
+                    )}
+                    <div className="d-flex gap-2">
+                      <button
+                        className="btn btn-outline-secondary btn-sm"
+                        onClick={handleSaveMessage}
+                        disabled={messageSaving || !message.trim() || messageSent}
+                      >
+                        {messageSaving ? "Saving…" : "Save Draft"}
+                      </button>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={handleSendMessage}
+                        disabled={messageSending || !message.trim() || messageSent}
+                      >
+                        {messageSent ? "Sent" : messageSending ? "Sending…" : "Send to Parent"}
+                      </button>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>

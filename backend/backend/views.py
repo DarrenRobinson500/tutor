@@ -3261,6 +3261,8 @@ class TutorJobViewSet(viewsets.ViewSet):
         student = job.student
         outcome = job.booking_outcome
 
+        productive = request.query_params.get('productive', 'true').lower() != 'false'
+
         # If a message is already saved, return it
         if outcome and outcome.parent_message:
             parent_mobile = _get_parent_mobile(student)
@@ -3318,8 +3320,11 @@ class TutorJobViewSet(viewsets.ViewSet):
             focus_parts = [
                 f"{name} ({_level_to_label(level_map.get(sid, 0))})"
                 for name, sid in focus_items
+                if level_map.get(sid, 0) > 0
             ]
-            if len(focus_parts) == 1:
+            if not focus_parts:
+                focus_text = "various topics"
+            elif len(focus_parts) == 1:
                 focus_text = focus_parts[0]
             elif len(focus_parts) == 2:
                 focus_text = f"{focus_parts[0]} and {focus_parts[1]}"
@@ -3345,19 +3350,28 @@ class TutorJobViewSet(viewsets.ViewSet):
         parent_mobile = _get_parent_mobile(student)
 
         # Build message
-        if current_pct > prev_pct:
-            pct_line = (
-                f"has now completed {current_pct}% of the Year {year_level} Maths syllabus"
-                f" — up from {prev_pct}% last session"
+        tutor_name = request.user.first_name or request.user.get_full_name() or "Your tutor"
+
+        if not productive:
+            message = (
+                f"{student_name} and I had our weekly tutoring session today, and got through "
+                f"3 questions. We're aiming to increase this to 10. "
+                f"Keep up the encouragement at home. {tutor_name}"
             )
         else:
-            pct_line = f"has now completed {current_pct}% of the Year {year_level} Maths syllabus"
+            if current_pct > prev_pct:
+                pct_line = (
+                    f"has now completed {current_pct}% of the Year {year_level} Maths syllabus"
+                    f" — up from {prev_pct}% last session"
+                )
+            else:
+                pct_line = f"has now completed {current_pct}% of the Year {year_level} Maths syllabus"
 
-        message = (
-            f"Great news! {student_name} had a productive session today. "
-            f"{pronoun} worked through {focus_text}, and {pct_line}. "
-            f"Keep up the encouragement at home! 🎉"
-        )
+            message = (
+                f"Great news! {student_name} had a productive session today. "
+                f"{pronoun} worked through {focus_text}, and {pct_line}. "
+                f"Keep up the encouragement at home! {tutor_name} 🎉"
+            )
 
         return Response({
             'message': message,
