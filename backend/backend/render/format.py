@@ -231,6 +231,19 @@ class IntegerFormat(FormatType):
         return str(int(value))
 
 @register_format_type
+class AbsFormat(FormatType):
+    """Returns the absolute value of a number: -7 → 7, -3.5 → 3.5."""
+    name = "abs"
+
+    def format(self, value):
+        if isinstance(value, str) and "/" in value:
+            from fractions import Fraction
+            frac = abs(Fraction(value))
+            return str(frac.numerator) if frac.denominator == 1 else f"{frac.numerator}/{frac.denominator}"
+        v = abs(float(value))
+        return str(int(v)) if v == int(v) else str(v)
+
+@register_format_type
 class CompassBearingFormat(FormatType):
     """Converts a true bearing (0–360°, clockwise from North) to a compass bearing.
 

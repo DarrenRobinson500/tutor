@@ -414,6 +414,8 @@ export function PreviewPanel({
 
     const normalize = (s: any) => {
       let v = String(s).trim().toLowerCase().replace(/\s+/g, "").replace(/\*\*/g, "^").replace(/,(?=\d{3})/g, "");
+      // Strip outer square brackets: [-5,-1,1,6] → -5,-1,1,6  (list answers typed without brackets match)
+      if (v.startsWith("[") && v.endsWith("]")) v = v.slice(1, -1);
       // Collapse redundant sign pairs: a + -b → a-b,  a - -b → a+b
       v = v.replace(/\+-/g, "-").replace(/--/g, "+");
       // x^(-n) → x^-n  (sympy wraps negative exponents in parens)

@@ -407,11 +407,16 @@ class Render:
             value = node.evaluate()
 
             if formatter == "raw":
-                # If the evaluated value is a list and an explicit pipe was given
-                # (e.g. | length), apply the pipe formatter — lists can't be
-                # coerced to float and the pipe is the only meaningful output.
-                if isinstance(value, list) and node.format_type is not None:
-                    result = node.format()
+                # Lists: apply explicit pipe formatter if present; otherwise
+                # format as comma-separated WITHOUT brackets so the stored answer
+                # string ("-5, -1, 1, 6") is comparable to what students type.
+                if isinstance(value, list):
+                    if node.format_type is not None:
+                        result = node.format()
+                    else:
+                        def _rfmt(v):
+                            return str(int(v) if isinstance(v, float) and v == int(v) else v)
+                        result = ", ".join(_rfmt(v) for v in value)
                     return "{" + result + "}" if triple else result
                 try:
                     f = float(value)

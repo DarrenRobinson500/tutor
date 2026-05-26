@@ -8,6 +8,76 @@ from rest_framework.response import Response
 
 import re as _re
 
+
+def _format_yaml_error(e, content: str) -> str:
+    """Convert a raw PyYAML exception into a readable message with line context and a plain-English hint."""
+    problem      = getattr(e, 'problem',       None) or str(e)
+    problem_mark = getattr(e, 'problem_mark',  None)
+
+    lines = content.splitlines()
+
+    # --- locate the offending line ---
+    if problem_mark is not None:
+        line_no = problem_mark.line    # 0-indexed
+        col_no  = problem_mark.column  # 0-indexed
+        header  = f"YAML syntax error on line {line_no + 1}:"
+        if 0 <= line_no < len(lines):
+            src_line = lines[line_no]
+            pointer  = " " * (col_no + 2) + "^"
+            location = f"  {src_line}\n{pointer}"
+        else:
+            location = ""
+    else:
+        header   = "YAML syntax error:"
+        location = str(e)
+        col_no   = -1
+        src_line = ""
+
+    # --- plain-English hints for common PyYAML messages ---
+    p = (problem or "").lower()
+
+    if problem_mark is not None and 0 <= problem_mark.line < len(lines):
+        src_line = lines[problem_mark.line]
+    else:
+        src_line = ""
+
+    hint = ""
+    if "expected <block end>" in p or "found '<scalar>'" in p:
+        # Stray character immediately after a closing quote?
+        if col_no > 0 and col_no <= len(src_line):
+            char_before = src_line[col_no - 1:col_no]
+            char_at     = src_line[col_no:col_no + 1]
+            if char_before in ("'", '"') and char_at and char_at not in (' ', '\t', '#', ''):
+                hint = f"Unexpected character '{char_at}' appears right after a closing quote — remove it."
+        if not hint:
+            hint = "Unexpected content found. Check indentation and that all quoted strings are properly closed."
+
+    elif "mapping values are not allowed" in p:
+        hint = "A colon (:) appeared inside an unquoted value. Wrap the value in quotes."
+
+    elif "found character '\\t'" in p or "tab" in p:
+        hint = "Tabs are not allowed for YAML indentation — use spaces only."
+
+    elif "found unexpected end of stream" in p:
+        hint = "The template appears to be cut off, or a quoted string was never closed."
+
+    elif "found duplicate key" in p:
+        hint = "The same key appears twice in the same block — remove the duplicate."
+
+    elif "could not find expected ':'" in p:
+        hint = "A key is missing its colon. Check for typos near this line."
+
+    elif src_line and "{{" in src_line and '"' not in src_line and "'" not in src_line:
+        hint = "Expressions like {{ ... }} must be quoted: answer: \"{{ expr }}\""
+
+    parts = [header]
+    if location:
+        parts.append(location)
+    if hint:
+        parts.append(f"Hint: {hint}")
+    return "\n".join(parts)
+
+
 def _fix_unquoted_diagram(content: str) -> str:
     """
     Quote an unquoted diagram string so YAML doesn't misparse the key: value
@@ -284,9 +354,9 @@ def generate_preview_from_content(content: str):
                 "diagram_code": "",
                 "substituted_yaml": content,
                 "params": {},
-                "errors": [f"YAML error: {str(e)}"]
+                "errors": [_format_yaml_error(e, content)]
             },
-            "error": f"YAML error: {str(e)}"
+            "error": _format_yaml_error(e, content)
         }
 
     # 2. Validate
@@ -368,9 +438,9 @@ def generate_values_and_question(template_id: int):
                 "diagram_code": "",
                 "substituted_yaml": content,
                 "params": {},
-                "errors": [f"YAML error: {str(e)}"]
+                "errors": [_format_yaml_error(e, content)]
             },
-            "error": f"YAML error: {str(e)}"
+            "error": _format_yaml_error(e, content)
         }
 
     # 3. Validate
@@ -468,9 +538,9 @@ def generate_preview_from_template_id(template_id: int):
                 "diagram_code": "",
                 "substituted_yaml": content,
                 "params": {},
-                "errors": [f"YAML error: {str(e)}"]
+                "errors": [_format_yaml_error(e, content)]
             },
-            "error": f"YAML error: {str(e)}"
+            "error": _format_yaml_error(e, content)
         }
 
     # 3. Validate

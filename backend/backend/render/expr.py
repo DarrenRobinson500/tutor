@@ -110,14 +110,38 @@ class ExpressionNode:
         if not format_part:
             return None, {}
         if "(" not in format_part:
-            return format_part, {}
-        name, args = format_part.split("(", 1)
+            return format_part.strip(), {}
+        name, rest = format_part.split("(", 1)
         name = name.strip()
-        args = args.rstrip(")")
+        args_str = rest.rstrip(")")
+        # Split on commas that are not inside quotes
+        parts, current, in_quote = [], [], None
+        for ch in args_str:
+            if ch in ("'", '"') and in_quote is None:
+                in_quote = ch
+                current.append(ch)
+            elif ch == in_quote:
+                in_quote = None
+                current.append(ch)
+            elif ch == ',' and in_quote is None:
+                parts.append(''.join(current).strip())
+                current = []
+            else:
+                current.append(ch)
+        if current:
+            parts.append(''.join(current).strip())
         options = {}
-        for item in args.split(","):
-            key, val = map(str.strip, item.split("="))
-            options[key] = val
+        positional = []
+        for item in parts:
+            if not item:
+                continue
+            if "=" in item and not (item.startswith("'") or item.startswith('"')):
+                key, val = item.split("=", 1)
+                options[key.strip()] = val.strip().strip("'\"")
+            else:
+                positional.append(item.strip("'\""))
+        if positional:
+            options.setdefault("sep", positional[0])
         return name, options
 
     # ── Value coercion ───────────────────────────────────────────────────────
@@ -248,13 +272,22 @@ class ExpressionNode:
             except TypeError:
                 return "0"
 
-        # Lists → comma-separated (| sorted sorts first)
+        # Lists — handle special list pipes before the generic renderer
         if isinstance(self.evaluated_value, list):
+            def _fmt_num(v):
+                return str(int(v) if isinstance(v, float) and v == int(v) else v)
+
+            if self.format_type == "join":
+                sep = self.format_options.get("sep", ", ")
+                return sep.join(_fmt_num(v) for v in self.evaluated_value)
+
+            if self.format_type == "max_abs":
+                result = max(self.evaluated_value, key=abs)
+                return _fmt_num(result)
+
             vals = sorted(self.evaluated_value) if self.format_type == "sorted" \
                    else self.evaluated_value
-            return ", ".join(
-                str(int(v) if isinstance(v, float) and v == int(v) else v) for v in vals
-            )
+            return ", ".join(_fmt_num(v) for v in vals)
 
         # Explicit format type always wins
         if self.format_type is not None:
