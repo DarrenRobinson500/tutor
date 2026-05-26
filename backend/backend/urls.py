@@ -44,6 +44,7 @@ urlpatterns = [
     path("payments/<int:pk>/retry/",      payment_retry,           name="payment_retry"),
     path("parents/<int:pk>/payments/",    parent_payment_history,  name="parent_payment_history"),
     path("admin/activity/",               admin_activity,          name="admin_activity"),
+    path("settings/",                     system_settings,         name="system_settings"),
 ]
 
 urlpatterns += router.urls

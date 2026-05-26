@@ -23,7 +23,6 @@ now = timezone.localtime(timezone.now(), local_tz)
 today = now.date()
 
 weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-days_needed_to_cancel = 1
 
 # from django.db.models import Count
 # from django_cte import With
@@ -516,7 +515,8 @@ class BookingWeekly(models.Model):
         return next_start_time
 
     def student_can_edit(self):
-        return self.next_occurrence() > now + timedelta(days=days_needed_to_cancel)
+        notice_hours = get_int('cancellation_notice_hours', 24)
+        return self.next_occurrence() > timezone.now() + timedelta(hours=notice_hours)
 
     def duration(self):
         return (self.end_time.hour * 60 + self.end_time.minute) - (self.start_time.hour * 60 + self.start_time.minute)
@@ -559,7 +559,8 @@ class BookingAdhoc(models.Model):
     def __str__(self): return f"{self.start_datetime} {self.student} {self.tutor}"
 
     def student_can_edit(self):
-        return self.start_datetime > now + timedelta(days=days_needed_to_cancel)
+        notice_hours = get_int('cancellation_notice_hours', 24)
+        return self.start_datetime > timezone.now() + timedelta(hours=notice_hours)
 
     def duration(self):
         return (self.end_datetime.hour * 60 + self.end_datetime.minute) - (self.start_datetime.hour * 60 + self.start_datetime.minute)

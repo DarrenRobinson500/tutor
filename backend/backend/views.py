@@ -2,8 +2,7 @@ from django.http import HttpResponse
 from django.contrib.auth.hashers import make_password
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets
-from rest_framework.decorators import action
-from rest_framework.decorators import api_view
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.contrib.auth import authenticate, login, logout
@@ -5077,6 +5076,14 @@ class KnowledgeViewSet(viewsets.ModelViewSet):
             "diagram": item.get("diagram", ""),
             "text_2": item.get("text_2", ""),
         })
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def system_settings(request):
+    """Return public system configuration values used by the frontend."""
+    platform_fee = get_decimal('platform_fee', '6.50')
+    return Response({'platform_fee': float(platform_fee)})
 
 
 @api_view(["GET"])
