@@ -693,6 +693,7 @@ function AddChildForm({
         latest_session_date: null,
         tutor_name: null,
         next_booking: null,
+        syllabus_percent: null,
       });
     } catch {
       setError("Something went wrong. Please try again.");
