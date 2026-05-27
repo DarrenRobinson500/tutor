@@ -1385,6 +1385,7 @@ class SMSMessage(models.Model):
 class SMSSendJob(models.Model):
     conversation = models.ForeignKey(SMSConversation, blank=True, null=True, on_delete=models.CASCADE, related_name="jobs")
     to_number = models.CharField(max_length=20, null=True, blank=True)  # used when no conversation
+    message_type = models.CharField(max_length=60, null=True, blank=True)
     body = models.TextField()
     scheduled_for = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)

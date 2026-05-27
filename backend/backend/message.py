@@ -95,12 +95,14 @@ def sms_enqueue(booking, message_type, user_role):
     tutor_id = booking["tutor_id"]
     student_id = booking["student_id"]
     conversation = get_or_create_conversation(User.objects.get(id=tutor_id), User.objects.get(id=student_id))
+    combined_type = f"{user_role}_{message_type}"
     body = create_sms_body(booking, message_type, user_role)
     now = timezone.now()
     scheduled_for = now + SMS_PAUSE
 
     job = SMSSendJob.objects.filter(
         conversation=conversation,
+        message_type=combined_type,
         cancelled=False
     ).first()
 
@@ -113,6 +115,7 @@ def sms_enqueue(booking, message_type, user_role):
 
     return SMSSendJob.objects.create(
         conversation=conversation,
+        message_type=combined_type,
         body=body,
         scheduled_for=scheduled_for
     )
