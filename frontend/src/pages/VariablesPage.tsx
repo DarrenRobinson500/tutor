@@ -8,8 +8,9 @@ interface Setting {
 }
 
 const SYSTEM_KEYS: { key: string; label: string; description: string }[] = [
-  { key: "platform_fee",               label: "Platform Fee ($)",           description: "Added to the tutor's rate on the Available Tutors page and at checkout." },
+  { key: "platform_fee",               label: "Platform Fee ($)",            description: "Added to the tutor's rate on the Available Tutors page and at checkout." },
   { key: "cancellation_notice_hours",  label: "Cancellation Notice (hours)", description: "Minimum hours before a session that a student can cancel or reschedule." },
+  { key: "booking_notice_hours",       label: "Booking Notice (hours)",      description: "Minimum hours ahead a parent or student must book a session." },
 ];
 
 const DEV_USER_ROLES = [

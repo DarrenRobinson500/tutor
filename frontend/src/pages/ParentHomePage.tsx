@@ -26,6 +26,7 @@ interface Child {
   latest_session_date: string | null;
   tutor_name: string | null;
   next_booking: NextBooking | null;
+  syllabus_percent: number | null;
 }
 
 interface ParentData {
@@ -590,6 +591,11 @@ function ChildCard({
 
       <div className="mt-3">
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Progress</div>
+        {child.syllabus_percent != null && child.syllabus_percent > 0 && child.year_level && (
+          <div style={{ fontSize: 13, color: "var(--sm-text-secondary, #5A5047)", marginBottom: 8 }}>
+            {child.first_name} is {child.syllabus_percent}% of the way through the Year {child.year_level.replace(/^year\s*/i, "")} syllabus.
+          </div>
+        )}
         <ProgressChart studentId={child.id} />
       </div>
 

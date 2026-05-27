@@ -5,6 +5,7 @@ DEFAULTS = {
     # Pricing / booking rules
     'platform_fee': '6.50',
     'cancellation_notice_hours': '24',
+    'booking_notice_hours': '24',
     # Quick-login test accounts
     'dev_admin_email': 'Darren',
     'dev_admin_password': 'Darren',

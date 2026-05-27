@@ -677,6 +677,7 @@ class AuthViewSet(viewsets.ViewSet):
 
         from .models import TutorStudent
         children_links = ParentChild.objects.filter(parent=user).select_related("child")
+        from .competency import get_student_score as _get_student_score
         children_data = []
         for link in children_links:
             child = link.child
@@ -696,18 +697,23 @@ class AuthViewSet(viewsets.ViewSet):
                 .first()
             ) if tutor_link else None
 
+            year_level = profile.year_level if profile else None
+            grade_key = str(year_level).strip().lower().replace("year", "").strip() if year_level else None
+            syllabus_percent = round(_get_student_score(child, grade_key) * 100) if grade_key else None
+
             children_data.append({
                 "id": child.id,
                 "first_name": child.first_name,
                 "last_name": child.last_name,
                 "email": child.email,
-                "year_level": profile.year_level if profile else None,
+                "year_level": year_level,
                 "school_name": profile.school_name if profile else None,
                 "test_count": test_count,
                 "latest_test_date": latest_test.completed_at.isoformat() if latest_test else None,
                 "latest_session_date": latest_tutoring.created_at.isoformat() if latest_tutoring else None,
                 "tutor_name": tutor_name,
                 "next_booking": child.next_booking(),
+                "syllabus_percent": syllabus_percent,
             })
 
         if not user.welcome_email_sent:
@@ -4242,13 +4248,18 @@ class StudentViewSet(viewsets.ModelViewSet):
         if not tutor:
             return Response({"error": "Student has no tutor assigned"}, status=400)
 
-        start_date = (date.today() + timedelta(days=1)).isoformat()
+        notice_hours = get_int('booking_notice_hours', 24)
+        earliest_dt = timezone.localtime(timezone.now()) + timedelta(hours=notice_hours)
+        start_date = earliest_dt.date().isoformat()
+        earliest_time = earliest_dt.strftime("%H:%M")
 
         weekly_slots = get_weekly_slots(tutor)
         weekly_bookings = get_weekly_bookings(tutor)
         weekly_bookings = mask_weekly_bookings(weekly_bookings, student.id)
 
-        adhoc_slots = get_availability_adhoc(tutor, start_date)
+        adhoc_slots = dict(get_availability_adhoc(tutor, start_date))  # copy — don't mutate cache
+        if start_date in adhoc_slots:
+            adhoc_slots[start_date] = [t for t in adhoc_slots[start_date] if t >= earliest_time]
         adhoc_bookings = get_adhoc_bookings(tutor, start_date)
         adhoc_bookings = mask_adhoc_bookings(adhoc_bookings, student.id)
 
@@ -5832,6 +5843,26 @@ class TestViewSet(viewsets.ViewSet):
 
         if not skill_codes:
             return Response({'error': 'No skills found'}, status=400)
+
+        # ── Filter skills by competency level for test mode ───────────────────
+        # Start from the lowest competency level and expand upward until at
+        # least 5 skills are selected (or all levels are exhausted).
+        # A new student (all level 0) will always test every skill.
+        if mode == 'test' and not skill_codes_override:
+            comp_map = {
+                c.skill.code: c.level
+                for c in StudentSkillCompetency.objects.filter(
+                    student=student, skill__code__in=skill_codes
+                ).select_related('skill')
+            }
+            level_of = lambda code: comp_map.get(code, 0)
+            sorted_levels = sorted(set(level_of(c) for c in skill_codes))
+            filtered = skill_codes  # fallback: use all if somehow empty
+            for lvl in sorted_levels:
+                filtered = [c for c in skill_codes if level_of(c) <= lvl]
+                if len(filtered) >= 5:
+                    break
+            skill_codes = filtered
 
         # ── Resolve linked focus area ─────────────────────────────────────────
         linked_fa = None
