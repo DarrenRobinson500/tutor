@@ -21,3 +21,4 @@ pytz
 sympy
 stripe>=7.0.0
 reportlab>=4.0.0
+django-anymail[sendgrid]>=10.0

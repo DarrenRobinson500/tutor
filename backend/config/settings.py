@@ -225,10 +225,17 @@ EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.Email
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "false").lower() == "true"
-EMAIL_USE_TLS = not EMAIL_USE_SSL  # TLS (587) and SSL (465) are mutually exclusive
+EMAIL_USE_TLS = not EMAIL_USE_SSL
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "SubjectMatter <noreply@subjectmatter.app>")
+
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
+if SENDGRID_API_KEY:
+    EMAIL_BACKEND = "anymail.backends.sendgrid.EmailBackend"
+    ANYMAIL = {"SENDGRID_API_KEY": SENDGRID_API_KEY}
+    if 'anymail' not in INSTALLED_APPS:
+        INSTALLED_APPS.append('anymail')
 
 # SMS (ClickSend)
 SMS_SEND = os.environ.get("SMS_SEND")
