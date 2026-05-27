@@ -332,10 +332,20 @@ interface ActivityUser {
   date_joined: string;
 }
 
+interface TutorRemoval {
+  id: number;
+  tutor_first_name: string;
+  tutor_last_name: string;
+  tutor_email: string;
+  notes: string;
+  triggered_at: string;
+}
+
 interface ActivityData {
   parents: ActivityUser[];
   students: ActivityUser[];
   tutors: ActivityUser[];
+  tutor_removals: TutorRemoval[];
 }
 
 function ActivityTab() {
@@ -346,7 +356,7 @@ function ActivityTab() {
     apiFetch("/api/admin/activity/")
       .then(r => r.json())
       .then(setData)
-      .catch(() => setData({ parents: [], students: [], tutors: [] }))
+      .catch(() => setData({ parents: [], students: [], tutors: [], tutor_removals: [] }))
       .finally(() => setLoading(false));
   }, []);
 
@@ -396,6 +406,34 @@ function ActivityTab() {
       <section>
         <h5 className="mb-2">New Tutors <span className="text-muted fw-normal" style={{ fontSize: "0.85rem" }}>({data.tutors.length})</span></h5>
         <UserList users={data.tutors} emptyMsg="No tutors yet." />
+      </section>
+      <section>
+        <h5 className="mb-2">Tutor Removals <span className="text-muted fw-normal" style={{ fontSize: "0.85rem" }}>({data.tutor_removals.length})</span></h5>
+        {data.tutor_removals.length === 0 ? (
+          <p className="text-muted" style={{ fontSize: 13 }}>No tutor removals yet.</p>
+        ) : (
+          <div style={{ overflowX: "auto", borderRadius: 8, border: "1px solid #dee2e6" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+              <thead>
+                <tr style={{ background: "#f8f9fa", borderBottom: "1px solid #dee2e6" }}>
+                  {["Tutor", "Email", "Details", "Removed"].map(h => (
+                    <th key={h} style={{ padding: "0.5rem 0.9rem", textAlign: "left", fontWeight: 600, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em", color: "#6c757d" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.tutor_removals.map((r, i) => (
+                  <tr key={r.id} style={{ background: i % 2 === 0 ? "#fff" : "#f8f9fa", borderBottom: "1px solid #dee2e6" }}>
+                    <td style={{ padding: "0.55rem 0.9rem", fontWeight: 500 }}>{r.tutor_first_name} {r.tutor_last_name}</td>
+                    <td style={{ padding: "0.55rem 0.9rem", color: "#555" }}>{r.tutor_email}</td>
+                    <td style={{ padding: "0.55rem 0.9rem", color: "#444", whiteSpace: "pre-line", fontSize: "0.82rem" }}>{r.notes}</td>
+                    <td style={{ padding: "0.55rem 0.9rem", color: "#888", whiteSpace: "nowrap" }}>{fmtDate(r.triggered_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );

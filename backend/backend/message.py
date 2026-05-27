@@ -66,7 +66,7 @@ def create_sms_body(booking, message_type, user_role):
         "start": start,
         "end": end,
         "student_name": booking.get("student_name"),
-        "tutor_name": booking.get("tutor_name"),
+        "tutor_name": (booking.get("tutor_name") or "").split()[0] or booking.get("tutor_name"),
     }
 
     template = SMS_TEMPLATES[combined_type]

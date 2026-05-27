@@ -186,8 +186,8 @@ export function PaymentAuthorisePage() {
             <StarRating value={rating} onChange={setRating} />
             {rating > 0 && (
               <textarea
-                className="sm-input pa-comment"
-                placeholder="Optional comment…"
+                className="pa-comment"
+                placeholder={`Let us know if you have any feedback on ${payment.tutor_name.split(" ")[0]}…`}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={3}

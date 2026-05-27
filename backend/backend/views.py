@@ -860,9 +860,10 @@ class AuthViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"])
     def remove_tutor(self, request):
-        """Remove the tutor–student link and any unconfirmed weekly bookings for that child."""
-        from .models import TutorStudent, BookingWeekly, ParentChild
+        """Remove the tutor–student link, all bookings, send SMS to tutor, log for admin."""
+        from .models import TutorStudent, BookingWeekly, BookingAdhoc, ParentChild, AdminJob, TutorProfile
         from django.contrib.auth import get_user_model
+        import threading
 
         User = get_user_model()
         user = request.user
@@ -870,6 +871,9 @@ class AuthViewSet(viewsets.ViewSet):
             return Response({"error": "Not authorised."}, status=403)
 
         child_id = request.data.get("child_id")
+        rating = request.data.get("rating")
+        rating_comment = request.data.get("rating_comment", "").strip()
+
         try:
             child = User.objects.get(id=child_id, role="student")
         except User.DoesNotExist:
@@ -878,8 +882,52 @@ class AuthViewSet(viewsets.ViewSet):
         if not ParentChild.objects.filter(parent=user, child=child).exists():
             return Response({"error": "Not authorised."}, status=403)
 
+        link = TutorStudent.objects.filter(student=child).select_related("tutor").first()
+        tutor = link.tutor if link else None
+
+        BookingWeekly.objects.filter(student=child).delete()
+        BookingAdhoc.objects.filter(student=child).delete()
         TutorStudent.objects.filter(student=child).delete()
-        BookingWeekly.objects.filter(student=child, confirmed=False).delete()
+
+        if tutor:
+            notes_parts = [f"Student: {child.get_full_name()}"]
+            if rating is not None:
+                notes_parts.append(f"Rating: {rating}/5")
+            if rating_comment:
+                notes_parts.append(f"Comment: {rating_comment}")
+            AdminJob.objects.create(
+                job_type="tutor_removed",
+                subject=tutor,
+                notes="\n".join(notes_parts),
+                completed_at=timezone.now(),
+            )
+
+            def _send_sms():
+                try:
+                    from .message import process_sms_jobs, SMSSendJob, get_or_create_conversation
+                    profile = TutorProfile.objects.filter(tutor=tutor).first()
+                    mobile = profile.mobile if profile else None
+                    if mobile:
+                        tutor_first = tutor.first_name
+                        student_name = child.get_full_name()
+                        body = (
+                            f"Hi {tutor_first}, {student_name}'s family has ended the tutoring arrangement. "
+                            f"Thank you for your work with SubjectMatter."
+                        )
+                        admin_user = User.objects.filter(role="admin").first()
+                        if admin_user:
+                            conversation = get_or_create_conversation(tutor=tutor, student=admin_user)
+                            SMSSendJob.objects.create(
+                                conversation=conversation,
+                                to_number=mobile,
+                                body=body,
+                                scheduled_for=timezone.now(),
+                            )
+                            process_sms_jobs()
+                except Exception as _e:
+                    print("Failed to send removal SMS to tutor:", _e)
+
+            threading.Thread(target=_send_sms, daemon=True).start()
 
         return Response({"status": "ok"})
 
@@ -3322,11 +3370,10 @@ class TutorJobViewSet(viewsets.ViewSet):
                     student=student, skill_id__in=skill_ids
                 )
             }
-            focus_parts = [
-                f"{name} ({_level_to_label(level_map.get(sid, 0))})"
-                for name, sid in focus_items
-                if level_map.get(sid, 0) > 0
-            ]
+            focus_parts = []
+            for _name, _sid in focus_items:
+                _lvl = level_map.get(_sid, 0)
+                focus_parts.append(f"{_name} ({_level_to_label(_lvl)})" if _lvl > 0 else _name)
             if not focus_parts:
                 focus_text = "various topics"
             elif len(focus_parts) == 1:
@@ -3487,6 +3534,16 @@ class TutorJobViewSet(viewsets.ViewSet):
         already_applied = payment_id is not None
         has_outcome = outcome is not None
 
+        # Check if the parent has paid but tutor hasn't confirmed yet
+        pending_confirmation = False
+        payment_parent_name = None
+        if payment_id:
+            from .models import SessionPayment
+            sp_obj = SessionPayment.objects.filter(pk=payment_id).select_related('parent').first()
+            if sp_obj and sp_obj.status == 'paid':
+                pending_confirmation = True
+                payment_parent_name = sp_obj.parent.get_full_name() if sp_obj.parent else None
+
         return Response({
             'student_name': f"{student.first_name} {student.last_name}".strip() if student else "",
             'tutor_name': tutor.get_full_name(),
@@ -3505,6 +3562,8 @@ class TutorJobViewSet(viewsets.ViewSet):
             'already_applied': already_applied,
             'payment_id': payment_id,
             'has_outcome': has_outcome,
+            'pending_payment_confirmation': pending_confirmation,
+            'payment_parent_name': payment_parent_name,
         })
 
     @action(detail=True, methods=['post'])
@@ -7208,8 +7267,11 @@ def payment_authorise(request, pk):
     if payment.parent != request.user:
         return Response({'error': 'Forbidden'}, status=403)
 
-    if payment.status != 'pending':
-        return Response({'error': f'Payment is already {payment.status}'}, status=400)
+    if payment.status in ('paid', 'confirmed'):
+        return Response({'success': True, 'payment': payment.to_dict()})
+
+    if payment.status not in ('pending', 'authorised', 'overdue_7', 'overdue_14'):
+        return Response({'error': f'Payment cannot be authorised (status: {payment.status})'}, status=400)
 
     # Save optional rating
     rating = request.data.get('rating')
@@ -7228,6 +7290,51 @@ def payment_authorise(request, pk):
     # Flag low ratings to admin
     if payment.rating and payment.rating <= 2:
         AdminJob.objects.create(job_type='low_session_rating', subject=payment.parent)
+
+    tutor = payment.tutor
+    student = payment.student
+
+    # Create a job for the tutor to confirm receipt
+    from .models import TutorJob as _TutorJob
+    from datetime import timedelta
+    booking_ref = f"payment_{payment.id}"
+    if not _TutorJob.objects.filter(tutor=tutor, booking_ref=booking_ref).exists():
+        _TutorJob.objects.create(
+            tutor=tutor,
+            student=student,
+            job_type='confirm_payment_receipt',
+            booking_ref=booking_ref,
+            expires_at=_tz.now() + timedelta(days=30),
+        )
+
+    # SMS the tutor
+    import threading
+    def _send_sms():
+        try:
+            from .models import TutorProfile, SMSSendJob, get_or_create_conversation
+            from .message import process_sms_jobs
+            profile = TutorProfile.objects.filter(tutor=tutor).first()
+            mobile = profile.mobile if profile else None
+            if mobile:
+                student_name = student.first_name if student else "your student"
+                total = f"${float(payment.tutor_amount):.2f}"
+                body = (
+                    f"Hi {tutor.first_name}, {student_name}'s parent has made a payment of {total}. "
+                    f"Please confirm receipt in the SubjectMatter app."
+                )
+                admin_user = User.objects.filter(role='admin').first()
+                if admin_user:
+                    conversation = get_or_create_conversation(tutor=tutor, student=admin_user)
+                    SMSSendJob.objects.create(
+                        conversation=conversation,
+                        to_number=mobile,
+                        body=body,
+                        scheduled_for=_tz.now(),
+                    )
+                    process_sms_jobs()
+        except Exception as _e:
+            print("Failed to send payment SMS to tutor:", _e)
+    threading.Thread(target=_send_sms, daemon=True).start()
 
     return Response({'success': True, 'payment': payment.to_dict()})
 
@@ -7252,6 +7359,14 @@ def payment_confirm_receipt(request, pk):
     payment.status = 'confirmed'
     payment.confirmed_at = _tz.now()
     payment.save(update_fields=['status', 'confirmed_at'])
+
+    # Complete the confirm_payment_receipt job if it exists
+    from .models import TutorJob as _TutorJob
+    _TutorJob.objects.filter(
+        tutor=request.user,
+        booking_ref=f"payment_{payment.id}",
+        completed_at__isnull=True,
+    ).update(completed_at=_tz.now())
 
     return Response({'success': True, 'payment': payment.to_dict()})
 
@@ -7454,10 +7569,28 @@ def admin_activity(request):
     students = User.objects.filter(role='student').order_by('-date_joined')[:50]
     tutors   = User.objects.filter(role='tutor').order_by('-date_joined')[:50]
 
+    from .models import AdminJob
+    removal_jobs = AdminJob.objects.filter(
+        job_type='tutor_removed'
+    ).select_related('subject').order_by('-triggered_at')[:50]
+
+    tutor_removals = []
+    for job in removal_jobs:
+        entry = {
+            'id': job.id,
+            'tutor_first_name': job.subject.first_name if job.subject else '',
+            'tutor_last_name': job.subject.last_name if job.subject else '',
+            'tutor_email': job.subject.email if job.subject else '',
+            'notes': job.notes or '',
+            'triggered_at': job.triggered_at.isoformat(),
+        }
+        tutor_removals.append(entry)
+
     return Response({
-        'parents':  fmt(parents),
-        'students': fmt(students),
-        'tutors':   fmt(tutors),
+        'parents':        fmt(parents),
+        'students':       fmt(students),
+        'tutors':         fmt(tutors),
+        'tutor_removals': tutor_removals,
     })
 
 

@@ -26,6 +26,7 @@ const JOB_LABELS: Record<string, (firstName: string | null, job?: any) => string
   setup_weekly_session: (n) => `Set up weekly session${n ? ` for ${n}` : ""}`,
   set_fee: () => `Set your tutoring fee`,
   confirm_appointment: (n) => `Confirm Appointment${n ? `: ${n}` : ""}`,
+  confirm_payment_receipt: (n) => `Confirm payment received${n ? ` from ${n}'s family` : ""}`,
 };
 
 const JOB_LINKS: Record<string, (tutorId: string, studentId: number, jobId: number) => string> = {
@@ -38,6 +39,7 @@ const JOB_LINKS: Record<string, (tutorId: string, studentId: number, jobId: numb
   setup_weekly_session: (tutorId) => `/tutors/${tutorId}/booking`,
   set_fee: (tutorId, _studentId, jobId) => `/tutors/${tutorId}/set-fee?job_id=${jobId}`,
   confirm_appointment: (tutorId) => `/tutors/${tutorId}/booking`,
+  confirm_payment_receipt: (tutorId) => `/tutors/${tutorId}/payments`,
 };
 
 export function TutorJobsPanel({ tutorId }: { tutorId: string }) {

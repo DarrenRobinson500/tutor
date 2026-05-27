@@ -19,6 +19,8 @@ interface PaymentSummary {
   already_applied: boolean;
   payment_id: number | null;
   has_outcome: boolean;
+  pending_payment_confirmation: boolean;
+  payment_parent_name: string | null;
 }
 
 interface FocusArea {
@@ -87,6 +89,10 @@ export function PostTuitionPage() {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentApplying, setPaymentApplying] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  // Step 4: confirm receipt
+  const [receiptConfirming, setReceiptConfirming] = useState(false);
+  const [receiptConfirmed, setReceiptConfirmed] = useState(false);
 
   useEffect(() => {
     if (!studentId) return;
@@ -238,6 +244,20 @@ export function PostTuitionPage() {
 
   function handleApproveFocusAreas() {
     setFocusAreasApproved(true);
+  }
+
+  async function handleConfirmReceipt() {
+    if (!payment?.payment_id) return;
+    setReceiptConfirming(true);
+    try {
+      await apiFetch(`/api/payments/${payment.payment_id}/confirm_receipt/`, { method: "POST" });
+      setReceiptConfirmed(true);
+      setPayment(prev => prev ? { ...prev, pending_payment_confirmation: false } : prev);
+    } catch {
+      // silently ignore — confirmation can be done from Payments page too
+    } finally {
+      setReceiptConfirming(false);
+    }
   }
 
   async function handleRequestPayment() {
@@ -578,6 +598,48 @@ export function PostTuitionPage() {
             )}
           </div>
         </div>
+
+        {/* ── Step 4: Confirm receipt (only shown when parent has paid but tutor hasn't confirmed) ── */}
+        {payment && (payment.pending_payment_confirmation || receiptConfirmed) && (
+          <div className="card mb-4">
+            <div className="card-header d-flex align-items-center gap-2">
+              <span className="badge bg-primary">4</span>
+              <span className="fw-semibold">Confirm Payment Received</span>
+              {receiptConfirmed && <span className="badge bg-primary ms-auto">Confirmed</span>}
+            </div>
+            <div className="card-body">
+              {receiptConfirmed ? (
+                <p className="mb-0 text-success" style={{ fontSize: 14 }}>
+                  Payment confirmed — thank you.
+                </p>
+              ) : (
+                <>
+                  <p className="mb-3" style={{ fontSize: 14 }}>
+                    Have you received payment from{" "}
+                    <strong>{payment.payment_parent_name ?? "the parent"}</strong> for the session
+                    {payment.date_tuition ? ` on ${formatDate(payment.date_tuition)}` : ""} with{" "}
+                    <strong>{payment.student_name}</strong>?
+                  </p>
+                  <div className="d-flex gap-2">
+                    <button
+                      className="btn btn-success btn-sm"
+                      onClick={handleConfirmReceipt}
+                      disabled={receiptConfirming}
+                    >
+                      {receiptConfirming ? "Confirming…" : "Yes, I've received it"}
+                    </button>
+                    <button
+                      className="btn btn-outline-secondary btn-sm"
+                      onClick={() => setPayment(prev => prev ? { ...prev, pending_payment_confirmation: false } : prev)}
+                    >
+                      Not yet
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
       </div>
     </Layout>

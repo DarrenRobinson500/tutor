@@ -966,6 +966,7 @@ class TutorJob(models.Model):
         ('payment_failed', 'Payment Failed'),
         ('payment_overdue_7', 'Payment Overdue — 7 Days'),
         ('payment_overdue_14', 'Payment Overdue — 14 Days — Sessions Paused'),
+        ('confirm_payment_receipt', 'Confirm Payment Receipt'),
     ]
     tutor = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tutor_jobs')
     student = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='student_jobs')
@@ -999,6 +1000,7 @@ class AdminJob(models.Model):
         ('payment_overdue_14', 'Payment Overdue — 14 Days'),
         ('low_session_rating', 'Low Session Rating'),
         ('setup_bank_details', 'Setup Bank Details'),
+        ('tutor_removed', 'Tutor Removed'),
     ]
     job_type = models.CharField(max_length=50, choices=JOB_TYPES)
     subject = models.ForeignKey(
@@ -1008,6 +1010,7 @@ class AdminJob(models.Model):
         blank=True,
         related_name='admin_jobs',
     )
+    notes = models.TextField(blank=True, null=True)
     triggered_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 

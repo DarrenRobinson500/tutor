@@ -87,7 +87,7 @@ export function PaymentReceiptPage() {
           <div style={{ textAlign: "center", marginBottom: "2rem" }}>
             <div style={{ fontSize: "3rem", color: "var(--sm-success, #2E7D32)", lineHeight: 1, marginBottom: "0.5rem" }}>✓</div>
             <h1 style={{ fontFamily: "var(--font-display, Lora, serif)", fontSize: "1.5rem", fontWeight: 600, color: "var(--sm-success, #2E7D32)", margin: 0 }}>
-              Payment confirmed
+              Thank you
             </h1>
           </div>
 
@@ -120,13 +120,6 @@ export function PaymentReceiptPage() {
                 <span>Total</span><span>{currency(payment.total_amount)}</span>
               </div>
             </div>
-          </div>
-
-          {/* Settlement note */}
-          <div style={{ background: "var(--sm-success-bg, #E8F5E9)", border: "1px solid #A5D6A7", borderRadius: 8, padding: "1rem 1.25rem", marginBottom: "1.5rem" }}>
-            <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--sm-success, #2E7D32)" }}>
-              Your tutor will receive their payment immediately.
-            </p>
           </div>
 
           <Link to={dashboardPath()} className="sm-btn-primary" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>

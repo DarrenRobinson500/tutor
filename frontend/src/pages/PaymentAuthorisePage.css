@@ -106,6 +106,15 @@
   width: 100%;
   resize: vertical;
   margin-bottom: 0.5rem;
+  border: 1px solid var(--sm-border, #E8E0D6);
+  border-radius: var(--radius-md, 8px);
+  padding: 0.65rem 0.875rem;
+  font-family: var(--font-body, Inter, sans-serif);
+  font-size: var(--text-base, 0.9rem);
+  color: var(--sm-text, #2D2D2D);
+  background: var(--sm-surface, #fff);
+  outline: none;
+  box-sizing: border-box;
 }
 
 .pa-low-rating-note {

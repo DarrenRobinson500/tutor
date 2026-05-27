@@ -6,6 +6,101 @@ import { dashboardPath } from "../utils/dashboardPath";
 import "./ParentHomePage.css";
 import { useYears } from "../utils/useYears";
 
+/* ── Star rating ─────────────────────────────────────────────── */
+function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hovered, setHovered] = useState(0);
+  return (
+    <div style={{ display: "flex", gap: 4, fontSize: "1.8rem", cursor: "pointer" }}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <span
+          key={n}
+          style={{ color: n <= (hovered || value) ? "#f59e0b" : "#d1d5db", transition: "color 0.1s" }}
+          onMouseEnter={() => setHovered(n)}
+          onMouseLeave={() => setHovered(0)}
+          onClick={() => onChange(n)}
+        >★</span>
+      ))}
+    </div>
+  );
+}
+
+/* ── Remove tutor modal ──────────────────────────────────────── */
+function RemoveTutorModal({
+  childName,
+  tutorName,
+  onConfirm,
+  onCancel,
+}: {
+  childName: string;
+  tutorName: string;
+  onConfirm: (rating: number | null, comment: string) => void;
+  onCancel: () => void;
+}) {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleConfirm() {
+    setSubmitting(true);
+    await onConfirm(rating > 0 ? rating : null, comment.trim());
+    setSubmitting(false);
+  }
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 16, padding: "2rem", maxWidth: 440, width: "90%",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+      }}>
+        <h3 style={{ marginBottom: "0.5rem", fontFamily: "var(--font-display, Lora, serif)", fontSize: "1.2rem" }}>
+          Remove {tutorName}?
+        </h3>
+        <p style={{ color: "var(--sm-text-muted, #8A7F74)", fontSize: "0.9rem", marginBottom: "1.25rem" }}>
+          This will cancel all upcoming sessions between {childName} and {tutorName}.
+        </p>
+
+        <div style={{ marginBottom: "1rem" }}>
+          <div style={{ fontWeight: 600, fontSize: "0.9rem", marginBottom: "0.4rem" }}>
+            How would you rate your experience with {tutorName}? <span style={{ color: "var(--sm-text-muted)", fontWeight: 400 }}>(optional)</span>
+          </div>
+          <StarRating value={rating} onChange={setRating} />
+        </div>
+
+        <div style={{ marginBottom: "1.5rem" }}>
+          <label style={{ fontWeight: 600, fontSize: "0.9rem", display: "block", marginBottom: "0.4rem" }}>
+            Any feedback? <span style={{ color: "var(--sm-text-muted)", fontWeight: 400 }}>(optional)</span>
+          </label>
+          <textarea
+            className="sm-input"
+            rows={3}
+            placeholder="Tell us about your experience…"
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            style={{ width: "100%", resize: "vertical" }}
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+          <button className="sm-btn-secondary" onClick={onCancel} disabled={submitting}>
+            Keep tutor
+          </button>
+          <button
+            className="sm-btn-primary"
+            style={{ background: "#dc3545", borderColor: "#dc3545" }}
+            onClick={handleConfirm}
+            disabled={submitting}
+          >
+            {submitting ? "Removing…" : "Remove tutor"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface NextBooking {
   start_iso: string;
   start_time: string;
@@ -265,6 +360,7 @@ export default function ParentHomePage() {
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
   const [tab, setTab] = useState<"overview" | "assessments">("overview");
+  const [removingChild, setRemovingChild] = useState<Child | null>(null);
 
   useEffect(() => {
     apiFetch("/api/auth/parent_home/")
@@ -285,15 +381,10 @@ export default function ParentHomePage() {
       })
       .finally(() => setLoading(false));
 
-    function fetchPending() {
-      apiFetch("/api/payments/pending/")
-        .then((r) => r.ok ? r.json() : { payments: [] })
-        .then((d) => setPendingPayments(d.payments || []))
-        .catch(() => {});
-    }
-    fetchPending();
-    const interval = setInterval(fetchPending, 30000);
-    return () => clearInterval(interval);
+    apiFetch("/api/payments/pending/")
+      .then((r) => r.ok ? r.json() : { payments: [] })
+      .then((d) => setPendingPayments(d.payments || []))
+      .catch(() => {});
   }, []);
 
   function handleLogout() {
@@ -336,11 +427,22 @@ export default function ParentHomePage() {
     });
   }
 
-  async function handleRemoveTutor(childId: number) {
+  function handleRemoveTutor(childId: number) {
+    if (!data) return;
+    const child = data.children.find(c => c.id === childId) ?? null;
+    setRemovingChild(child);
+  }
+
+  async function confirmRemoveTutor(rating: number | null, comment: string) {
+    if (!removingChild) return;
     try {
       const res = await apiFetch("/api/auth/remove_tutor/", {
         method: "POST",
-        body: JSON.stringify({ child_id: childId }),
+        body: JSON.stringify({
+          child_id: removingChild.id,
+          rating,
+          rating_comment: comment,
+        }),
       });
       if (!res.ok) return;
       setData((prev) =>
@@ -348,12 +450,13 @@ export default function ParentHomePage() {
           ? {
               ...prev,
               children: prev.children.map((c) =>
-                c.id === childId ? { ...c, tutor_name: null } : c
+                c.id === removingChild.id ? { ...c, tutor_name: null } : c
               ),
             }
           : prev
       );
     } catch {}
+    setRemovingChild(null);
   }
 
   function onChildAdded(child: Child) {
@@ -492,6 +595,15 @@ export default function ParentHomePage() {
         {tab === "assessments" && <AssessmentsTab children={children} />}
 
       </main>
+
+      {removingChild && removingChild.tutor_name && (
+        <RemoveTutorModal
+          childName={removingChild.first_name}
+          tutorName={removingChild.tutor_name}
+          onConfirm={confirmRemoveTutor}
+          onCancel={() => setRemovingChild(null)}
+        />
+      )}
     </div>
   );
 }
