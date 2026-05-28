@@ -4316,9 +4316,16 @@ class StudentViewSet(viewsets.ModelViewSet):
 
         snapshots = WeeklyProgressSnapshot.objects.filter(student=student).order_by('recorded_at')
 
-        # Count all leaf skills in the student's year-level syllabus as the denominator.
+        # Count all syllabus-level leaf skills (is_detail=False, no non-detail children)
+        # as the denominator — matching the "Your Syllabus" view, not the detail level.
+        from django.db.models import Count as _Count, Q as _Q
         year_level = str(student_profile.year_level) if student_profile.year_level else None
-        all_leaf = Skill.objects.filter(children__isnull=True)
+        all_leaf = (
+            Skill.objects
+            .filter(is_detail=False)
+            .annotate(non_detail_children=_Count('children', filter=_Q(children__is_detail=False)))
+            .filter(non_detail_children=0)
+        )
         if year_level:
             syllabus_skill_ids = {
                 s.id for s in all_leaf if _skill_matches_year(s, year_level)
