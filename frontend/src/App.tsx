@@ -9,6 +9,7 @@ import { NewTemplatePage } from "./pages/NewTemplatePage";
 import { SkillCreatePage } from "./pages/SkillCreatePage";
 import { TutorListPage } from "./pages/TutorListPage";
 import { TutorHomePage } from "./pages/TutorHomePage";
+import { TutorDetailsPage } from "./pages/TutorDetailsPage";
 import TutorSetFeePage from "./pages/TutorSetFeePage";
 import { TutorEditPage } from "./pages/TutorEditPage";
 import { TutorCreatePage } from "./pages/TutorCreatePage";
@@ -24,6 +25,7 @@ import { StudentListPage } from "./pages/StudentListPage";
 import { StudentEditPage } from "./pages/StudentEditPage";
 import { StudentQuestionPage } from "./pages/StudentQuestionPage";
 import { StudentHomePage } from "./pages/StudentHomePage";
+import { StudentDetailsPage } from "./pages/StudentDetailsPage";
 import { TestPage } from "./pages/TestPage";
 import { StudentBookingPage } from "./pages/StudentBookingPage";
 import { StudentCreatePage } from "./pages/StudentCreatePage";
@@ -199,6 +201,7 @@ function App() {
         <Route path="/tutors/:id" element={<ProtectedRoute><TutorHomePage /></ProtectedRoute>} />
         <Route path="/tutors/:id/booking" element={<ProtectedRoute><TutorBookingPage /></ProtectedRoute>} />
         <Route path="/tutors/:id/schedule" element={<ProtectedRoute><TutorSchedulePage /></ProtectedRoute>} />
+        <Route path="/tutors/:id/details" element={<ProtectedRoute><TutorDetailsPage /></ProtectedRoute>} />
         <Route path="/tutors/:id/edit" element={<ProtectedRoute><TutorEditPage /></ProtectedRoute>} />
         <Route path="/tutors/:id/sms" element={<TutorSMSInboxPage />} />
         <Route path="/tutors/:id/sms/:conversationId" element={<TutorSMSConversationPage />} />
@@ -220,6 +223,7 @@ function App() {
         <Route path="/students/:id/booking" element={<ProtectedRoute><StudentBookingPage /></ProtectedRoute>} />
         <Route path="/students/:studentId/past-tests" element={<ProtectedRoute><PastTestsPage /></ProtectedRoute>} />
         <Route path="/students/:studentId/assessment/:assessmentId" element={<ProtectedRoute><AssessmentQuestionPage /></ProtectedRoute>} />
+        <Route path="/students/:id/details" element={<ProtectedRoute><StudentDetailsPage /></ProtectedRoute>} />
         <Route path="/students/:id" element={<ProtectedRoute><StudentHomePage /></ProtectedRoute>} />
 
         <Route path="/knowledge" element={<ProtectedRoute><KnowledgeListPage /></ProtectedRoute>} />

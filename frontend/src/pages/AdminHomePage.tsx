@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Layout } from "./components/Layout";
+import { Layout, PageHeader } from "./components/Layout";
 import { apiFetch } from "../utils/apiFetch";
 
 interface AdminJob {
@@ -441,11 +441,13 @@ function ActivityTab() {
 
 export default function AdminHomePage() {
   const [tab, setTab] = useState<"jobs" | "feedback" | "activity">("jobs");
+  const storedUser = (() => { try { return JSON.parse(localStorage.getItem("user") ?? "{}"); } catch { return {}; } })();
+  const firstName = storedUser.first_name ?? "Admin";
 
   return (
-    <Layout>
+    <Layout header={<PageHeader title={`Welcome back, ${firstName}.`} />}>
       <div className="container py-4" style={{ maxWidth: 900 }}>
-        <h2 className="mb-3">Administration Home</h2>
+
 
         <ul className="nav nav-tabs mb-4">
           <li className="nav-item">

@@ -2206,21 +2206,28 @@ class TemplateViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def filtered(self, request):
+        from django.db.models import Case, When, IntegerField, Value, F
         skill = request.query_params.get("skill")
         grade = request.query_params.get("grade")
-        difficulty = request.query_params.get("difficulty")
         validated = request.query_params.get("validated")
         language = request.query_params.get("language")
 
-        qs = Template.objects.select_related("skill_detail__parent").all()
+        qs = Template.objects.select_related("skill_detail", "skill_detail__parent").all()
         if skill: qs = qs.filter(skill_detail__parent_id=skill)
         if grade: qs = qs.filter(grade=grade)
-        if difficulty: qs = qs.filter(difficulty__iexact=difficulty.strip())
         if validated == "validated": qs = qs.filter(validated=True)
         elif validated == "unvalidated": qs = qs.filter(validated=False)
         if language and language != "all": qs = qs.filter(language=language)
 
-        qs = qs.order_by("-id")
+        qs = qs.annotate(
+            diff_order=Case(
+                When(difficulty='easy',   then=Value(0)),
+                When(difficulty='medium', then=Value(1)),
+                When(difficulty='hard',   then=Value(2)),
+                default=Value(3),
+                output_field=IntegerField(),
+            )
+        ).order_by('diff_order', F('skill_detail__order_index').asc(nulls_last=True), 'id')
 
         import yaml as _yaml
         def _question_text(t):
@@ -2233,19 +2240,35 @@ class TemplateViewSet(viewsets.ModelViewSet):
             except Exception:
                 return ""
 
+        templates = list(qs)
+
+        # Debug print
+        skill_name = "All Skills"
+        if skill:
+            try:
+                skill_obj = Skill.objects.get(pk=skill)
+                skill_name = skill_obj.description
+            except Skill.DoesNotExist:
+                pass
+        print(f"\n=== Template List: {skill_name} ===")
+        for t in templates:
+            detail = t.skill_detail.description if t.skill_detail else "—"
+            print(f"  {(t.difficulty or '?').capitalize()} - {detail}")
+        print(f"  Total: {len(templates)} templates\n")
+
         return Response([
             {
                 "id": t.id,
                 "name": t.name or "",
                 "description": t.description or "",
                 "skill_detail": t.skill_detail.description if t.skill_detail else "",
-                "skill": t.skill.id if t.skill else None,
+                "skill": t.skill_detail.parent_id if t.skill_detail else None,
                 "grade": t.grade,
                 "difficulty": t.difficulty,
                 "validated": t.validated,
                 "question_text": _question_text(t),
             }
-            for t in qs
+            for t in templates
         ])
 
     @action(detail=False, methods=["post"])

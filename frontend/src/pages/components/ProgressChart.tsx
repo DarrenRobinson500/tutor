@@ -35,7 +35,7 @@ const LEVEL_LABELS = [
   "Competent", "Advanced", "Mastered",
 ];
 
-export function ProgressChart({ studentId }: { studentId: number | string }) {
+export function ProgressChart({ studentId, overallPct }: { studentId: number | string; overallPct?: number }) {
   const [data, setData] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,6 +55,7 @@ export function ProgressChart({ studentId }: { studentId: number | string }) {
   const { snapshots, competency } = data;
   const hasSnapshots = snapshots.length >= 2;
   const hasCompetency = competency.total_skills > 0;
+  const latestScore = overallPct ?? (snapshots.length > 0 ? Math.round(snapshots[snapshots.length - 1].score) : 0);
 
   if (!hasSnapshots && !hasCompetency) {
     return (
@@ -68,12 +69,12 @@ export function ProgressChart({ studentId }: { studentId: number | string }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
       {/* Overall score trend */}
-      {hasSnapshots && (
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            {Math.round(snapshots[snapshots.length - 1].score)}% Percent of Year 7 Complete
-          </div>
-          <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 4 }}>Goal: 100% by end of year</div>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          {latestScore}% Percent of Year 7 Complete
+        </div>
+        <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 4 }}>Goal: 100% by end of year</div>
+        {hasSnapshots && (
           <ResponsiveContainer width="100%" height={140}>
             <LineChart data={snapshots} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -83,8 +84,8 @@ export function ProgressChart({ studentId }: { studentId: number | string }) {
               <Line type="monotone" dataKey="score" stroke="#FF8C42" strokeWidth={2} dot={{ r: 3 }} connectNulls />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Skill competency summary */}
       {hasCompetency && (

@@ -82,7 +82,36 @@ const DEFAULT_DEV_USERS = [
   { label: "Tutor",   email: "Alex",    password: "Alex"    },
 ];
 
-export function Layout({ children, hideNav }: { children: React.ReactNode; hideNav?: boolean }) {
+const HEADER_STYLE: React.CSSProperties = {
+  background: "linear-gradient(145deg, #FFFBF5 0%, #FFF5E8 100%)",
+  padding: "2.5rem 2rem 2rem",
+  borderBottom: "1px solid #F0EAE0",
+};
+const HEADER_TITLE_STYLE: React.CSSProperties = {
+  fontFamily: "Lora, Georgia, serif",
+  fontSize: "1.875rem",
+  fontWeight: 700,
+  color: "#2D2D2D",
+  margin: "0 0 0.4rem",
+};
+const HEADER_SUB_STYLE: React.CSSProperties = {
+  fontSize: "1rem",
+  color: "#5C5249",
+  margin: 0,
+};
+
+export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div style={HEADER_STYLE}>
+      <div className="container">
+        <h1 style={HEADER_TITLE_STYLE}>{title}</h1>
+        {subtitle && <p style={HEADER_SUB_STYLE}>{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+export function Layout({ children, hideNav, header }: { children: React.ReactNode; hideNav?: boolean; header?: React.ReactNode }) {
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
   const access = localStorage.getItem("access");
@@ -186,6 +215,7 @@ export function Layout({ children, hideNav }: { children: React.ReactNode; hideN
                 <Link className="sm-nav-link" to="/templates">Templates</Link>
                 <Link className="sm-nav-link" to="/knowledge">Knowledge</Link>
                 <Link className="sm-nav-link" to="/docs">Docs</Link>
+                <Link className="sm-nav-link" to={`/tutors/${user.id}/details`}>My details</Link>
               </>)}
 
               {user?.role === "parent" && (<>
@@ -206,6 +236,7 @@ export function Layout({ children, hideNav }: { children: React.ReactNode; hideN
                 <Link className="sm-nav-link" to={`/students/${user.id}/`}>Home</Link>
                 <Link className="sm-nav-link" to={`/students/${user.id}/booking`}>Bookings</Link>
                 <Link className="sm-nav-link" to={`/students/${user.id}/past-tests`}>Past Tests</Link>
+                <Link className="sm-nav-link" to={`/students/${user.id}/details`}>My details</Link>
               </>)}
 
             </div>
@@ -243,6 +274,8 @@ export function Layout({ children, hideNav }: { children: React.ReactNode; hideN
 
       {/* Incoming call notification for students */}
       {!hideNav && user?.role === "student" && <IncomingCallBanner />}
+
+      {header}
 
       {/* Page content */}
       <div className="container-fluid">{children}</div>

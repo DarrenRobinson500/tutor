@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 // import { WeeklyCalendar } from "./components/WeeklyCalendar";
-import { Layout } from "./components/Layout";
+import { Layout, PageHeader } from "./components/Layout";
 // import { WeekData } from "../types/weekly";
 import { apiFetch } from "../utils/apiFetch";
 import { ProgressChart } from "./components/ProgressChart";
@@ -160,22 +160,17 @@ export function StudentHomePage() {
     );
   }
 
+  const leafSkills = syllabus.filter(s => s.children_count === 0);
+  const overallAvg = leafSkills.length > 0
+    ? leafSkills.reduce((sum, s) => sum + (mastery[s.id]?.mastery ?? 0), 0) / leafSkills.length
+    : 0;
+  const overallPct = Math.round((overallAvg / 4) * 100);
+
   return (
-    <Layout>
+    <Layout header={<PageHeader title={`Welcome back, ${student.name?.split(" ")[0]}.`} />}>
       <div className="container mt-4">
-        <h1>Welcome back {student.name?.split(" ")[0]}</h1>
-        <p><strong>Email:</strong> {student.email}<br/>
-        <strong>Year Level:</strong> {student.year_level || "Not set"}<br/>
-        <strong>Area of Study:</strong> {student.area_of_study || "Not set"}
-        </p>
-        <button
-          className="btn btn-outline-primary"
-          onClick={() => navigate(`/students/${id}/edit?returnTo=/students/${id}`)}
-        >
-          Edit My Details
-        </button>
-        <div className="d-flex flex-wrap gap-2 mt-2">
-          <Link to={`/students/${id}/test?type=dynamic`} className="btn btn-outline-success">
+        <div className="d-flex flex-wrap gap-2 mb-2">
+          <Link to={`/students/${id}/test?type=dynamic`} className="btn btn-success btn-sm">
             Start Skills Test
           </Link>
         </div>
@@ -214,7 +209,7 @@ export function StudentHomePage() {
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <h3 className="mt-4">Your Progress</h3>
-            <ProgressChart studentId={id!} />
+            <ProgressChart studentId={id!} overallPct={overallPct} />
           </div>
         </div>
 

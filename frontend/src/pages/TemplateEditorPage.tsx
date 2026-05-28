@@ -33,7 +33,6 @@ export function TemplateEditorPage() {
   const [filteredList, setFilteredList] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [skills, setSkills] = useState<any[]>([]);
-  const [subjects, setSubjects] = useState<string[]>([]);
   const savedValidatedFilter = usePreferenceStore((s) =>
     s.get("template.validated_filter")
   );
@@ -204,12 +203,11 @@ const handleToggleValidated = async () => {
         buildMetadataFromTemplate(tpl, prev.validated_filter ?? currentFilter)
       );
 
-      // Load the filtered list so subjects/navigation work without needing a filter change
+      // Load the filtered list so navigation works without needing a filter change
       const currentLanguage = usePreferenceStore.getState().get("template.language_filter") ?? "en";
       const queryParams = new URLSearchParams({
         skill: String(tpl.skill_id ?? ""),
         grade: String(tpl.grade ?? ""),
-        difficulty: String(tpl.difficulty ?? ""),
         validated: currentFilter,
         language: currentLanguage,
       });
@@ -275,39 +273,6 @@ const handleToggleValidated = async () => {
     loadSkills();
   }, [metadata.grade]);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    const params = new URLSearchParams();
-    if (metadata.skill) params.set("skill", String(metadata.skill));
-    if (metadata.grade) params.set("grade", String(metadata.grade));
-    if (metadata.difficulty) params.set("difficulty", String(metadata.difficulty));
-    if (metadata.validated_filter) params.set("validated", String(metadata.validated_filter));
-    apiFetch(`/api/templates/subjects/?${params.toString()}`, { signal: controller.signal })
-      .then(res => res.json())
-      .then(data => setSubjects(data))
-      .catch(err => { if (err.name !== "AbortError") console.error("[subjects] error", err); });
-    return () => controller.abort();
-  }, [metadata.skill, metadata.grade, metadata.difficulty, metadata.validated_filter]);
-
-  // Handle Subject Change
-  const handleSubjectChange = (subject: string) => {
-    setMetadata(prev => ({ ...prev, subject }));
-    if (!subject) {
-      // Reset to full filtered list
-      setCurrentIndex(0);
-      if (filteredList.length > 0) {
-        navigate(`/templates/${filteredList[0].id}`);
-      }
-      return;
-    }
-
-  // Filter templates by subject
-  const subjectFiltered = filteredList.filter(t => t.skill_detail === subject);
-    if (subjectFiltered.length > 0) {
-      setCurrentIndex(0);
-      navigate(`/templates/${subjectFiltered[0].id}`);
-    }
-  };
 
   // Handle Content Change
   function handleContentChange(newContent: string) {
@@ -421,7 +386,6 @@ const handleToggleValidated = async () => {
       const queryParams = new URLSearchParams({
         skill: String(metadata.skill ?? ""),
         grade: String(metadata.grade ?? ""),
-        difficulty: String(metadata.difficulty ?? ""),
         validated: metadata.validated_filter ?? "all",
         language: metadata.language_filter ?? "en",
       });
@@ -549,12 +513,11 @@ const handleToggleValidated = async () => {
     }
 
     // If any of the filters change, reload the list
-    const isFilterChange = "skill" in updated || "grade" in updated || "difficulty" in updated || "validated_filter" in updated || "language_filter" in updated;
+    const isFilterChange = "skill" in updated || "grade" in updated || "validated_filter" in updated || "language_filter" in updated;
     if (isFilterChange) {
       const params = new URLSearchParams();
       if (newMeta.skill) params.set("skill", String(newMeta.skill));
       if (newMeta.grade) params.set("grade", String(newMeta.grade));
-      if (newMeta.difficulty) params.set("difficulty", String(newMeta.difficulty));
       params.set("validated", newMeta.validated_filter ?? "all");
       if (newMeta.language_filter && newMeta.language_filter !== "all") params.set("language", newMeta.language_filter);
 
@@ -571,12 +534,7 @@ const handleToggleValidated = async () => {
       setCurrentIndex(0);
 
       if (list.length > 0) {
-        const currentSubject = newMeta.subject;
-        const subjectMatch = currentSubject
-          ? list.find((t: any) => t.skill_detail === currentSubject)
-          : null;
-        const target = subjectMatch ?? list[0];
-        navigate(`/templates/${target.id}`);
+        navigate(`/templates/${list[0].id}`);
       }
     }
   };
@@ -755,8 +713,8 @@ const handleToggleValidated = async () => {
       onNext={goNext}
       onPrev={goPrev}
       skills={skills}
-      subjects={subjects}
-      onSubjectChange={handleSubjectChange}
+      currentIndex={currentIndex}
+      listLength={filteredList.length}
       onShowRelated={handleShowRelated}
       onShowLanguages={handleShowLanguages}
     />

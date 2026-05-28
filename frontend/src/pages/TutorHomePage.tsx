@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { Layout } from "./components/Layout";
+import { Layout, PageHeader } from "./components/Layout";
 import { TutorStudentList } from "./components/TutorStudentList";
 import { TutorJobsPanel } from "./components/TutorJobsPanel";
 import { WeeklyCalendar } from "./components/WeeklyCalendar";
@@ -97,14 +97,11 @@ export function TutorHomePage() {
   const [tutor, setTutor] = useState<any>(null);
   const [week, setWeek] = useState<WeekData | null>(null);
   const [weekStart, setWeekStart] = useState<string | null>(null);
-  const [lookingForStudents, setLookingForStudents] = useState<boolean>(false);
-
   useEffect(() => {
     apiFetch(`/api/tutors/${id}/home/`)
       .then(res => res.json())
       .then(data => {
         setTutor(data);
-        setLookingForStudents(data.looking_for_students ?? false);
       })
       .catch(err => {
         console.error("Failed to load tutor home:", err);
@@ -112,43 +109,11 @@ export function TutorHomePage() {
       });
   }, [id]);
 
-  async function toggleLooking() {
-    const res = await apiFetch(`/api/tutors/${id}/toggle_looking/`, { method: "POST" });
-    const data = await res.json();
-    setLookingForStudents(data.looking_for_students);
-  }
-
   if (!tutor) return <div className="container mt-4">Loading…</div>;
 
   return (
-    <Layout>
+    <Layout header={<PageHeader title={`Welcome back, ${tutor.name.split(" ")[0]}.`} />}>
       <div className="container mt-4">
-        <div className="d-flex align-items-center gap-2 mb-1">
-          <h2 className="mb-0">{tutor.name}</h2>
-          {!tutor.approved && (
-            <span className="badge text-bg-warning">Pending approval</span>
-          )}
-        </div>
-        <p>
-          Email: {tutor.email}<br/>
-          Mobile: {tutor.mobile || "Not set"}<br/>
-          Address: {tutor.address || "Not set"}
-        </p>
-
-        <div className="d-flex gap-2 mb-3">
-          <button
-            className={`btn ${lookingForStudents ? "btn-primary" : "btn-outline-primary"}`}
-            onClick={toggleLooking}
-          >
-            {lookingForStudents ? "Looking for students" : "Not looking for students"}
-          </button>
-          <button
-            className="btn btn-outline-primary"
-            onClick={() => window.location.href = `/tutors/${id}/edit?returnTo=/tutors/${id}`}
-          >
-            Edit My Details
-          </button>
-        </div>
         <hr />
 
         <TutorJobsPanel tutorId={id!} />

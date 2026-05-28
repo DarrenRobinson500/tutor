@@ -20,9 +20,9 @@ interface TemplateMetadataBarProps {
   onNext: () => void;
   onPrev: () => void;
   skills: Array<{ id: number; description: string }>;
-  subjects: string[];
   validated_filter?: "all" | "validated" | "unvalidated";
-  onSubjectChange: (subject: string) => void;
+  currentIndex: number;
+  listLength: number;
 }
 
 
@@ -45,8 +45,8 @@ export function TemplateMetadataBar({
   onNext,
   onPrev,
   skills,
-  subjects,
-  onSubjectChange,
+  currentIndex,
+  listLength,
 }: TemplateMetadataBarProps) {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
@@ -123,35 +123,25 @@ export function TemplateMetadataBar({
           <option value="pt">Portuguese</option>
         </select>
 
-        <select
-          className="form-select form-select-sm"
-          style={{ width: "110px", flexShrink: 0 }}
-          value={metadata.difficulty ?? ""}
-          onChange={(e) => onChange({ difficulty: e.target.value })}
-        >
-          <option value="">Difficulty</option>
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
-        </select>
-
-        <select
-          className="form-select form-select-sm"
-          style={{ minWidth: 0, flex: 2 }}
-          value={metadata.subject ?? ""}
-          onChange={(e) => onSubjectChange(e.target.value)}
-        >
-          <option value="">All subjects</option>
-          {(subjects ?? []).map((subj) => (
-            <option key={subj} value={subj}>{subj}</option>
-          ))}
-        </select>
+        {metadata.id && metadata.difficulty && (
+          <span className="badge bg-secondary" style={{ fontSize: 12, fontWeight: 500 }}>
+            {metadata.difficulty.charAt(0).toUpperCase() + metadata.difficulty.slice(1)}
+          </span>
+        )}
+        {metadata.id && metadata.subject && (
+          <span className="badge bg-secondary" style={{ fontSize: 12, fontWeight: 500, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {metadata.subject}
+          </span>
+        )}
       </div>
 
       {/* Row 2: Action buttons */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-        <button className="btn btn-sm btn-outline-primary" onClick={onPrev}>Previous</button>
-        <button className="btn btn-sm btn-outline-primary" onClick={onNext}>Next</button>
+        <button className="btn btn-sm btn-outline-primary" onClick={onPrev} disabled={currentIndex <= 0}>Previous</button>
+        <span style={{ fontSize: 13, color: "#555", minWidth: 54, textAlign: "center" }}>
+          {listLength > 0 ? `${currentIndex + 1} / ${listLength}` : "0 / 0"}
+        </span>
+        <button className="btn btn-sm btn-outline-primary" onClick={onNext} disabled={currentIndex >= listLength - 1}>Next</button>
 
         {saveSuccess && <span style={{ color: "green", fontSize: 13 }}>Saved</span>}
         {saveError && <span style={{ color: "red", fontSize: 13 }}>{saveError}</span>}
