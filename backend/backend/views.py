@@ -4316,11 +4316,27 @@ class StudentViewSet(viewsets.ModelViewSet):
 
         snapshots = WeeklyProgressSnapshot.objects.filter(student=student).order_by('recorded_at')
 
+        # Count all leaf skills in the student's year-level syllabus as the denominator.
+        year_level = str(student_profile.year_level) if student_profile.year_level else None
+        all_leaf = Skill.objects.filter(children__isnull=True)
+        if year_level:
+            syllabus_skill_ids = {
+                s.id for s in all_leaf if _skill_matches_year(s, year_level)
+            }
+        else:
+            syllabus_skill_ids = set(all_leaf.values_list('id', flat=True))
+        syllabus_total = len(syllabus_skill_ids)
+
         comp_qs = StudentSkillCompetency.objects.filter(student=student).select_related('skill')
         distribution = [0] * 7
+        assessed_ids = set()
         for c in comp_qs:
-            distribution[max(0, min(6, c.level))] += 1
-        total_skills = sum(distribution)
+            if c.skill_id in syllabus_skill_ids:
+                distribution[max(0, min(6, c.level))] += 1
+                assessed_ids.add(c.skill_id)
+        # Unassessed syllabus skills are implicitly level 0
+        distribution[0] += syllabus_total - len(assessed_ids)
+        total_skills = syllabus_total
         avg_level = (
             sum(i * distribution[i] for i in range(7)) / total_skills
             if total_skills else None
