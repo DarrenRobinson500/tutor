@@ -29,7 +29,7 @@
 
 
           <!-- ════════════════════════════════════
-               HEADER — orange background
+               HEADER
           ═════════════════════════════════════ -->
           <tr>
             <td style="background-color:#E87722;padding:32px;border-radius:10px 10px 0 0;">
@@ -37,17 +37,11 @@
               <!-- Logo row -->
               <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-
-                  <!-- Icon tile: solid lighter-orange stands in for rgba(255,255,255,0.2) overlay in Outlook -->
                   <td valign="middle">
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <td width="36" height="36" align="center" valign="middle"
                             style="width:36px;height:36px;background-color:#F09A42;border-radius:8px;text-align:center;vertical-align:middle;line-height:36px;">
-                          <!--
-                            Inline SVG: stylised Sigma (maths icon).
-                            Outlook ignores SVG — the orange tile remains visible as a clean fallback.
-                          -->
                           <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
                                xmlns="http://www.w3.org/2000/svg"
                                style="display:inline-block;vertical-align:middle;">
@@ -59,30 +53,22 @@
                       </tr>
                     </table>
                   </td>
-
-                  <!-- Wordmark -->
                   <td valign="middle" style="padding-left:10px;">
                     <span style="color:#ffffff;font-size:16px;font-weight:500;font-family:Arial,Helvetica,sans-serif;line-height:1;white-space:nowrap;">Subject Matter</span>
                   </td>
-
                 </tr>
               </table>
-              <!-- /Logo row -->
 
-              <!-- Muted all-caps label.
-                   rgba(255,255,255,0.75) computed to solid #F9DDC8 for Outlook. -->
               <p style="margin:20px 0 6px 0;padding:0;
-                        color:#F9DDC8;
-                        font-size:13px;letter-spacing:0.03em;text-transform:uppercase;
+                        color:#F9DDC8;font-size:13px;letter-spacing:0.03em;text-transform:uppercase;
                         font-family:Arial,Helvetica,sans-serif;line-height:1.4;">
-                Welcome to Subject Matter
+                Application received
               </p>
 
-              <!-- Heading -->
               <p style="margin:0;padding:0;
                         color:#ffffff;font-size:26px;font-weight:500;
                         font-family:Arial,Helvetica,sans-serif;line-height:1.3;">
-                You&#8217;re all set, [FIRST_NAME].
+                Thanks for applying, [FIRST_NAME].
               </p>
 
             </td>
@@ -91,21 +77,17 @@
 
 
           <!-- ════════════════════════════════════
-               BODY — white background
+               BODY
           ═════════════════════════════════════ -->
           <tr>
             <td style="background-color:#ffffff;padding:28px 32px;">
 
-              <!-- Intro paragraph -->
+              <!-- Intro -->
               <p style="margin:0 0 20px 0;padding:0;
                         font-size:15px;color:#666666;
                         font-family:Arial,Helvetica,sans-serif;line-height:1.65;">
-                Your account is ready. Log in any time at
-                <a href="https://subject-matter.com.au"
-                   style="color:#E87722;text-decoration:none;font-weight:600;">subject-matter.com.au</a>
-                &#8212; select <strong style="color:#333333;">Parent</strong>,
-                then enter your email and password.
-                [ASSESSMENT_SENTENCE]
+                We&#8217;ve received your application to join Subject Matter as a tutor.
+                Our team will review your details and be in touch shortly to confirm your approval.
               </p>
 
               <!-- Divider -->
@@ -117,170 +99,119 @@
 
               <!-- Section label -->
               <p style="margin:0 0 12px 0;padding:0;
-                        font-size:14px;
-                        color:#666666;
-                        font-family:Arial,Helvetica,sans-serif;line-height:1.5;">
-                Once you&#8217;re matched with a tutor, your dashboard keeps everything in one place:
+                        font-size:13px;text-transform:uppercase;letter-spacing:0.06em;
+                        color:#999999;font-family:Arial,Helvetica,sans-serif;line-height:1.4;">
+                What happens next
               </p>
 
               <!-- ─────────────────────────────────
-                   Feature row 1 — Upcoming sessions
+                   Step 1 — Application review
               ────────────────────────────────── -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
                 <tr>
                   <td style="background-color:#F8F7F4;border-radius:8px;padding:12px 14px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                       <tr>
-
-                        <!-- Calendar icon tile -->
                         <td valign="middle" style="padding-right:12px;">
                           <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                             <tr>
                               <td width="32" height="32" align="center" valign="middle"
                                   style="width:32px;height:32px;background-color:#FEF0E6;border-radius:6px;text-align:center;vertical-align:middle;line-height:32px;">
+                                <!-- Magnifying glass / review icon -->
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
                                      xmlns="http://www.w3.org/2000/svg"
                                      style="display:inline-block;vertical-align:middle;">
-                                  <rect x="1.5" y="3.5" width="13" height="11" rx="1.5"
-                                        stroke="#E87722" stroke-width="1.4"/>
-                                  <line x1="1.5" y1="7" x2="14.5" y2="7"
-                                        stroke="#E87722" stroke-width="1.4"/>
-                                  <line x1="5" y1="1.5" x2="5" y2="4.5"
+                                  <circle cx="6.5" cy="6.5" r="4.5" stroke="#E87722" stroke-width="1.4"/>
+                                  <line x1="9.9" y1="9.9" x2="14" y2="14"
                                         stroke="#E87722" stroke-width="1.4" stroke-linecap="round"/>
-                                  <line x1="11" y1="1.5" x2="11" y2="4.5"
-                                        stroke="#E87722" stroke-width="1.4" stroke-linecap="round"/>
-                                  <rect x="4" y="9" width="2" height="2" rx="0.5" fill="#E87722"/>
-                                  <rect x="7.5" y="9" width="2" height="2" rx="0.5" fill="#E87722"/>
                                 </svg>
                               </td>
                             </tr>
                           </table>
                         </td>
-
-                        <!-- Text -->
                         <td valign="middle">
-                          <p style="margin:0 0 2px 0;padding:0;font-size:14px;font-weight:600;color:#333333;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">Upcoming sessions</p>
-                          <p style="margin:0;padding:0;font-size:12px;color:#999999;font-family:Arial,Helvetica,sans-serif;line-height:1.4;">View your child&#8217;s scheduled tutoring</p>
+                          <p style="margin:0 0 2px 0;padding:0;font-size:14px;font-weight:600;color:#333333;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">Application review</p>
+                          <p style="margin:0;padding:0;font-size:12px;color:#999999;font-family:Arial,Helvetica,sans-serif;line-height:1.4;">Our team will review your details within 1&#8211;2 business days</p>
                         </td>
-
                       </tr>
                     </table>
                   </td>
                 </tr>
               </table>
-              <!-- /Feature row 1 -->
 
               <!-- ─────────────────────────────────
-                   Feature row 2 — Manage bookings
+                   Step 2 — Approval notification
               ────────────────────────────────── -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
                 <tr>
                   <td style="background-color:#F8F7F4;border-radius:8px;padding:12px 14px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                       <tr>
-
-                        <!-- Clipboard-check icon tile -->
                         <td valign="middle" style="padding-right:12px;">
                           <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                             <tr>
                               <td width="32" height="32" align="center" valign="middle"
                                   style="width:32px;height:32px;background-color:#FEF0E6;border-radius:6px;text-align:center;vertical-align:middle;line-height:32px;">
+                                <!-- Bell / notification icon -->
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
                                      xmlns="http://www.w3.org/2000/svg"
                                      style="display:inline-block;vertical-align:middle;">
-                                  <path d="M10 2H12a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h2"
+                                  <path d="M8 1.5A4 4 0 0 0 4 5.5v3L2.5 10.5h11L12 8.5v-3A4 4 0 0 0 8 1.5Z"
+                                        stroke="#E87722" stroke-width="1.4" stroke-linejoin="round"/>
+                                  <path d="M6.5 10.5a1.5 1.5 0 0 0 3 0"
                                         stroke="#E87722" stroke-width="1.4" stroke-linecap="round"/>
-                                  <rect x="5.5" y="1" width="5" height="3" rx="1"
-                                        stroke="#E87722" stroke-width="1.4"/>
-                                  <path d="M5.5 9.5L7 11L10.5 7.5"
-                                        stroke="#E87722" stroke-width="1.4"
-                                        stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                               </td>
                             </tr>
                           </table>
                         </td>
-
-                        <!-- Text -->
                         <td valign="middle">
-                          <p style="margin:0 0 2px 0;padding:0;font-size:14px;font-weight:600;color:#333333;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">Manage bookings</p>
-                          <p style="margin:0;padding:0;font-size:12px;color:#999999;font-family:Arial,Helvetica,sans-serif;line-height:1.4;">Book, reschedule, or cancel sessions</p>
+                          <p style="margin:0 0 2px 0;padding:0;font-size:14px;font-weight:600;color:#333333;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">Approval notification</p>
+                          <p style="margin:0;padding:0;font-size:12px;color:#999999;font-family:Arial,Helvetica,sans-serif;line-height:1.4;">You&#8217;ll receive an email at [TUTOR_EMAIL] once your account is approved</p>
                         </td>
-
                       </tr>
                     </table>
                   </td>
                 </tr>
               </table>
-              <!-- /Feature row 2 -->
 
               <!-- ─────────────────────────────────
-                   Feature row 3 — Track payments
+                   Step 3 — Log in and get started
               ────────────────────────────────── -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
                 <tr>
                   <td style="background-color:#F8F7F4;border-radius:8px;padding:12px 14px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                       <tr>
-
-                        <!-- Credit-card icon tile -->
                         <td valign="middle" style="padding-right:12px;">
                           <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                             <tr>
                               <td width="32" height="32" align="center" valign="middle"
                                   style="width:32px;height:32px;background-color:#FEF0E6;border-radius:6px;text-align:center;vertical-align:middle;line-height:32px;">
+                                <!-- Key / unlock icon -->
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
                                      xmlns="http://www.w3.org/2000/svg"
                                      style="display:inline-block;vertical-align:middle;">
-                                  <rect x="1.5" y="4" width="13" height="9" rx="1.5"
-                                        stroke="#E87722" stroke-width="1.4"/>
-                                  <line x1="1.5" y1="7.5" x2="14.5" y2="7.5"
-                                        stroke="#E87722" stroke-width="1.4"/>
-                                  <rect x="3" y="9.5" width="4" height="1.5" rx="0.75" fill="#E87722"/>
+                                  <circle cx="6" cy="6.5" r="3.5" stroke="#E87722" stroke-width="1.4"/>
+                                  <path d="M8.5 9L13.5 14" stroke="#E87722" stroke-width="1.4" stroke-linecap="round"/>
+                                  <path d="M11 11.5L13 13.5" stroke="#E87722" stroke-width="1.4" stroke-linecap="round"/>
                                 </svg>
                               </td>
                             </tr>
                           </table>
                         </td>
-
-                        <!-- Text -->
                         <td valign="middle">
-                          <p style="margin:0 0 2px 0;padding:0;font-size:14px;font-weight:600;color:#333333;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">Track payments</p>
-                          <p style="margin:0;padding:0;font-size:12px;color:#999999;font-family:Arial,Helvetica,sans-serif;line-height:1.4;">View invoices and payment history</p>
-                        </td>
-
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-              <!-- /Feature row 3 -->
-
-              <!-- ─────────────────────────────────
-                   CTA Button
-                   Table-based approach: background on <td> works in all Outlook versions.
-                   border-radius falls back to square corners in Outlook — acceptable.
-              ────────────────────────────────── -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
-                <tr>
-                  <td align="center">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td align="center" style="background-color:#E87722;border-radius:6px;padding:11px 28px;">
-                          <a href="https://subject-matter.com.au"
-                             style="color:#ffffff;font-size:14px;font-weight:600;
-                                    font-family:Arial,Helvetica,sans-serif;
-                                    text-decoration:none;white-space:nowrap;
-                                    letter-spacing:0.01em;">
-                            Go to my dashboard &#8594;
-                          </a>
+                          <p style="margin:0 0 2px 0;padding:0;font-size:14px;font-weight:600;color:#333333;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">Log in and get started</p>
+                          <p style="margin:0;padding:0;font-size:12px;color:#999999;font-family:Arial,Helvetica,sans-serif;line-height:1.4;">Visit
+                            <a href="[SITE_URL]" style="color:#E87722;text-decoration:none;">[SITE_DOMAIN]</a>
+                            and sign in as a Tutor
+                          </p>
                         </td>
                       </tr>
                     </table>
                   </td>
                 </tr>
               </table>
-              <!-- /CTA Button -->
 
               <!-- Divider -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -303,7 +234,7 @@
 
 
           <!-- ════════════════════════════════════
-               FOOTER strip
+               FOOTER
           ═════════════════════════════════════ -->
           <tr>
             <td style="border-top:1px solid #E8E8E4;padding:16px 32px;background-color:#ffffff;border-radius:0 0 10px 10px;">
@@ -319,12 +250,12 @@
 
 
         </table>
-        <!-- /600px CONTAINER -->
+        <!-- /CONTAINER -->
 
       </td>
     </tr>
   </table>
-  <!-- /PAGE WRAPPER -->
+  <!-- /WRAPPER -->
 
 </body>
 </html>
@@ -332,29 +263,26 @@
 <!--
 ================================================================================
 PLAIN-TEXT FALLBACK
-Include this as the text/plain part when sending via your email service provider.
 ================================================================================
 
 Welcome to Subject Matter
 
 Hi [FIRST_NAME],
 
-Your account is ready. Log in any time at subject-matter.com.au — select
-"Parent", then enter your email and password.
+We've received your application to join Subject Matter as a tutor. Our team
+will review your details and be in touch shortly to confirm your approval.
 
-FROM YOUR DASHBOARD
--------------------
+WHAT HAPPENS NEXT
+-----------------
 
-Upcoming sessions
-View your child's scheduled tutoring
+1. Application review
+   Our team will review your details within 1-2 business days.
 
-Manage bookings
-Book, reschedule, or cancel sessions
+2. Approval notification
+   You'll receive an email at [TUTOR_EMAIL] once your account is approved.
 
-Track payments
-View invoices and payment history
-
-Go to my dashboard: https://subject-matter.com.au
+3. Log in and get started
+   Visit [SITE_URL] and sign in as a Tutor.
 
 ---
 

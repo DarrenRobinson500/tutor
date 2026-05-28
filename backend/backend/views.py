@@ -50,30 +50,56 @@ from .booking import *
 
 
 def _send_tutor_welcome_email(tutor):
-    from django.core.mail import send_mail
+    import os
+    from django.core.mail import EmailMultiAlternatives, send_mail
     from django.conf import settings
 
     site = (getattr(settings, "FRONTEND_URL", "") or "").rstrip("/") or "https://subject-matter.com.au"
+    domain = site.replace("https://", "").replace("http://", "")
 
-    body = (
+    plain = (
         f"Hi {tutor.first_name},\n\n"
-        f"Welcome to SubjectMatter! Thank you for registering as a tutor.\n\n"
-        f"Your application is currently under review and we will be in touch shortly to advise you of your approval.\n\n"
-        f"Once approved, you can log in at any time by visiting:\n"
-        f"  {site}\n\n"
-        f"Click \"Sign in\" and choose the Tutor option, then enter your email address "
-        f"({tutor.email}) and password.\n\n"
-        f"If you have any questions in the meantime, feel free to reply to this email.\n\n"
-        f"The SubjectMatter Team"
+        f"We've received your application to join Subject Matter as a tutor. "
+        f"Our team will review your details and be in touch shortly to confirm your approval.\n\n"
+        f"What happens next:\n"
+        f"1. Application review — our team will review your details within 1-2 business days.\n"
+        f"2. Approval notification — you'll receive an email at {tutor.email} once your account is approved.\n"
+        f"3. Log in and get started — visit {site} and sign in as a Tutor.\n\n"
+        f"Questions? Just reply to this email — we're here to help.\n\n"
+        f"The Subject Matter Team"
     )
+
     try:
-        send_mail(
-            subject="Welcome to SubjectMatter — application received",
-            message=body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[tutor.email],
-            fail_silently=True,
-        )
+        template_path = os.path.join(os.path.dirname(__file__), "..", "emails", "welcome_tutor.html")
+        with open(template_path, encoding="utf-8") as fh:
+            html_body = (
+                fh.read()
+                .replace("[FIRST_NAME]", tutor.first_name)
+                .replace("[TUTOR_EMAIL]", tutor.email)
+                .replace("[SITE_URL]", site)
+                .replace("[SITE_DOMAIN]", domain)
+            )
+    except Exception:
+        html_body = None
+
+    try:
+        if html_body:
+            msg = EmailMultiAlternatives(
+                subject="Welcome to Subject Matter — application received",
+                body=plain,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[tutor.email],
+            )
+            msg.attach_alternative(html_body, "text/html")
+            msg.send()
+        else:
+            send_mail(
+                subject="Welcome to Subject Matter — application received",
+                message=plain,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[tutor.email],
+                fail_silently=True,
+            )
     except Exception:
         pass
 
@@ -85,11 +111,27 @@ def _send_parent_welcome_emails(parent, children_data):
 
     site = (getattr(settings, "FRONTEND_URL", "") or "").rstrip("/") or "https://subject-matter.com.au"
 
+    child_first_names = [c.get("first_name", "") for c in children_data if c.get("first_name")]
+    if len(child_first_names) == 0:
+        assessment_sentence = ""
+    elif len(child_first_names) == 1:
+        assessment_sentence = (
+            f"Once {child_first_names[0]} has completed the assessment, we will send you "
+            f"a detailed report on their strengths and areas to focus on."
+        )
+    else:
+        names = ", ".join(child_first_names[:-1]) + f" and {child_first_names[-1]}"
+        assessment_sentence = (
+            f"Once {names} have completed their assessments, we will send you "
+            f"detailed reports on their strengths and areas to focus on."
+        )
+
     # Email to parent
     parent_plain = (
         f"Hi {parent.first_name},\n\n"
         f"Welcome to Subject Matter! You're all set to get started.\n\n"
-        f"Log in any time at subject-matter.com.au — select Parent, then enter your email and password.\n\n"
+        f"Log in any time at subject-matter.com.au — select Parent, then enter your email and password. "
+        f"{assessment_sentence}\n\n"
         f"From your dashboard you can:\n"
         f"· View your child's upcoming sessions\n"
         f"· Manage bookings\n"
@@ -97,10 +139,15 @@ def _send_parent_welcome_emails(parent, children_data):
         f"Questions? Just reply to this email — we're here to help.\n\n"
         f"The Subject Matter Team"
     )
+
     try:
         template_path = os.path.join(os.path.dirname(__file__), "..", "emails", "welcome_parent.html")
         with open(template_path, encoding="utf-8") as fh:
-            html_body = fh.read().replace("[FIRST_NAME]", parent.first_name)
+            html_body = (
+                fh.read()
+                .replace("[FIRST_NAME]", parent.first_name)
+                .replace("[ASSESSMENT_SENTENCE]", assessment_sentence)
+            )
     except Exception:
         html_body = None
 
