@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10 Principles for Helping Your Child Learn Maths</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #faf7f2;
+    --warm-white: #fff9f2;
+    --charcoal: #1e1e1e;
+    --mid: #4a4540;
+    --muted: #8a8078;
+    --orange: #e8671a;
+    --orange-light: #f5924a;
+    --orange-pale: #fdecd8;
+    --rule: #d8cfc4;
+    --number-size: 3.2rem;
+  }
+
+  body {
+    background: var(--cream);
+    color: var(--charcoal);
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-weight: 300;
+    line-height: 1.75;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    background: var(--charcoal);
+    padding: 3.5rem 2rem 3rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 24px,
+      rgba(232,103,26,0.06) 24px,
+      rgba(232,103,26,0.06) 25px
+    );
+  }
+
+  .header-inner { position: relative; z-index: 1; }
+
+  .eyebrow {
+    font-family: 'Source Serif 4', serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 1.1rem;
+    display: block;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.9rem, 5vw, 3.2rem);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+    max-width: 700px;
+    margin: 0 auto 1.2rem;
+  }
+
+  header h1 em {
+    font-style: italic;
+    color: var(--orange-light);
+  }
+
+  .header-sub {
+    color: #b8b0a8;
+    font-size: 1rem;
+    font-weight: 300;
+    max-width: 500px;
+    margin: 0 auto;
+    font-style: italic;
+  }
+
+  /* Orange bar */
+  .bar {
+    height: 5px;
+    background: linear-gradient(90deg, var(--orange), var(--orange-light));
+  }
+
+  /* Main content */
+  main {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+  }
+
+  /* Intro */
+  .intro {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .intro p {
+    font-size: 1.05rem;
+    color: var(--mid);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.8;
+  }
+
+  /* Principle cards */
+  .principles { display: flex; flex-direction: column; gap: 0; }
+
+  .principle {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 0 1.6rem;
+    padding: 2rem 0;
+    border-bottom: 1px solid var(--rule);
+    align-items: start;
+    opacity: 0;
+    transform: translateY(18px);
+    animation: fadeUp 0.5s ease forwards;
+  }
+
+  .principle:last-child { border-bottom: none; }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .principle:nth-child(1)  { animation-delay: 0.05s; }
+  .principle:nth-child(2)  { animation-delay: 0.10s; }
+  .principle:nth-child(3)  { animation-delay: 0.15s; }
+  .principle:nth-child(4)  { animation-delay: 0.20s; }
+  .principle:nth-child(5)  { animation-delay: 0.25s; }
+  .principle:nth-child(6)  { animation-delay: 0.30s; }
+  .principle:nth-child(7)  { animation-delay: 0.35s; }
+  .principle:nth-child(8)  { animation-delay: 0.40s; }
+  .principle:nth-child(9)  { animation-delay: 0.45s; }
+  .principle:nth-child(10) { animation-delay: 0.50s; }
+
+  .principle-number {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: var(--number-size);
+    font-weight: 700;
+    color: var(--orange-pale);
+    line-height: 1;
+    padding-top: 0.15rem;
+    position: relative;
+    user-select: none;
+  }
+
+  .principle-number::after {
+    content: attr(data-n);
+    position: absolute;
+    inset: 0;
+    color: var(--orange);
+    opacity: 0.18;
+  }
+
+  .principle-body {}
+
+  .principle-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.22rem;
+    font-weight: 700;
+    color: var(--charcoal);
+    line-height: 1.3;
+    margin-bottom: 0.55rem;
+  }
+
+  .principle-text {
+    font-size: 0.97rem;
+    color: var(--mid);
+    line-height: 1.78;
+  }
+
+  .principle-tip {
+    display: inline-block;
+    margin-top: 0.7rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--orange);
+    background: var(--orange-pale);
+    padding: 0.28rem 0.7rem;
+    border-radius: 3px;
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+  }
+
+  /* Footer */
+  footer {
+    background: var(--charcoal);
+    color: #888;
+    text-align: center;
+    font-size: 0.8rem;
+    padding: 1.8rem 1rem;
+    letter-spacing: 0.04em;
+  }
+
+  footer strong { color: var(--orange); }
+
+  @media (max-width: 520px) {
+    .principle { grid-template-columns: 54px 1fr; gap: 0 1rem; }
+    :root { --number-size: 2.4rem; }
+    header h1 { font-size: 1.7rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <span class="eyebrow">A guide for parents</span>
+    <h1>10 Principles for Helping Your Child <em>Learn Maths</em></h1>
+    <p class="header-sub">Practical habits and mindsets that make a lasting difference</p>
+  </div>
+</header>
+<div class="bar"></div>
+
+<main>
+  <div class="intro">
+    <p>You don't need to be a maths expert to support your child. What matters most are the habits, attitudes, and small daily choices that build confidence and genuine understanding over time.</p>
+  </div>
+
+  <div class="principles">
+
+    <div class="principle">
+      <div class="principle-number">01</div>
+      <div class="principle-body">
+        <div class="principle-title">Make practice a daily habit — not an event</div>
+        <p class="principle-text">Twenty minutes of maths every day is far more powerful than two hours on a Sunday. Consistent repetition strengthens memory, builds fluency, and reduces anxiety before tests. Treat it like brushing teeth — non-negotiable and quick.</p>
+        <span class="principle-tip">Try: same time each afternoon, before screens</span>
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-number">02</div>
+      <div class="principle-body">
+        <div class="principle-title">Find and fill the gaps in foundational knowledge</div>
+        <p class="principle-text">Maths is cumulative. A shaky understanding of fractions makes algebra painful. A weak grasp of multiplication slows everything downstream. Before pushing forward, look back — identify exactly which concepts haven't clicked and address them directly.</p>
+        <span class="principle-tip">Try: a short diagnostic quiz to pinpoint weak spots</span>
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-number">03</div>
+      <div class="principle-body">
+        <div class="principle-title">Praise effort and strategy, not just correct answers</div>
+        <p class="principle-text">Children who believe ability is fixed give up when things get hard. Praising the process — "I love how you tried a different approach" — builds a growth mindset where struggle is seen as normal, not a sign of failure.</p>
+        <span class="principle-tip">Try: ask "what did you try?" before looking at the answer</span>
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-number">04</div>
+      <div class="principle-body">
+        <div class="principle-title">Let them struggle — a little</div>
+        <p class="principle-text">Productive struggle is where real learning happens. Resist the urge to jump in immediately when your child is stuck. Give them a minute or two to wrestle with a problem first. Confidence is built by overcoming difficulty, not avoiding it.</p>
+        <span class="principle-tip">Try: "What do you know about this problem so far?"</span>
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-number">05</div>
+      <div class="principle-body">
+        <div class="principle-title">Connect maths to the real world</div>
+        <p class="principle-text">Abstract concepts stick when children see them in real life. Cooking uses fractions and ratios. Shopping involves percentages and estimation. Driving trips use time, distance, and rates. Point these out naturally — it shows maths is useful, not just a school exercise.</p>
+        <span class="principle-tip">Try: involve your child in splitting a restaurant bill</span>
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-number">06</div>
+      <div class="principle-body">
+        <div class="principle-title">Prioritise understanding over memorisation</div>
+        <p class="principle-text">A child who understands <em>why</em> a method works can reconstruct it if they forget. A child who only memorised steps is lost. Ask "can you explain that to me?" regularly — if they can teach it back, they truly understand it.</p>
+        <span class="principle-tip">Try: "Explain it to me like I'm six years old"</span>
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-number">07</div>
+      <div class="principle-body">
+        <div class="principle-title">Watch your own attitude toward maths</div>
+        <p class="principle-text">Parents who say "I was never a maths person" give their children permission to feel the same way. Children absorb parental attitudes. Even if you found maths hard, frame it as something that takes practice — not a talent some people are simply born without.</p>
+        <span class="principle-tip">Try: "Maths is tricky — let's figure it out together"</span>
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-number">08</div>
+      <div class="principle-body">
+        <div class="principle-title">Review what was learned, not just what's new</div>
+        <p class="principle-text">Spaced repetition — revisiting earlier topics regularly — is one of the most evidence-backed ways to build long-term retention. A few questions on last month's topic each week is far more effective than cramming before a test.</p>
+        <span class="principle-tip">Try: one "review question" from a past topic each session</span>
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-number">09</div>
+      <div class="principle-body">
+        <div class="principle-title">Know when to get specialist help</div>
+        <p class="principle-text">Some gaps are better addressed by a specialist tutor than a parent. There's no shame in this — often children learn differently from someone outside the family, and a good tutor can pinpoint misconceptions that are easy to overlook at home.</p>
+        <span class="principle-tip">Try: a tutor who gives you feedback on specific gaps, not just homework help</span>
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-number">10</div>
+      <div class="principle-body">
+        <div class="principle-title">Celebrate progress, not just grades</div>
+        <p class="principle-text">A child who moves from struggling with percentages to understanding them has achieved something real — regardless of what a test score says. Recognise progress explicitly. Children who feel seen for improving are far more motivated to keep going than those chasing a mark.</p>
+        <span class="principle-tip">Try: keep a visible record of topics mastered over the year</span>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <strong>SubjectMatter</strong> &nbsp;·&nbsp; NSW Maths Tutoring · Built for Families
+</footer>
+
+</body>
+</html>

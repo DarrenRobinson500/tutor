@@ -206,6 +206,13 @@ const TYPE_BADGE: Record<string, [string, string]> = {
   easy: ["bg-success", "Easy"], medium: ["bg-primary", "Moderate"], hard: ["bg-danger", "Hard"],
 };
 
+function formatChildNamesForBtn(names: string[]): string {
+  if (names.length === 0) return "your child";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
 }
@@ -577,6 +584,31 @@ export default function ParentHomePage() {
                 />
               ))}
             </div>
+          )}
+
+          {/* Principles link */}
+          {children.length > 0 && (
+            <Link
+              to={`/parents/${parent.id}/principles`}
+              style={{
+                display: "block",
+                margin: "1.5rem 0 0.5rem",
+                padding: "1rem 1.5rem",
+                background: "#FFF8F0",
+                border: "1px solid #FFD4A8",
+                borderRadius: 12,
+                textDecoration: "none",
+                color: "#e8671a",
+                fontWeight: 600,
+                fontSize: "0.95rem",
+                textAlign: "center",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#FDECD8")}
+              onMouseLeave={e => (e.currentTarget.style.background = "#FFF8F0")}
+            >
+              How can I help {formatChildNamesForBtn(children.map(c => c.first_name))} learn maths?
+            </Link>
           )}
 
           {/* Add child */}

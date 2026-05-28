@@ -79,13 +79,14 @@ def _send_tutor_welcome_email(tutor):
 
 
 def _send_parent_welcome_emails(parent, children_data):
-    from django.core.mail import send_mail
+    import os
+    from django.core.mail import EmailMultiAlternatives, send_mail
     from django.conf import settings
 
     site = (getattr(settings, "FRONTEND_URL", "") or "").rstrip("/") or "https://subject-matter.com.au"
 
     # Email to parent
-    parent_body = (
+    parent_plain = (
         f"Hi {parent.first_name},\n\n"
         f"Welcome to Subject Matter! You're all set to get started.\n\n"
         f"Log in any time at subject-matter.com.au — select Parent, then enter your email and password.\n\n"
@@ -93,18 +94,34 @@ def _send_parent_welcome_emails(parent, children_data):
         f"· View your child's upcoming sessions\n"
         f"· Manage bookings\n"
         f"· Track payments\n\n"
-        f"If you have any questions, feel free to reply to this email.\n\n"
-        f"We're glad you're here.\n\n"
+        f"Questions? Just reply to this email — we're here to help.\n\n"
         f"The Subject Matter Team"
     )
     try:
-        send_mail(
-            subject="Welcome to Subject Matter",
-            message=parent_body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[parent.email],
-            fail_silently=True,
-        )
+        template_path = os.path.join(os.path.dirname(__file__), "..", "emails", "welcome_parent.html")
+        with open(template_path, encoding="utf-8") as fh:
+            html_body = fh.read().replace("[FIRST_NAME]", parent.first_name)
+    except Exception:
+        html_body = None
+
+    try:
+        if html_body:
+            msg = EmailMultiAlternatives(
+                subject="Welcome to Subject Matter",
+                body=parent_plain,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[parent.email],
+            )
+            msg.attach_alternative(html_body, "text/html")
+            msg.send()
+        else:
+            send_mail(
+                subject="Welcome to Subject Matter",
+                message=parent_plain,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[parent.email],
+                fail_silently=True,
+            )
     except Exception:
         pass
 
