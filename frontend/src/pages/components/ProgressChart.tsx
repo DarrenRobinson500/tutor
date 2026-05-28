@@ -30,6 +30,11 @@ const LEVEL_COLOURS = [
   "#059669", // 6 Mastered
 ];
 
+const LEVEL_LABELS = [
+  "Not Started", "Developing", "Easy Complete", "Emerging",
+  "Competent", "Advanced", "Mastered",
+];
+
 export function ProgressChart({ studentId }: { studentId: number | string }) {
   const [data, setData] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,9 +95,6 @@ export function ProgressChart({ studentId }: { studentId: number | string }) {
             </div>
             <div style={{ fontSize: 12, color: "#6b7280" }}>
               {competency.total_skills} skill{competency.total_skills !== 1 ? "s" : ""}
-              {competency.avg_label && (
-                <> · avg <strong style={{ color: "#374151" }}>{competency.avg_label}</strong></>
-              )}
             </div>
           </div>
           {/* Distribution bar */}
@@ -111,9 +113,16 @@ export function ProgressChart({ studentId }: { studentId: number | string }) {
               ) : null
             )}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#9ca3af", marginTop: 3 }}>
-            <span>Not started</span><span>Mastered</span>
-          </div>
+          {(() => {
+            const lowestLevel = competency.distribution.findIndex(c => c > 0);
+            const highestLevel = competency.distribution.reduce((hi, c, i) => c > 0 ? i : hi, 0);
+            return (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#9ca3af", marginTop: 3 }}>
+                <span>{LEVEL_LABELS[lowestLevel] ?? "Not Started"}</span>
+                <span>{LEVEL_LABELS[highestLevel] ?? "Mastered"}</span>
+              </div>
+            );
+          })()}
         </div>
       )}
 

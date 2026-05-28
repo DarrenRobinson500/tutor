@@ -90,7 +90,7 @@ const DEFAULT_DEV_USERS = [
   { label: "Tutor",   email: "Alex",    password: "Alex"    },
 ];
 
-export function Layout({ children }: { children: React.ReactNode }) {
+export function Layout({ children, hideNav }: { children: React.ReactNode; hideNav?: boolean }) {
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
   const access = localStorage.getItem("access");
@@ -188,7 +188,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <style>{NAV_STYLES}</style>
 
       {/* Navbar */}
-      <nav className="navbar navbar-expand-lg sm-layout-nav">
+      {!hideNav && <nav className="navbar navbar-expand-lg sm-layout-nav">
         <div className="container-fluid px-0">
           <Link className="navbar-brand" to={dashboardPath()}>
             <img src="/subjectmatter_wordmark_orange.svg" alt="SubjectMatter" />
@@ -294,10 +294,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           </div>
         </div>
-      </nav>
+      </nav>}
 
       {/* Incoming call notification for students */}
-      {user?.role === "student" && <IncomingCallBanner />}
+      {!hideNav && user?.role === "student" && <IncomingCallBanner />}
 
       {/* Page content */}
       <div className="container-fluid">{children}</div>

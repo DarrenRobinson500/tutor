@@ -576,21 +576,12 @@ export function TestPage() {
   const progressPct = totalSkills > 0 ? Math.round((doneSkills / totalSkills) * 100) : 0;
 
   return (
-    <Layout>
+    <Layout hideNav={mode !== "learning"}>
       <div className="container py-3" style={{ maxWidth: 700 }}>
-        <button
-          className="btn btn-sm btn-outline-secondary mb-3"
-          onClick={() => navigate(`/students/${studentId}`)}
-        >
-          ← Back
-        </button>
 
         {/* Mode / test label */}
         {mode === "learning" && question && (
           <div className="d-flex align-items-center gap-3 mb-2">
-            <span className="badge bg-success" style={{ fontSize: 12 }}>
-              Loop {(question as any).loop ?? 1} of 2
-            </span>
             <span className="text-muted" style={{ fontSize: 13 }}>
               {(() => {
                 const remaining = (question as any).loop_remaining ?? 0;
@@ -680,17 +671,15 @@ export function TestPage() {
           preview={preview}
           onStudentNext={handleAnswer}
           disableOnWrong={mode !== "learning"}
+          extraInputActions={
+            <button
+              className="btn btn-outline-secondary btn-sm"
+              onClick={() => setShowCalculator(v => !v)}
+            >
+              {showCalculator ? "Hide calculator" : "Show calculator"}
+            </button>
+          }
         />
-
-        {/* Calculator toggle */}
-        <div className="mt-3">
-          <button
-            className="btn btn-outline-secondary btn-sm"
-            onClick={() => setShowCalculator(v => !v)}
-          >
-            {showCalculator ? "Hide calculator" : "Show calculator"}
-          </button>
-        </div>
 
         {/* Floating calculator */}
         {showCalculator && (

@@ -4173,6 +4173,31 @@ class FocusAreaViewSet(viewsets.ViewSet):
         StudentFocusArea.objects.filter(pk=pk).delete()
         return Response({"deleted": True})
 
+    @action(detail=True, methods=['post'])
+    def complete_learning(self, request, pk=None):
+        """Mark a focus area's learning as done this week and snapshot star levels."""
+        try:
+            fa = StudentFocusArea.objects.select_related('skill').get(pk=pk)
+        except StudentFocusArea.DoesNotExist:
+            return Response({'error': 'Not found'}, status=404)
+
+        comp = StudentSkillCompetency.objects.filter(
+            student=fa.student, skill=fa.skill
+        ).first()
+        level_after = comp.level if comp else 0
+        level_before = int(request.data.get('level_before', 0))
+
+        fa.learning_done_week = _this_weeks_monday()
+        fa.level_before_learning = level_before
+        fa.level_after_learning = level_after
+        fa.save(update_fields=['learning_done_week', 'level_before_learning', 'level_after_learning'])
+
+        return Response({
+            'level_before': level_before,
+            'level_after': level_after,
+            'gained': level_after - level_before,
+        })
+
     @action(detail=True, methods=["post"], url_path="move_up")
     def move_up(self, request, pk=None):
         fa = StudentFocusArea.objects.filter(pk=pk).first()
@@ -5988,11 +6013,11 @@ class TestViewSet(viewsets.ViewSet):
         if not skill_codes:
             return Response({'error': 'No skills found'}, status=400)
 
-        # ── Filter skills by competency level for test mode ───────────────────
+        # ── Filter skills by competency level ────────────────────────────────
         # Start from the lowest competency level and expand upward until at
         # least 5 skills are selected (or all levels are exhausted).
         # A new student (all level 0) will always test every skill.
-        if mode == 'test' and not skill_codes_override:
+        if mode in ('test', '') and not skill_codes_override:
             comp_map = {
                 c.skill.code: c.level
                 for c in StudentSkillCompetency.objects.filter(
@@ -6037,19 +6062,32 @@ class TestViewSet(viewsets.ViewSet):
                 key=lambda code: (level_of(code), syllabus_order.get(code, (0,)))
             )
 
-            # ── DEBUG: print skill selection details to server log ────────────
-            print(f"\n{'='*60}")
-            print(f"TEST START — student: {student.get_full_name()} (id={student.id})")
-            print(f"Year level: {getattr(StudentProfile.objects.filter(user=student).first(), 'year_level', 'unknown')}")
-            print(f"Competency threshold chosen: level <= {chosen_threshold}")
-            print(f"All skill competency levels (code: level):")
-            for code in skill_codes:
-                lvl = level_of(code)
-                name = getattr(_sort_skill_objs.get(code), 'description', code)
-                print(f"  [{lvl}] {code} — {name}")
-            print(f"Total skills queued: {len(skill_codes)}")
-            print(f"{'='*60}\n")
-            # ── END DEBUG ─────────────────────────────────────────────────────
+        # ── DEBUG: print skill order to server log ────────────────────────────
+        _debug_skill_objs = {
+            s.code: s
+            for s in Skill.objects.filter(code__in=skill_codes)
+        }
+        _debug_comp_map = (
+            {c.skill.code: c.level
+             for c in StudentSkillCompetency.objects.filter(
+                 student=student, skill__code__in=skill_codes
+             ).select_related('skill')}
+            if mode in ('test', '') else {}
+        )
+        _debug_level_of = lambda code: _debug_comp_map.get(code, 0)
+        _debug_profile = StudentProfile.objects.filter(user=student).first()
+        print(f"\n{'='*60}")
+        print(f"TEST START — student: {student.get_full_name()} (id={student.id})")
+        print(f"Mode: '{mode or 'dynamic'}' | Year level: {getattr(_debug_profile, 'year_level', 'unknown')}")
+        if mode in ('test', '') and not skill_codes_override:
+            print(f"Competency threshold: level <= {chosen_threshold}")
+        print(f"Test order ({len(skill_codes)} skills):")
+        for i, code in enumerate(skill_codes, 1):
+            lvl = _debug_level_of(code)
+            name = getattr(_debug_skill_objs.get(code), 'description', code)
+            print(f"  {i:2}. [lvl {lvl}] {code} — {name}")
+        print(f"{'='*60}\n")
+        # ── END DEBUG ─────────────────────────────────────────────────────────
 
         # ── Resolve linked focus area ─────────────────────────────────────────
         linked_fa = None
@@ -6065,85 +6103,35 @@ class TestViewSet(viewsets.ViewSet):
             linked_fa.level_after_learning = None  # clear previous week's result
             linked_fa.save(update_fields=['level_before_learning', 'level_after_learning'])
 
-        # ── For new modes, always create a fresh session ──────────────────────
-        if mode in ('test', 'learning'):
-            # Abandon any existing active session of the same mode/type to avoid confusion
-            TestSession.objects.filter(student=student, status='active', mode=mode).update(
-                status='abandoned'
-            )
-            session = TestSession.objects.create(
-                student=student,
-                skill_codes=skill_codes,
-                test_type=test_type if mode == '' else '',
-                current_difficulty='easy',
-                mode=mode,
-                linked_focus_area=linked_fa,
-            )
-            if mode == 'test':
-                question = _advance_to_question_test_mode(session)
-            else:
-                question = _advance_to_question_learning_mode(session)
-            if question is None:
-                session.status = 'completed'
-                session.completed_at = timezone.now()
-                session.save()
-                return Response({'complete': True, 'session_id': session.id, 'mode': mode})
-            return Response({
-                'session_id': session.id,
-                'question': question,
-                'total_skills': len(skill_codes),
-                'mode': mode,
-            })
-
-        # ── Legacy modes: resume or create ───────────────────────────────────
-        existing_session = TestSession.objects.filter(
-            student=student, status='active', test_type=test_type, mode='',
-        ).order_by('-started_at').first()
-
-        if existing_session:
-            session = existing_session
-            question = _advance_to_question(session)
-            if question is None:
-                session.status = 'completed'
-                session.completed_at = timezone.now()
-                session.save()
-                return Response({'complete': True, 'session_id': session.id})
-
-            skill_progress = [
-                {
-                    'code': r.skill_code,
-                    'description': r.skill_description,
-                    'result': r.highest_difficulty_reached,
-                }
-                for r in session.skill_results.all()
-            ]
-            return Response({
-                'session_id': session.id,
-                'question': question,
-                'total_skills': len(session.skill_codes),
-                'skill_progress': skill_progress,
-                'test_type': session.test_type,
-                'resumed': True,
-            })
-
+        # ── Always create a fresh session ─────────────────────────────────────
+        # Abandon any existing active session of the same mode to avoid stale skill lists.
+        TestSession.objects.filter(student=student, status='active', mode=mode).update(
+            status='abandoned'
+        )
         session = TestSession.objects.create(
             student=student,
             skill_codes=skill_codes,
-            test_type=test_type,
-            current_difficulty=test_type if test_type in ('easy', 'medium', 'hard') else 'easy',
+            test_type=test_type if mode == '' else '',
+            current_difficulty=test_type if (mode == '' and test_type in ('easy', 'medium', 'hard')) else 'easy',
+            mode=mode,
+            linked_focus_area=linked_fa,
         )
-
-        question = _advance_to_question(session)
+        if mode == 'test':
+            question = _advance_to_question_test_mode(session)
+        elif mode == 'learning':
+            question = _advance_to_question_learning_mode(session)
+        else:
+            question = _advance_to_question(session)
         if question is None:
             session.status = 'completed'
             session.completed_at = timezone.now()
             session.save()
-            return Response({'complete': True, 'session_id': session.id})
-
+            return Response({'complete': True, 'session_id': session.id, 'mode': mode})
         return Response({
             'session_id': session.id,
             'question': question,
             'total_skills': len(skill_codes),
+            'mode': mode,
             'test_type': session.test_type,
         })
 

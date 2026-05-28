@@ -26,6 +26,7 @@ interface SkillRow {
 
 interface FocusArea {
   id: number;
+  skill_id: number;
   skill_code: string;
   skill_description: string;
   order: number;
@@ -64,23 +65,16 @@ function SkillStars({ level }: { level: number }) {
 function FocusAreaCard({ fa, studentId }: { fa: FocusArea; studentId: string }) {
   const gained = (fa.level_after_learning ?? 0) - (fa.level_before_learning ?? 0);
   const improved = fa.learning_done_this_week && gained > 0;
-  const stars = fa.learning_done_this_week
-    ? (fa.level_after_learning ?? fa.mastery)
-    : fa.mastery;
+  const stars = fa.mastery;
 
   if (!fa.learning_done_this_week) {
-    const params = new URLSearchParams({
-      mode: "learning",
-      skill_codes: fa.skill_code,
-      focus_area_id: String(fa.id),
-    });
     return (
       <div className="fa-card">
         <div className="fa-card-name">{fa.skill_description}</div>
         <div className="fa-card-right">
           <SkillStars level={stars} />
           <Link
-            to={`/students/${studentId}/test?${params.toString()}`}
+            to={`/students/${studentId}/test/${fa.skill_id}?focus_area_id=${fa.id}`}
             className="btn btn-success btn-sm"
           >
             Learn
