@@ -6437,29 +6437,59 @@ def _send_test_report_email(session):
 
 def _send_student_welcome_email(student, plaintext_password, teacher_class, teacher):
     """Send a welcome email to a newly-created student with their login credentials."""
-    from django.core.mail import send_mail
+    import os
+    from django.core.mail import EmailMultiAlternatives, send_mail
     from django.conf import settings as _settings
 
-    login_url = getattr(_settings, 'FRONTEND_URL', 'https://greenlearning.vercel.app') + '/login'
-    subject = f"Your SubjectMatter login for {teacher_class.name}"
-    body = (
+    login_url = (getattr(_settings, 'FRONTEND_URL', 'https://subject-matter.com.au') or '').rstrip('/') + '/login'
+    teacher_name = teacher.get_full_name()
+    subject = f"Your Subject Matter login for {teacher_class.name}"
+
+    plain = (
         f"Hi {student.first_name},\n\n"
-        f"Your teacher {teacher.get_full_name()} has set up a SubjectMatter account for you.\n\n"
-        f"Log in at: {login_url}\n"
-        f"Email:     {student.email}\n"
-        f"Password:  {plaintext_password}\n\n"
-        f"Class: {teacher_class.name} (Year {teacher_class.year_level})\n\n"
-        f"You can change your password after you log in.\n\n"
-        f"SubjectMatter"
+        f"{teacher_name} has set up a Subject Matter account for you in "
+        f"{teacher_class.name} (Year {teacher_class.year_level}).\n\n"
+        f"Email:    {student.email}\n"
+        f"Password: {plaintext_password}\n\n"
+        f"Log in at: {login_url}\n\n"
+        f"You can change your password after logging in.\n\n"
+        f"The Subject Matter Team"
     )
+
     try:
-        send_mail(
-            subject=subject,
-            message=body,
-            from_email=getattr(_settings, 'DEFAULT_FROM_EMAIL', 'noreply@subjectmatter.app'),
-            recipient_list=[student.email],
-            fail_silently=True,
-        )
+        template_path = os.path.join(os.path.dirname(__file__), "..", "emails", "welcome_student.html")
+        with open(template_path, encoding="utf-8") as fh:
+            html_body = (
+                fh.read()
+                .replace("[FIRST_NAME]", student.first_name)
+                .replace("[TEACHER_NAME]", teacher_name)
+                .replace("[CLASS_NAME]", teacher_class.name)
+                .replace("[YEAR_LEVEL]", str(teacher_class.year_level))
+                .replace("[STUDENT_EMAIL]", student.email)
+                .replace("[PASSWORD]", plaintext_password)
+                .replace("[LOGIN_URL]", login_url)
+            )
+    except Exception:
+        html_body = None
+
+    try:
+        if html_body:
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=plain,
+                from_email=getattr(_settings, 'DEFAULT_FROM_EMAIL', 'noreply@subjectmatter.app'),
+                to=[student.email],
+            )
+            msg.attach_alternative(html_body, "text/html")
+            msg.send()
+        else:
+            send_mail(
+                subject=subject,
+                message=plain,
+                from_email=getattr(_settings, 'DEFAULT_FROM_EMAIL', 'noreply@subjectmatter.app'),
+                recipient_list=[student.email],
+                fail_silently=True,
+            )
     except Exception:
         pass  # Don't let email failure block the import response
 
