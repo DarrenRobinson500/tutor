@@ -16,9 +16,9 @@ const LANGUAGE_LABELS: Record<string, string> = {
   ja: "日本語 (Japanese)",
 };
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="mb-3">
+    <div className="col-6 mb-3">
       <div style={{ fontSize: 12, color: "#8C8179", marginBottom: 2 }}>{label}</div>
       <div style={{ fontSize: 15, color: "#2D2D2D" }}>{value || "Not set"}</div>
     </div>
@@ -46,19 +46,21 @@ export function StudentDetailsPage() {
 
   return (
     <Layout header={<PageHeader title="My Details" />}>
-      <div className="container mt-4" style={{ maxWidth: 560 }}>
-        <DetailRow label="Email" value={student.email} />
-        <DetailRow label="Year Level" value={student.year_level} />
-        <DetailRow label="Gender" value={
-          student.gender === "male" ? "Male"
-          : student.gender === "female" ? "Female"
-          : student.gender === "other" ? "Other"
-          : ""
-        } />
-        <DetailRow label="Mobile" value={student.mobile} />
-        <DetailRow label="Address" value={student.address} />
-        <DetailRow label="Question Language" value={LANGUAGE_LABELS[student.language] ?? student.language ?? ""} />
-        <DetailRow label="Active" value={student.active ? "Yes" : "No"} />
+      <div className="container mt-4" style={{ maxWidth: 640 }}>
+        <div className="row">
+          <DetailCell label="Email" value={student.email} />
+          <DetailCell label="Year Level" value={student.year_level} />
+          <DetailCell label="Gender" value={
+            student.gender === "male" ? "Male"
+            : student.gender === "female" ? "Female"
+            : student.gender === "other" ? "Other"
+            : ""
+          } />
+          <DetailCell label="Mobile" value={student.mobile} />
+          <DetailCell label="Address" value={student.address} />
+          <DetailCell label="Question Language" value={LANGUAGE_LABELS[student.language] ?? student.language ?? ""} />
+          <DetailCell label="Active" value={student.active ? "Yes" : "No"} />
+        </div>
 
         <button
           className="btn btn-outline-primary mt-2"

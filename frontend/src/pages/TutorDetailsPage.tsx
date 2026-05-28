@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { Layout, PageHeader } from "./components/Layout";
 import { apiFetch } from "../utils/apiFetch";
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="mb-3">
+    <div className="col-6 mb-3">
       <div style={{ fontSize: 12, color: "#8C8179", marginBottom: 2 }}>{label}</div>
       <div style={{ fontSize: 15, color: "#2D2D2D" }}>{value || "Not set"}</div>
     </div>
@@ -43,20 +43,22 @@ export function TutorDetailsPage() {
 
   return (
     <Layout header={<PageHeader title="My Details" />}>
-      <div className="container mt-4" style={{ maxWidth: 560 }}>
+      <div className="container mt-4" style={{ maxWidth: 640 }}>
         {!tutor.approved && (
           <div className="alert alert-warning mb-3">Your account is pending approval.</div>
         )}
 
-        <DetailRow label="Name" value={tutor.name} />
-        <DetailRow label="Email" value={tutor.email} />
-        <DetailRow label="Mobile" value={tutor.mobile} />
-        <DetailRow label="Address" value={tutor.address} />
-        <DetailRow label="Default Session Length" value={tutor.default_session_minutes ? `${tutor.default_session_minutes} minutes` : ""} />
-        <DetailRow label="Buffer Between Sessions" value={tutor.buffer_minutes != null ? `${tutor.buffer_minutes} minutes` : ""} />
-        <DetailRow label="Default Hourly Rate" value={tutor.default_hourly_rate != null ? `$${tutor.default_hourly_rate}` : ""} />
+        <div className="row">
+          <DetailCell label="Name" value={tutor.name} />
+          <DetailCell label="Email" value={tutor.email} />
+          <DetailCell label="Mobile" value={tutor.mobile} />
+          <DetailCell label="Address" value={tutor.address} />
+          <DetailCell label="Default Session Length" value={tutor.default_session_minutes ? `${tutor.default_session_minutes} minutes` : ""} />
+          <DetailCell label="Buffer Between Sessions" value={tutor.buffer_minutes != null ? `${tutor.buffer_minutes} minutes` : ""} />
+          <DetailCell label="Default Hourly Rate" value={tutor.default_hourly_rate != null ? `$${tutor.default_hourly_rate}` : ""} />
+        </div>
 
-        <div className="d-flex gap-2 mt-3">
+        <div className="d-flex gap-2 mt-3 flex-wrap">
           <button
             className={`btn btn-sm ${lookingForStudents ? "btn-primary" : "btn-outline-primary"}`}
             onClick={toggleLooking}
@@ -69,6 +71,9 @@ export function TutorDetailsPage() {
           >
             Edit My Details
           </button>
+          <Link to={`/tutors/${id}/schedule`} className="btn btn-outline-primary btn-sm">
+            ⏱ Set my available hours
+          </Link>
         </div>
       </div>
     </Layout>

@@ -71,6 +71,7 @@ export function PostTuitionPage() {
   const [sessionProductive, setSessionProductive] = useState<boolean | null>(null);
   const [message, setMessage] = useState<string>("");
   const [parentMobile, setParentMobile] = useState<string | null>(null);
+  const [parentName, setParentName] = useState<string | null>(null);
   const [messageLoading, setMessageLoading] = useState(false);
   const [messageSaving, setMessageSaving] = useState(false);
   const [messageSending, setMessageSending] = useState(false);
@@ -125,6 +126,7 @@ export function PostTuitionPage() {
       .then((d) => {
         setMessage(d.message ?? "");
         setParentMobile(d.parent_mobile ?? null);
+        setParentName(d.parent_name ?? null);
       })
       .catch(() => setMessageError("Failed to load message."))
       .finally(() => setMessageLoading(false));
@@ -369,7 +371,7 @@ export function PostTuitionPage() {
                     />
                     {parentMobile && (
                       <div className="text-muted mb-2" style={{ fontSize: 13 }}>
-                        Will be sent to: {parentMobile}
+                        This message will be sent to{parentName ? ` ${parentName}` : ""} on {parentMobile.replace(/(\d{4})(\d{3})(\d{3})/, "$1 $2 $3")}
                       </div>
                     )}
                     {messageError && (

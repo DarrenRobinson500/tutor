@@ -2303,6 +2303,9 @@ class SkillViewSet(viewsets.ModelViewSet):
         grade = request.query_params.get("grade")
         matrix = get_matrix_cache()  # uses cached tree
         rows = matrix["skills"]
+
+        id_map = {row["id"]: row for row in rows}
+
         leaf_skills = []
         for row in rows:
             if row["children_count"] != 0:
@@ -2312,9 +2315,27 @@ class SkillViewSet(viewsets.ModelViewSet):
                 if row["cells"][g]["colour"] != "covered":
                     continue
 
+            # Walk up the ancestor chain to find direct parent and root
+            parent_desc = None
+            root_desc = None
+            parent_is_root = False
+            pid = row.get("parent_id")
+            if pid and pid in id_map:
+                parent_row = id_map[pid]
+                parent_desc = parent_row["description"]
+                # Keep walking to find root (node with no parent in the map)
+                current = parent_row
+                while current.get("parent_id") and current["parent_id"] in id_map:
+                    current = id_map[current["parent_id"]]
+                root_desc = current["description"]
+                parent_is_root = (parent_desc == root_desc)
+
             leaf_skills.append({
                 "id": row["id"],
                 "description": row["description"],
+                "parent_description": parent_desc,
+                "root_description": root_desc,
+                "parent_is_root": parent_is_root,
             })
 
         return Response(leaf_skills)
@@ -3315,6 +3336,15 @@ def _get_parent_mobile(student):
         return None
 
 
+def _get_parent_name(student):
+    """Return the parent/guardian's first name for a student via ParentChild link."""
+    from .models import ParentChild
+    parent_link = ParentChild.objects.filter(child=student).select_related('parent').first()
+    if parent_link and parent_link.parent.first_name:
+        return parent_link.parent.first_name
+    return None
+
+
 class TutorJobViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
@@ -3406,9 +3436,11 @@ class TutorJobViewSet(viewsets.ViewSet):
         # If a message is already saved, return it
         if outcome and outcome.parent_message:
             parent_mobile = _get_parent_mobile(student)
+            parent_name = _get_parent_name(student)
             return Response({
                 'message': outcome.parent_message,
                 'parent_mobile': parent_mobile,
+                'parent_name': parent_name,
             })
 
         # --- Build the message ---
@@ -3498,23 +3530,31 @@ class TutorJobViewSet(viewsets.ViewSet):
                 f"Keep up the encouragement at home. {tutor_name}"
             )
         else:
+            if focus_items:
+                topics_line = f"We worked through various topics including {focus_text}."
+            else:
+                topics_line = "We worked through various topics."
+
             if current_pct > prev_pct:
-                pct_line = (
-                    f"has now completed {current_pct}% of the Year {year_level} Maths syllabus"
-                    f" — up from {prev_pct}% last session"
+                pct_sentence = (
+                    f"{student_name} has now completed {current_pct}% of the Year {year_level} Maths syllabus"
+                    f" — up from {prev_pct}% last session."
                 )
             else:
-                pct_line = f"has now completed {current_pct}% of the Year {year_level} Maths syllabus"
+                pct_sentence = f"{student_name} has now completed {current_pct}% of the Year {year_level} Maths syllabus."
 
             message = (
                 f"Great news! {student_name} had a productive session today. "
-                f"{pronoun} worked through {focus_text}, and {pct_line}. "
+                f"{topics_line} "
+                f"{pct_sentence} "
                 f"Keep up the encouragement at home! {tutor_name} 🎉"
             )
 
+        parent_name = _get_parent_name(student)
         return Response({
             'message': message,
             'parent_mobile': parent_mobile,
+            'parent_name': parent_name,
         })
 
     @action(detail=True, methods=['post'])

@@ -19,7 +19,7 @@ interface TemplateMetadataBarProps {
   onToSkill: () => void;
   onNext: () => void;
   onPrev: () => void;
-  skills: Array<{ id: number; description: string }>;
+  skills: Array<{ id: number; description: string; parent_description?: string; root_description?: string; parent_is_root?: boolean }>;
   validated_filter?: "all" | "validated" | "unvalidated";
   currentIndex: number;
   listLength: number;
@@ -86,9 +86,32 @@ export function TemplateMetadataBar({
           onChange={(e) => onChange({ skill: Number(e.target.value) })}
         >
           <option value="">Select skill</option>
-          {skills.map((s) => (
-            <option key={s.id} value={s.id}>{s.description}</option>
-          ))}
+          {(() => {
+            // Group by root_description, preserving insertion order
+            const groups: Record<string, typeof skills> = {};
+            for (const s of skills) {
+              const root = s.root_description ?? "";
+              if (!groups[root]) groups[root] = [];
+              groups[root].push(s);
+            }
+            const roots = Object.keys(groups);
+            if (roots.length <= 1 && (roots.length === 0 || roots[0] === "")) {
+              return skills.map(s => (
+                <option key={s.id} value={s.id}>{s.description}</option>
+              ));
+            }
+            return roots.map(root => (
+              <optgroup key={root} label={root}>
+                {groups[root].map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.parent_is_root
+                      ? s.description
+                      : `${s.parent_description} - ${s.description}`}
+                  </option>
+                ))}
+              </optgroup>
+            ));
+          })()}
         </select>
 
         <select

@@ -142,8 +142,8 @@ export function SkillsMatrix({ courseSet, prefKey = "skills.selected_grade" }: S
                     const gStr = String(g);
                     const cell = skill.cells[gStr];
                     const covered = cell?.colour === "covered";
-                    const count = cell?.count ?? 0;
-                    const total = (cell?.validated ?? 0) + (cell?.unvalidated ?? 0);
+                    const count = cell?.count ?? 0;          // total (validated + unvalidated)
+                    const validated = cell?.validated ?? 0;  // validated only
                     const hasTemplates = count > 0;
                     const anomaly = hasTemplates && !covered; // templates outside syllabus
 
@@ -185,7 +185,7 @@ export function SkillsMatrix({ courseSet, prefKey = "skills.selected_grade" }: S
                           if (hasTemplates) navigate(`/skills/${skill.id}/overview/${gStr}`);
                         }}
                       >
-                        {hasTemplates ? <>{count}{total > count && <> <span style={{ color: "#9ca3af", fontWeight: 400 }}>{total}</span></>}</> : (covered ? "" : "")}
+                        {hasTemplates ? <>{validated}{count > validated && <> <span style={{ color: "#9ca3af", fontWeight: 400 }}>{count}</span></>}</> : (covered ? "" : "")}
                       </td>
                     );
                   })}
