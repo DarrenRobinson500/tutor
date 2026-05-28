@@ -206,21 +206,23 @@ export function StudentHomePage() {
           </div>
         )}
 
-        {focusAreas.length > 0 && (
-          <>
-            <hr />
-            <h3 className="mt-4">Your Focus Areas</h3>
-            <div className="fa-card-list">
-              {focusAreas.map(fa => (
-                <FocusAreaCard key={fa.id} fa={fa} studentId={id!} />
-              ))}
-            </div>
-          </>
-        )}
-
         <hr />
-        <h3 className="mt-4">Your Progress</h3>
-        <ProgressChart studentId={id!} />
+        <div style={{ display: "flex", gap: "2rem", alignItems: "flex-start" }}>
+          {focusAreas.length > 0 && (
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h3 className="mt-4">Your Focus Areas</h3>
+              <div className="fa-card-list">
+                {focusAreas.map(fa => (
+                  <FocusAreaCard key={fa.id} fa={fa} studentId={id!} />
+                ))}
+              </div>
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 className="mt-4">Your Progress</h3>
+            <ProgressChart studentId={id!} />
+          </div>
+        </div>
 
         <hr />
         <h3 className="mt-4">Your Syllabus</h3>

@@ -5751,9 +5751,7 @@ def _recompute_session_competency(session):
 
     student = session.student
     profile = student.get_student_profile()
-    grade = profile.year_level if profile else None
-    if not grade:
-        return
+    grade = (profile.year_level if profile else None) or ''
 
     skill_stats = (
         TestQuestionResult.objects
@@ -5981,11 +5979,54 @@ class TestViewSet(viewsets.ViewSet):
             level_of = lambda code: comp_map.get(code, 0)
             sorted_levels = sorted(set(level_of(c) for c in skill_codes))
             filtered = skill_codes  # fallback: use all if somehow empty
+            chosen_threshold = sorted_levels[-1] if sorted_levels else 0
             for lvl in sorted_levels:
                 filtered = [c for c in skill_codes if level_of(c) <= lvl]
                 if len(filtered) >= 5:
+                    chosen_threshold = lvl
                     break
-            skill_codes = filtered
+            # Sort by (competency level, syllabus position) so the lowest-competency
+            # skills are tested first, and within each level skills appear in the same
+            # order as "Your Syllabus". order_index is per-sibling so we build a
+            # root→leaf tuple from the full ancestor chain for stable cross-branch ordering.
+            _sort_skill_objs = {
+                s.code: s
+                for s in Skill.objects.filter(code__in=filtered).select_related(
+                    'parent', 'parent__parent', 'parent__parent__parent',
+                    'parent__parent__parent__parent'
+                )
+            }
+
+            def _ancestor_order_key(skill):
+                chain, node = [], skill
+                while node is not None:
+                    chain.append(node.order_index)
+                    node = node.parent
+                chain.reverse()
+                return tuple(chain)
+
+            syllabus_order = {
+                code: _ancestor_order_key(s)
+                for code, s in _sort_skill_objs.items()
+            }
+            skill_codes = sorted(
+                filtered,
+                key=lambda code: (level_of(code), syllabus_order.get(code, (0,)))
+            )
+
+            # ── DEBUG: print skill selection details to server log ────────────
+            print(f"\n{'='*60}")
+            print(f"TEST START — student: {student.get_full_name()} (id={student.id})")
+            print(f"Year level: {getattr(StudentProfile.objects.filter(user=student).first(), 'year_level', 'unknown')}")
+            print(f"Competency threshold chosen: level <= {chosen_threshold}")
+            print(f"All skill competency levels (code: level):")
+            for code in skill_codes:
+                lvl = level_of(code)
+                name = getattr(_sort_skill_objs.get(code), 'description', code)
+                print(f"  [{lvl}] {code} — {name}")
+            print(f"Total skills queued: {len(skill_codes)}")
+            print(f"{'='*60}\n")
+            # ── END DEBUG ─────────────────────────────────────────────────────
 
         # ── Resolve linked focus area ─────────────────────────────────────────
         linked_fa = None

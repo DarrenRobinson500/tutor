@@ -368,6 +368,43 @@ export default function ParentHomePage() {
   const [isFirstVisit, setIsFirstVisit] = useState(false);
   const [tab, setTab] = useState<"overview" | "assessments">("overview");
   const [removingChild, setRemovingChild] = useState<Child | null>(null);
+  const [devUsers, setDevUsers] = useState([
+    { label: "Admin",   email: "Darren",  password: "Darren"  },
+    { label: "Parent",  email: "Amanda",  password: "Amanda"  },
+    { label: "Student", email: "Michael", password: "Michael" },
+    { label: "Tutor",   email: "Alex",    password: "Alex"    },
+  ]);
+
+  useEffect(() => {
+    fetch(`${(process.env.REACT_APP_API_URL ?? "").replace(/\/$/, "")}/api/settings/`)
+      .then(r => r.json())
+      .then((d: { dev_users?: typeof devUsers }) => {
+        if (Array.isArray(d.dev_users) && d.dev_users.length) setDevUsers(d.dev_users);
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function devLoginAs(email: string, password: string) {
+    const API_URL = (process.env.REACT_APP_API_URL ?? "").replace(/\/$/, "");
+    try {
+      const res = await fetch(`${API_URL}/api/auth/login/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+      localStorage.setItem("access", data.access);
+      localStorage.setItem("refresh", data.refresh);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      const role = data.user?.role;
+      if (role === "parent")  window.location.href = `/parents/${data.user.id}`;
+      else if (role === "tutor")   window.location.href = `/tutors/${data.user.id}`;
+      else if (role === "student") window.location.href = `/students/${data.user.id}`;
+      else if (role === "admin")   window.location.href = "/admin";
+      else window.location.href = "/";
+    } catch { /* ignore */ }
+  }
 
   useEffect(() => {
     apiFetch("/api/auth/parent_home/")
@@ -513,7 +550,27 @@ export default function ParentHomePage() {
             <Link to={`/parents/${parent.id}`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Dashboard</Link>
             {hasTutor && <Link to={`/parents/${parent.id}/bookings`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Bookings</Link>}
             {hasTutor && <Link to={`/parents/${parent.id}/payments`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Payments</Link>}
+            {children.length > 0 && (
+              <Link to={`/parents/${parent.id}/principles`} className="ph-nav-logout" style={{ textDecoration: "none" }}>
+                Helping {formatChildNamesForBtn(children.map(c => c.first_name))}
+              </Link>
+            )}
           </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginRight: 12 }}>
+          {devUsers.map(u => (
+            <button
+              key={u.label}
+              onClick={() => devLoginAs(u.email, u.password)}
+              style={{
+                fontSize: "0.75rem", padding: "0.2rem 0.6rem", borderRadius: 4,
+                border: "1px solid rgba(255,200,0,0.4)", background: "rgba(255,200,0,0.12)",
+                color: "rgba(255,220,80,0.9)", cursor: "pointer",
+              }}
+            >
+              {u.label}
+            </button>
+          ))}
         </div>
         <div className="ph-nav-right">
           <span className="ph-nav-user">{parent.first_name} {parent.last_name}</span>

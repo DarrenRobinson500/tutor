@@ -14,12 +14,10 @@ interface Competency {
   distribution: number[];
 }
 
-interface FocusArea { name: string; level: number; label: string; }
-
 interface ProgressData {
   snapshots: Snapshot[];
   competency: Competency;
-  focus_areas: FocusArea[];
+  focus_areas: unknown[];
 }
 
 const LEVEL_COLOURS = [
@@ -31,18 +29,6 @@ const LEVEL_COLOURS = [
   "#10b981", // 5 Advanced
   "#059669", // 6 Mastered
 ];
-
-function LevelBar({ level, label }: { level: number; label: string }) {
-  const pct = Math.round((level / 6) * 100);
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-      <div style={{ flex: 1, height: 7, background: "#e5e7eb", borderRadius: 4, overflow: "hidden" }}>
-        <div style={{ width: `${pct}%`, height: "100%", background: LEVEL_COLOURS[level], borderRadius: 4, transition: "width 0.4s" }} />
-      </div>
-      <span style={{ width: 90, color: "#6b7280", flexShrink: 0 }}>{label}</span>
-    </div>
-  );
-}
 
 export function ProgressChart({ studentId }: { studentId: number | string }) {
   const [data, setData] = useState<ProgressData | null>(null);
@@ -61,12 +47,11 @@ export function ProgressChart({ studentId }: { studentId: number | string }) {
 
   if (!data) return <p style={{ fontSize: 13, color: "#8A7F74", margin: 0 }}>Could not load progress.</p>;
 
-  const { snapshots, competency, focus_areas } = data;
+  const { snapshots, competency } = data;
   const hasSnapshots = snapshots.length >= 2;
   const hasCompetency = competency.total_skills > 0;
-  const hasFocusAreas = focus_areas.length > 0;
 
-  if (!hasSnapshots && !hasCompetency && !hasFocusAreas) {
+  if (!hasSnapshots && !hasCompetency) {
     return (
       <p style={{ fontSize: 13, color: "#8A7F74", margin: 0 }}>
         Complete an assessment to see progress.
@@ -81,7 +66,7 @@ export function ProgressChart({ studentId }: { studentId: number | string }) {
       {hasSnapshots && (
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            Percent of Year 7 Complete
+            {snapshots[snapshots.length - 1].score}% Percent of Year 7 Complete
           </div>
           <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 4 }}>Goal: 100% by end of year</div>
           <ResponsiveContainer width="100%" height={140}>
@@ -132,22 +117,6 @@ export function ProgressChart({ studentId }: { studentId: number | string }) {
         </div>
       )}
 
-      {/* Focus areas */}
-      {hasFocusAreas && (
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            Focus areas
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            {focus_areas.map((fa, i) => (
-              <div key={i}>
-                <div style={{ fontSize: 12, color: "#374151", marginBottom: 2 }}>{fa.name}</div>
-                <LevelBar level={fa.level} label={fa.label} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
     </div>
   );
