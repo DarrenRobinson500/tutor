@@ -105,6 +105,7 @@ export default function ParentPrinciplesPage() {
             <Link to={`/parents/${id}`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Dashboard</Link>
             {hasTutor && <Link to={`/parents/${id}/bookings`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Bookings</Link>}
             {hasTutor && <Link to={`/parents/${id}/payments`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Payments</Link>}
+            <Link to={`/parents/${id}/principles`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Helping your child</Link>
           </div>
         </div>
         <div className="ph-nav-right">
@@ -115,42 +116,34 @@ export default function ParentPrinciplesPage() {
 
       {/* ── Hero header ──────────────────────────── */}
       <div style={{
-        background: "#1e1e1e",
+        background: "#fdecd8",
         padding: "3.5rem 2rem 3rem",
         textAlign: "center",
-        position: "relative",
-        overflow: "hidden",
+        borderBottom: "3px solid #e8671a",
       }}>
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "repeating-linear-gradient(-45deg, transparent, transparent 24px, rgba(232,103,26,0.06) 24px, rgba(232,103,26,0.06) 25px)",
-        }} />
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <span style={{
-            display: "block",
-            fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.22em",
-            textTransform: "uppercase", color: "#e8671a", marginBottom: "1.1rem",
-          }}>
-            A guide for parents
-          </span>
-          <h1 style={{
-            fontFamily: "Lora, Georgia, serif",
-            fontSize: "clamp(1.9rem, 5vw, 3.2rem)", fontWeight: 700,
-            color: "#fff", lineHeight: 1.2,
-            maxWidth: 700, margin: "0 auto 1.2rem",
-          }}>
-            10 Principles for Helping Your Child{" "}
-            <em style={{ fontStyle: "italic", color: "#f5924a" }}>Learn Maths</em>
-          </h1>
-          <p style={{
-            color: "#b8b0a8", fontSize: "1rem", fontWeight: 300,
-            maxWidth: 500, margin: "0 auto", fontStyle: "italic",
-          }}>
-            Practical habits and mindsets that make a lasting difference
-          </p>
-        </div>
+        <span style={{
+          display: "block",
+          fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.22em",
+          textTransform: "uppercase", color: "#e8671a", marginBottom: "1.1rem",
+        }}>
+          A guide for parents
+        </span>
+        <h1 style={{
+          fontFamily: "Lora, Georgia, serif",
+          fontSize: "clamp(1.9rem, 5vw, 3.2rem)", fontWeight: 700,
+          color: "#2d2d2d", lineHeight: 1.2,
+          maxWidth: 700, margin: "0 auto 1.2rem",
+        }}>
+          10 Principles for Helping Your Child{" "}
+          <em style={{ fontStyle: "italic", color: "#e8671a" }}>Learn Maths</em>
+        </h1>
+        <p style={{
+          color: "#7a6e65", fontSize: "1rem", fontWeight: 300,
+          maxWidth: 500, margin: "0 auto", fontStyle: "italic",
+        }}>
+          Practical habits and mindsets that make a lasting difference
+        </p>
       </div>
-      <div style={{ height: 5, background: "linear-gradient(90deg, #e8671a, #f5924a)" }} />
 
       {/* ── Content ──────────────────────────────── */}
       <main style={{ maxWidth: 780, margin: "0 auto", padding: "3rem 1.5rem 4rem" }}>
@@ -210,9 +203,10 @@ export default function ParentPrinciplesPage() {
       </main>
 
       <footer style={{
-        background: "#1e1e1e", color: "#888",
+        background: "#fdecd8", color: "#7a6e65",
         textAlign: "center", fontSize: "0.8rem",
         padding: "1.8rem 1rem", letterSpacing: "0.04em",
+        borderTop: "1px solid #d8cfc4",
       }}>
         <strong style={{ color: "#e8671a" }}>SubjectMatter</strong> &nbsp;·&nbsp; NSW Maths Tutoring · Built for Families
       </footer>

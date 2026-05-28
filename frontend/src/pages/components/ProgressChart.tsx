@@ -71,7 +71,7 @@ export function ProgressChart({ studentId }: { studentId: number | string }) {
       {hasSnapshots && (
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            {snapshots[snapshots.length - 1].score}% Percent of Year 7 Complete
+            {Math.round(snapshots[snapshots.length - 1].score)}% Percent of Year 7 Complete
           </div>
           <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 4 }}>Goal: 100% by end of year</div>
           <ResponsiveContainer width="100%" height={140}>

@@ -550,11 +550,9 @@ export default function ParentHomePage() {
             <Link to={`/parents/${parent.id}`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Dashboard</Link>
             {hasTutor && <Link to={`/parents/${parent.id}/bookings`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Bookings</Link>}
             {hasTutor && <Link to={`/parents/${parent.id}/payments`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Payments</Link>}
-            {children.length > 0 && (
-              <Link to={`/parents/${parent.id}/principles`} className="ph-nav-logout" style={{ textDecoration: "none" }}>
-                Helping {formatChildNamesForBtn(children.map(c => c.first_name))}
-              </Link>
-            )}
+            <Link to={`/parents/${parent.id}/principles`} className="ph-nav-logout" style={{ textDecoration: "none" }}>
+              Helping your child
+            </Link>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginRight: 12 }}>
@@ -792,11 +790,6 @@ function ChildCard({
 
       <div className="mt-3">
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Progress</div>
-        {child.syllabus_percent != null && child.syllabus_percent > 0 && child.year_level && (
-          <div style={{ fontSize: 13, color: "var(--sm-text-secondary, #5A5047)", marginBottom: 8 }}>
-            {child.first_name} is {child.syllabus_percent}% of the way through the Year {child.year_level.replace(/^year\s*/i, "")} syllabus.
-          </div>
-        )}
         <ProgressChart studentId={child.id} />
       </div>
 

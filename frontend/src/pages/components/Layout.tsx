@@ -5,83 +5,75 @@ import { dashboardPath } from "../../utils/dashboardPath";
 import { IncomingCallBanner } from "./IncomingCallBanner";
 
 const NAV_STYLES = `
+  .sm-page {
+    min-height: 100vh;
+    background: #FFFBF5;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
   .sm-layout-nav {
-    background: #2D2D2D;
-    border-bottom: 3px solid #FF8C42;
-    padding: 0 1.5rem;
-    min-height: 60px;
+    background: rgba(255,251,245,0.95);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid #F0EAE0;
+    padding: 0 2rem;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     position: sticky;
     top: 0;
     z-index: 100;
   }
-  .sm-layout-nav .container-fluid {
-    min-height: 60px;
-  }
-  @media (max-width: 991px) {
-    .sm-layout-nav {
-      padding-bottom: 0.75rem;
-    }
-  }
-  .sm-layout-nav .navbar-brand {
+  .sm-nav-left {
     display: flex;
     align-items: center;
-    padding: 0;
-    margin-right: 2rem;
+    gap: 1.5rem;
   }
-  .sm-layout-nav .navbar-brand img {
-    height: 28px;
-    width: auto;
+  .sm-nav-logo img { height: 32px; width: auto; }
+  .sm-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
   }
-  .sm-layout-nav .nav-link {
-    color: rgba(255,255,255,0.75) !important;
+  .sm-nav-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .sm-nav-user {
+    font-size: 0.8125rem;
+    color: #8C8179;
+  }
+  .sm-nav-link {
     font-size: 0.875rem;
-    font-weight: 500;
-    padding: 0.35rem 0.75rem !important;
+    font-family: Inter, -apple-system, sans-serif;
+    color: #5C5249;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem 0.75rem;
     border-radius: 6px;
     transition: color 0.15s, background 0.15s;
+    text-decoration: none;
+    display: inline-block;
+    line-height: 1.4;
   }
-  .sm-layout-nav .nav-link:hover {
-    color: #fff !important;
-    background: rgba(255,140,66,0.15);
-  }
-  .sm-layout-nav .nav-link.active {
-    color: #FF8C42 !important;
-  }
-  .sm-layout-nav .sm-nav-user {
-    font-size: 0.8125rem;
-    color: rgba(255,255,255,0.5);
-    margin-right: 0.75rem;
-  }
-  .sm-layout-nav .sm-nav-logout {
-    font-size: 0.8125rem;
-    color: rgba(255,255,255,0.5);
-    background: none;
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 6px;
-    padding: 0.3rem 0.75rem;
-    cursor: pointer;
-    transition: color 0.15s, border-color 0.15s;
-  }
-  .sm-layout-nav .sm-nav-logout:hover {
-    color: #fff;
-    border-color: rgba(255,255,255,0.4);
-  }
+  .sm-nav-link:hover { color: #2D2D2D; background: #FFF5E8; }
   .sm-dev-btn {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.6rem;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.55rem;
     border-radius: 4px;
-    border: 1px solid rgba(255,200,0,0.4);
-    background: rgba(255,200,0,0.12);
-    color: rgba(255,220,80,0.9);
+    border: 1px solid rgba(232,119,34,0.3);
+    background: rgba(232,119,34,0.08);
+    color: #b85c14;
     cursor: pointer;
+    font-family: Inter, sans-serif;
     transition: background 0.15s;
   }
   .sm-dev-btn:hover {
-    background: rgba(255,200,0,0.25);
-    color: #ffd700;
+    background: rgba(232,119,34,0.18);
+    color: #8a3f08;
   }
 `;
-
 
 const DEFAULT_DEV_USERS = [
   { label: "Admin",   email: "Darren",  password: "Darren"  },
@@ -104,6 +96,7 @@ export function Layout({ children, hideNav }: { children: React.ReactNode; hideN
       })
       .catch(() => {});
   }, []);
+
   async function devLoginAs(email: string, password: string) {
     const API_URL = (process.env.REACT_APP_API_URL ?? "").replace(/\/$/, "");
     try {
@@ -126,26 +119,11 @@ export function Layout({ children, hideNav }: { children: React.ReactNode; hideN
     } catch { /* ignore */ }
   }
 
-  async function devSwitch(name: string) {
-    const res = await fetch("/api/auth/dev_login/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: name })
-    });
-
-    const data = await res.json();
-
-    if (data.id) {
-      localStorage.setItem("user", JSON.stringify(data));
-      window.location.reload();
-    }
-  }
-
   async function switchToParent() {
     const res = await fetch("/api/auth/dev_switch_to_parent/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ student_id: user?.id })
+      body: JSON.stringify({ student_id: user?.id }),
     });
     const data = await res.json();
     if (data.id) {
@@ -156,129 +134,97 @@ export function Layout({ children, hideNav }: { children: React.ReactNode; hideN
     }
   }
 
-
-  // Hooks must always run
   useEffect(() => {
-    // If no access token, do nothing — Layout will just render children
     if (!access) return;
-
     if (!user) {
       window.location.href = "/login";
-      return;
     }
-
-//     if (user.role === "tutor") {
-//       window.location.href = `/tutor/${user.id}`;
-//     } else if (user.role === "student") {
-//       window.location.href = `/student/${user.id}`;
-//     } else if (user.role === "parent") {
-//       window.location.href = `/parent/${user.id}`;
-//     } else if (user.role === "admin") {
-//       window.location.href = `/admin/tutors`;
-//     }
   }, [access, user]);
 
-  // Early return is now AFTER the hook
   if (!access) {
     return <div>{children}</div>;
   }
 
   return (
-    <>
+    <div className="sm-page">
       <style>{NAV_STYLES}</style>
 
       {/* Navbar */}
-      {!hideNav && <nav className="navbar navbar-expand-lg sm-layout-nav">
-        <div className="container-fluid px-0">
-          <Link className="navbar-brand" to={dashboardPath()}>
-            <img src="/subjectmatter_wordmark_orange.svg" alt="SubjectMatter" />
-          </Link>
-          <button className="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" style={{ filter: "invert(1)" }}>
-            <span className="navbar-toggler-icon"></span>
-          </button>
-          <div className="collapse navbar-collapse" id="mainNavbar">
-            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+      {!hideNav && (
+        <nav className="sm-layout-nav">
+          <div className="sm-nav-left">
+            <Link className="sm-nav-logo" to={dashboardPath()}>
+              <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" />
+            </Link>
+            <div className="sm-nav-links">
 
-              {user?.role === "admin" && (
-                <>
-                  <li className="nav-item"><Link className="nav-link" to="/admin">Home</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/admin/tutors">Tutors</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/admin/students">Students</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/admin/payments">Payments</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/admin/sms">Messages</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/admin/emails">Emails</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/skills">Skills</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/skills-s6">Skills S6</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/templates">Templates</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/knowledge">Knowledge</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/feedback">Feedback</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/principles">Principles</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/docs">Docs</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/admin/variables">Variables</Link></li>
-</>
-              )}
+              {user?.role === "admin" && (<>
+                <Link className="sm-nav-link" to="/admin">Home</Link>
+                <Link className="sm-nav-link" to="/admin/tutors">Tutors</Link>
+                <Link className="sm-nav-link" to="/admin/students">Students</Link>
+                <Link className="sm-nav-link" to="/admin/payments">Payments</Link>
+                <Link className="sm-nav-link" to="/admin/sms">Messages</Link>
+                <Link className="sm-nav-link" to="/admin/emails">Emails</Link>
+                <Link className="sm-nav-link" to="/skills">Skills</Link>
+                <Link className="sm-nav-link" to="/skills-s6">Skills S6</Link>
+                <Link className="sm-nav-link" to="/templates">Templates</Link>
+                <Link className="sm-nav-link" to="/knowledge">Knowledge</Link>
+                <Link className="sm-nav-link" to="/feedback">Feedback</Link>
+                <Link className="sm-nav-link" to="/principles">Principles</Link>
+                <Link className="sm-nav-link" to="/docs">Docs</Link>
+                <Link className="sm-nav-link" to="/admin/variables">Variables</Link>
+              </>)}
 
-              {user?.role === "tutor" && (
-                <>
-                  <li className="nav-item"><Link className="nav-link" to={`/tutors/${user.id}/`}>Home</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to={`/tutors/${user.id}/booking`}>Bookings</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to={`/tutors/${user.id}/post-tuition`}>Post Tuition</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to={`/tutors/${user.id}/payments`}>Payments</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to={`/tutors/${user.id}/sms`}>Messages</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/skills">Skills</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/skills-s6">Skills S6</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/templates">Templates</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/knowledge">Knowledge</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/docs">Docs</Link></li>
-                </>
-              )}
+              {user?.role === "tutor" && (<>
+                <Link className="sm-nav-link" to={`/tutors/${user.id}/`}>Home</Link>
+                <Link className="sm-nav-link" to={`/tutors/${user.id}/booking`}>Bookings</Link>
+                <Link className="sm-nav-link" to={`/tutors/${user.id}/post-tuition`}>Post Tuition</Link>
+                <Link className="sm-nav-link" to={`/tutors/${user.id}/payments`}>Payments</Link>
+                <Link className="sm-nav-link" to={`/tutors/${user.id}/sms`}>Messages</Link>
+                <Link className="sm-nav-link" to="/skills">Skills</Link>
+                <Link className="sm-nav-link" to="/skills-s6">Skills S6</Link>
+                <Link className="sm-nav-link" to="/templates">Templates</Link>
+                <Link className="sm-nav-link" to="/knowledge">Knowledge</Link>
+                <Link className="sm-nav-link" to="/docs">Docs</Link>
+              </>)}
 
-              {user?.role === "parent" && (
-                <>
-                  <li className="nav-item"><Link className="nav-link" to={`/parents/${user.id}`}>Home</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to={`/parents/${user.id}/payments`}>Payments</Link></li>
-                </>
-              )}
+              {user?.role === "parent" && (<>
+                <Link className="sm-nav-link" to={`/parents/${user.id}`}>Home</Link>
+                <Link className="sm-nav-link" to={`/parents/${user.id}/payments`}>Payments</Link>
+              </>)}
 
-              {user?.role === "teacher" && (
-                <>
-                  <li className="nav-item"><Link className="nav-link" to={`/teachers/${user.id}`}>Home</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/skills">Skills</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/skills-s6">Skills S6</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/templates">Templates</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/knowledge">Knowledge</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to="/docs">Docs</Link></li>
-                </>
-              )}
+              {user?.role === "teacher" && (<>
+                <Link className="sm-nav-link" to={`/teachers/${user.id}`}>Home</Link>
+                <Link className="sm-nav-link" to="/skills">Skills</Link>
+                <Link className="sm-nav-link" to="/skills-s6">Skills S6</Link>
+                <Link className="sm-nav-link" to="/templates">Templates</Link>
+                <Link className="sm-nav-link" to="/knowledge">Knowledge</Link>
+                <Link className="sm-nav-link" to="/docs">Docs</Link>
+              </>)}
 
-              {user?.role === "student" && (
-                <>
-                  <li className="nav-item"><Link className="nav-link" to={`/students/${user.id}/`}>Home</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to={`/students/${user.id}/booking`}>Bookings</Link></li>
-                  <li className="nav-item"><Link className="nav-link" to={`/students/${user.id}/past-tests`}>Past Tests</Link></li>
-                </>
-              )}
+              {user?.role === "student" && (<>
+                <Link className="sm-nav-link" to={`/students/${user.id}/`}>Home</Link>
+                <Link className="sm-nav-link" to={`/students/${user.id}/booking`}>Bookings</Link>
+                <Link className="sm-nav-link" to={`/students/${user.id}/past-tests`}>Past Tests</Link>
+              </>)}
 
-            </ul>
-
-            <div className="d-flex align-items-center gap-1 me-3">
-              {devUsers.map(u => (
-                <button key={u.label} className="sm-dev-btn" onClick={() => devLoginAs(u.email, u.password)}>
-                  {u.label}
-                </button>
-              ))}
             </div>
+          </div>
 
+          <div className="sm-nav-right">
+            {devUsers.map(u => (
+              <button key={u.label} className="sm-dev-btn" onClick={() => devLoginAs(u.email, u.password)}>
+                {u.label}
+              </button>
+            ))}
             {user && (
-              <div className="d-flex align-items-center gap-2">
+              <>
                 <span className="sm-nav-user">{user.first_name} ({user.role})</span>
                 {user.role === "student" && (
-                  <button className="sm-nav-logout" onClick={switchToParent}>
-                    Parent
-                  </button>
+                  <button className="sm-nav-link" onClick={switchToParent}>Parent</button>
                 )}
                 <button
-                  className="sm-nav-logout"
+                  className="sm-nav-link"
                   onClick={() => {
                     apiFetch("/api/auth/logout/", { method: "POST", credentials: "include" });
                     localStorage.removeItem("user");
@@ -289,18 +235,17 @@ export function Layout({ children, hideNav }: { children: React.ReactNode; hideN
                 >
                   Sign out
                 </button>
-              </div>
+              </>
             )}
-
           </div>
-        </div>
-      </nav>}
+        </nav>
+      )}
 
       {/* Incoming call notification for students */}
       {!hideNav && user?.role === "student" && <IncomingCallBanner />}
 
       {/* Page content */}
       <div className="container-fluid">{children}</div>
-    </>
+    </div>
   );
 }
