@@ -3939,6 +3939,122 @@ class AdminEmailViewSet(viewsets.ViewSet):
         return Response({'sent': sent, 'failed': failed})
 
 
+class ParentFeedbackViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        from .models import ParentFeedback
+        user = request.user
+        if getattr(user, 'role', '') == 'admin':
+            qs = ParentFeedback.objects.all().select_related('parent', 'responded_by')
+        elif getattr(user, 'role', '') == 'parent':
+            qs = ParentFeedback.objects.filter(parent=user).select_related('responded_by')
+        else:
+            return Response({'error': 'Forbidden'}, status=403)
+        return Response([self._serialize(fb) for fb in qs])
+
+    def create(self, request):
+        from .models import ParentFeedback
+        user = request.user
+        if getattr(user, 'role', '') != 'parent':
+            return Response({'error': 'Only parents can submit feedback'}, status=403)
+        body = (request.data.get('body') or '').strip()
+        if not body:
+            return Response({'error': 'Feedback cannot be empty'}, status=400)
+        fb = ParentFeedback.objects.create(parent=user, body=body)
+        return Response(self._serialize(fb), status=201)
+
+    @action(detail=True, methods=['post'])
+    def respond(self, request, pk=None):
+        from .models import ParentFeedback, AdminEmailRecord
+        from django.utils import timezone
+        import threading, os
+
+        user = request.user
+        if getattr(user, 'role', '') != 'admin':
+            return Response({'error': 'Forbidden'}, status=403)
+
+        try:
+            fb = ParentFeedback.objects.select_related('parent').get(pk=pk)
+        except ParentFeedback.DoesNotExist:
+            return Response({'error': 'Not found'}, status=404)
+
+        response_text = (request.data.get('response') or '').strip()
+        if not response_text:
+            return Response({'error': 'Response cannot be empty'}, status=400)
+
+        fb.admin_response = response_text
+        fb.responded_at = timezone.now()
+        fb.responded_by = user
+        fb.save(update_fields=['admin_response', 'responded_at', 'responded_by'])
+
+        # Send email in background
+        def _send_email():
+            from django.core.mail import EmailMultiAlternatives
+            from django.conf import settings as _s
+
+            parent = fb.parent
+            first_name = parent.first_name or 'there'
+            email = parent.email
+            if not email:
+                return
+
+            subject = "We've responded to your feedback — Subject Matter"
+            plain = (
+                f"Hi {first_name},\n\n"
+                f"We've responded to your feedback.\n\n"
+                f"Your feedback:\n{fb.body}\n\n"
+                f"Our response:\n{response_text}\n\n"
+                f"The Subject Matter Team"
+            )
+
+            tpl_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'emails', 'parent_feedback_response.html')
+            html_body = None
+            try:
+                with open(tpl_path, encoding='utf-8') as f:
+                    html_body = (f.read()
+                        .replace('[FIRST_NAME]', first_name)
+                        .replace('[ORIGINAL_FEEDBACK]', fb.body)
+                        .replace('[RESPONSE]', response_text))
+            except Exception:
+                pass
+
+            from_email = getattr(_s, 'DEFAULT_FROM_EMAIL', 'noreply@subjectmatter.app')
+            status_val, error_val = 'sent', ''
+            try:
+                msg = EmailMultiAlternatives(
+                    subject=subject, body=plain,
+                    from_email=from_email, to=[f"{parent.get_full_name()} <{email}>" if parent.get_full_name() else email],
+                )
+                if html_body:
+                    msg.attach_alternative(html_body, 'text/html')
+                msg.send(fail_silently=False)
+            except Exception as e:
+                status_val, error_val = 'failed', str(e)
+            AdminEmailRecord.objects.create(
+                to_email=email, to_name=parent.get_full_name(),
+                subject=subject, body=plain,
+                status=status_val, error=error_val, sent_by=user,
+            )
+
+        threading.Thread(target=_send_email, daemon=True).start()
+        return Response(self._serialize(fb))
+
+    @staticmethod
+    def _serialize(fb):
+        return {
+            'id': fb.id,
+            'parent_id': fb.parent_id,
+            'parent_name': fb.parent.get_full_name() if fb.parent else '',
+            'parent_email': fb.parent.email if fb.parent else '',
+            'body': fb.body,
+            'created_at': fb.created_at.isoformat(),
+            'admin_response': fb.admin_response,
+            'responded_at': fb.responded_at.isoformat() if fb.responded_at else None,
+            'responded_by_name': fb.responded_by.get_full_name() if fb.responded_by else None,
+        }
+
+
 class AdminJobViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 

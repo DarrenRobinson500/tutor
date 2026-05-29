@@ -464,7 +464,7 @@ export function TestPage() {
           <div className="container py-5 text-center" style={{ maxWidth: 560 }}>
             {/* Stars display */}
             <div style={{ fontSize: 48, letterSpacing: 6, color: "#f5a623", marginBottom: 16 }}>
-              {Array.from({ length: 6 }).map((_, i) => (
+              {Array.from({ length: totalStars > 4 ? 6 : 4 }).map((_, i) => (
                 <span key={i} style={{ opacity: i < totalStars ? 1 : 0.2 }}>★</span>
               ))}
             </div>
@@ -485,13 +485,13 @@ export function TestPage() {
                 style={{ background: "#fff8e1", border: "1px solid #ffe082", fontSize: 15 }}
               >
                 <span>
-                  {Array.from({ length: 6 }).map((_, i) => (
+                  {Array.from({ length: starsBefore > 4 ? 6 : 4 }).map((_, i) => (
                     <span key={i} style={{ color: i < starsBefore ? "#f5a623" : "#ddd", fontSize: 18 }}>★</span>
                   ))}
                 </span>
                 <span style={{ color: "#888" }}>→</span>
                 <span>
-                  {Array.from({ length: 6 }).map((_, i) => (
+                  {Array.from({ length: starsAfter > 4 ? 6 : 4 }).map((_, i) => (
                     <span key={i} style={{ color: i < starsAfter ? "#f5a623" : "#ddd", fontSize: 18 }}>★</span>
                   ))}
                 </span>

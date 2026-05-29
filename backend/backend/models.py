@@ -1453,6 +1453,30 @@ class AdminEmailRecord(models.Model):
         return f"Email to {self.to_email} — {self.subject}"
 
 
+class ParentFeedback(models.Model):
+    parent = models.ForeignKey(
+        django_settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='feedback_submitted',
+    )
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    admin_response = models.TextField(blank=True, null=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+    responded_by = models.ForeignKey(
+        django_settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='feedback_responses',
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Feedback from {self.parent} ({self.created_at.date()})"
+
+
 def get_or_create_conversation(tutor, student):
     convo, created = SMSConversation.objects.get_or_create(
         tutor=tutor,

@@ -551,6 +551,7 @@ export default function ParentHomePage() {
             <Link to={`/parents/${parent.id}/principles`} className="ph-nav-logout" style={{ textDecoration: "none" }}>
               Helping your child
             </Link>
+            <Link to={`/parents/${parent.id}/feedback`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Feedback</Link>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginRight: 12 }}>

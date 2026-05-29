@@ -74,6 +74,7 @@ import { TutorPaymentsPage } from "./pages/TutorPaymentsPage";
 import { ParentPaymentsPage } from "./pages/ParentPaymentsPage";
 import { ParentBookingsPage } from "./pages/ParentBookingsPage";
 import ParentPrinciplesPage from "./pages/ParentPrinciplesPage";
+import ParentFeedbackPage from "./pages/ParentFeedbackPage";
 import { AdminPaymentsPage } from "./pages/AdminPaymentsPage";
 import { PaymentAuthorisePage } from "./pages/PaymentAuthorisePage";
 import { PaymentReceiptPage } from "./pages/PaymentReceiptPage";
@@ -168,6 +169,7 @@ function App() {
         <Route path="/parents/:id/bookings" element={<ProtectedRoute><ParentBookingsPage /></ProtectedRoute>} />
         <Route path="/parents/:id/find-tutor" element={<ProtectedRoute><RequestTutorPage /></ProtectedRoute>} />
         <Route path="/parents/:id/principles" element={<ProtectedRoute><ParentPrinciplesPage /></ProtectedRoute>} />
+        <Route path="/parents/:id/feedback" element={<ProtectedRoute><ParentFeedbackPage /></ProtectedRoute>} />
 
         {/* PROTECTED — payment flow */}
         <Route path="/payments/:id/authorise" element={<ProtectedRoute><PaymentAuthorisePage /></ProtectedRoute>} />
