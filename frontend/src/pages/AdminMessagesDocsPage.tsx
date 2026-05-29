@@ -195,7 +195,7 @@ interface TocEntry {
 }
 
 function buildToc(blocks: Block[]): TocEntry[] {
-  return blocks.flatMap((b) => {
+  return blocks.flatMap((b): TocEntry[] => {
     if (b.type === "h2") return [{ id: b.id, text: b.text, level: 2 as const }];
     if (b.type === "h3") return [{ id: b.id, text: b.text, level: 3 as const }];
     return [];

@@ -1520,7 +1520,7 @@ export function PreviewPanel({
                 <>
                   <button
                     className="btn btn-primary mt-2"
-                    onClick={() => onStudentNext?.(backendResult)}
+                    onClick={() => (onStudentNext as ((r: any) => void) | undefined)?.(backendResult)}
                   >
                     Next
                   </button>
