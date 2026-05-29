@@ -1367,13 +1367,83 @@ export function PreviewPanel({
         </div>
       )}
 
-      {selected !== null && (isCorrect || !disableOnWrong) && (
+      {/* Student mode: professional result box matching tutor's view */}
+      {mode === "student" && selected !== null && (
+        <div
+          className={`mt-2 p-3 rounded border ${
+            isCorrect
+              ? "border-success bg-success bg-opacity-10"
+              : "border-danger bg-danger bg-opacity-10"
+          }`}
+        >
+          <div className="fw-bold mb-1" style={{ fontSize: 16 }}>
+            {isCorrect ? "✓ Correct!" : "✗ Incorrect"}
+          </div>
+          {isCorrect && (
+            <div className="text-muted" style={{ fontSize: 13 }}>Next question loading…</div>
+          )}
+          {!isCorrect && !isMultiStep && (solution || (isInputMode && correctInputAnswer) || isMultiAnswerMode) && (
+            <>
+              <div
+                className="mt-2 p-2"
+                style={{ background: "#f8f9fa", borderLeft: "4px solid #dc3545", fontSize: 16, whiteSpace: "pre-wrap" }}
+              >
+                {solution
+                  ? <Latex>{solution}</Latex>
+                  : isMultiAnswerMode
+                    ? <span>The correct answers are <strong>{preview?.multiple_answers?.map(item => item.label ? `${item.label} = ${item.value}` : item.value).join(", ")}</strong></span>
+                    : <span>The correct answer is <strong>{correctInputAnswer?.text?.replace(/^\$/, "")}</strong></span>
+                }
+              </div>
+              {solutionKnowledge.map((k, i) => <KnowledgeCallout key={i} k={k} />)}
+              {knowledgeItems.length > 0 && (
+                <div className="mt-3">
+                  {knowledgeItems.map(k => (
+                    <div key={k.id} className="p-3 mb-2 rounded" style={{ background: "#fffde7", border: "1px solid #ffe082", fontSize: 15 }}>
+                      {k.title && <div className="fw-semibold mb-1" style={{ fontSize: 14 }}><Latex>{k.title}</Latex></div>}
+                      {k.text && <div className="mb-1" style={{ lineHeight: 1.6 }}><Latex>{k.text}</Latex></div>}
+                      {k.diagram_svg && (
+                        <div style={{ display: "flex", justifyContent: "center", width: "100%", margin: "8px 0" }}>
+                          <div dangerouslySetInnerHTML={{ __html: k.diagram_svg.replace("<svg ", '<svg style="width:90%;height:auto;display:block;" ') }} />
+                        </div>
+                      )}
+                      {k.text_2 && <div style={{ lineHeight: 1.6 }}><Latex>{k.text_2}</Latex></div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {backendResult && (
+                <div className="d-flex gap-2 mt-3">
+                  <button className="btn btn-primary btn-sm" onClick={() => onStudentNext?.(backendResult)}>Next</button>
+                  <button className="btn btn-sm btn-warning" onClick={handleIDontGetIt}>I don't get it</button>
+                </div>
+              )}
+            </>
+          )}
+          {!isCorrect && isMultiStep && activeStep && (
+            <>
+              <div className="mt-2 p-2" style={{ background: "#f8f9fa", borderLeft: "4px solid #dc3545", fontSize: 16 }}>
+                {activeStep.solution
+                  ? <Latex>{activeStep.solution}</Latex>
+                  : <>The answer is <strong>{activeStep.answer}</strong></>
+                }
+              </div>
+              {disableOnWrong && (
+                <button className="btn btn-primary btn-sm mt-2" onClick={handleMultiStepWrongNext}>Next</button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Editor/tutor mode: existing feedback */}
+      {mode !== "student" && selected !== null && (isCorrect || !disableOnWrong) && (
         <div className="mt-3" style={{ fontWeight: "bold", fontSize: 18, color: isCorrect ? "#2e7d32" : "#c62828" }}>
           {isCorrect ? "✓ Correct! Next question loading…" : "Try again"}
         </div>
       )}
 
-      {selected !== null && !isCorrect && isMultiStep && activeStep && (
+      {mode !== "student" && selected !== null && !isCorrect && isMultiStep && activeStep && (
         <>
           <div
             className="mt-2 p-2"
@@ -1384,7 +1454,7 @@ export function PreviewPanel({
               : <>The answer is <strong>{activeStep.answer}</strong></>
             }
           </div>
-          {disableOnWrong && mode === "student" && (
+          {disableOnWrong && (
             <button className="btn btn-primary btn-sm mt-2" onClick={handleMultiStepWrongNext}>
               Next
             </button>
@@ -1392,7 +1462,7 @@ export function PreviewPanel({
         </>
       )}
 
-      {selected !== null && !isCorrect && !isMultiStep && (solution || (isInputMode && correctInputAnswer) || isMultiAnswerMode) && (
+      {mode !== "student" && selected !== null && !isCorrect && !isMultiStep && (solution || (isInputMode && correctInputAnswer) || isMultiAnswerMode) && (
         <>
           <div
             className="mt-2 p-2"
@@ -1446,7 +1516,7 @@ export function PreviewPanel({
             </div>
           )}
 
-          {mode === "student" && backendResult && (
+          {backendResult && (
                 <>
                   <button
                     className="btn btn-primary mt-2"

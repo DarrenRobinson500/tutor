@@ -31,6 +31,7 @@ urlpatterns = [
     path("auth/jwt/login/", SuperuserRoleTokenView.as_view(), name="token_obtain_pair"),
     path("auth/jwt/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("docs/", editor_docs, name="editor_docs"),
+    path("docs/messages/", messages_docs, name="messages_docs"),
 
     # Payment flow
     path("payments/setup-intent/",        payment_setup_intent,    name="payment_setup_intent"),

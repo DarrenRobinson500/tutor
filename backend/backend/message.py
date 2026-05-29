@@ -138,7 +138,15 @@ def process_sms_jobs():
         if job.to_number:
             phone = job.to_number
         elif conversation:
-            phone = conversation.student.student_profile.mobile
+            msg_type = job.message_type or ""
+            if msg_type.startswith("student_") or msg_type.startswith("parent_"):
+                # Message is addressed to the tutor
+                try:
+                    phone = conversation.tutor.tutor.mobile
+                except Exception:
+                    phone = None
+            else:
+                phone = conversation.student.student_profile.mobile
         else:
             phone = None
 

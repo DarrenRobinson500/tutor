@@ -207,10 +207,11 @@ export function StudentBookingPage() {
         {booking.start_iso && new Date(booking.start_iso).toDateString() === new Date().toDateString() && student.tutor_id && (
           <div className="mt-3">
             <button
-              className="btn btn-success"
+              className="btn btn-success btn-lg w-100"
+              style={{ fontWeight: 600, fontSize: 16 }}
               onClick={() => navigate(`/session/t${student.tutor_id}-s${id}`)}
             >
-              Join Online Session
+              Join Session
             </button>
           </div>
         )}
@@ -264,7 +265,7 @@ export function StudentBookingPage() {
             {(modifyingWeekly) && (
               <div className="mt-3 mb-2" style={{ fontWeight: 600 }}>
                 {student?.tutor_name
-                  ? `${student.tutor_name}'s Available Appointments. Select a time for your next booking. (After this week you booking will revert to their normal time.)`
+                  ? `${student.tutor_name}'s Available Appointments. Select a time for your next booking. (After this week your booking will revert to its normal time.)`
                   : "Tutor's Weekly Calendar"}
               </div>
             )}

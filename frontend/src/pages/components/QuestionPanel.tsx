@@ -187,8 +187,14 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templates] = useState<Template[]>([]);
   const [search, setSearch] = useState("");
+
+  // ── Manual mode: student's year skills ────────────────────────────────────
+  interface SkillRow { id: number; description: string; depth: number; parent_id: number | null; children_count: number; }
+  const [manualSkills, setManualSkills] = useState<SkillRow[]>([]);
+  const [manualGrade, setManualGrade] = useState<string>("");
+  const [manualSkillLoading, setManualSkillLoading] = useState(false);
 
   const [mode, setMode] = useState<Mode>("learn");
   const [actionLoading, setActionLoading] = useState(false);
@@ -262,14 +268,19 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
     startLearnMode();
   }, [isTutor]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load template list for manual mode
+  // Load student's year skills for manual mode
   useEffect(() => {
-    if (!isTutor) return;
-    apiFetch("/api/templates/?page_size=500")
+    if (!isTutor || !roomName) return;
+    setManualSkillLoading(true);
+    apiFetch(`/api/sessions/student_skills/?room_name=${encodeURIComponent(roomName)}`)
       .then((r) => r.json())
-      .then((data) => setTemplates(Array.isArray(data) ? data : data.results ?? []))
-      .catch(() => {});
-  }, [isTutor]);
+      .then((data) => {
+        setManualSkills(data.skills ?? []);
+        setManualGrade(data.grade ?? "");
+      })
+      .catch(() => {})
+      .finally(() => setManualSkillLoading(false));
+  }, [isTutor, roomName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Listen for session events (template pushes from tutor → student)
   useEffect(() => {
@@ -632,15 +643,6 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  const filteredTemplates = templates.filter((t) => {
-    const q = search.toLowerCase();
-    return (
-      t.title?.toLowerCase().includes(q) ||
-      t.skill_detail_description?.toLowerCase().includes(q) ||
-      t.grade?.toLowerCase().includes(q)
-    );
-  });
-
   const showStudentLearn = !isTutor && studentLearnMode && !!studentSessionId && !!studentTemplateId;
   console.log("[QuestionPanel] render — showStudentLearn:", showStudentLearn, {
     isTutor,
@@ -676,7 +678,7 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
               Assessment
             </button>
             <button
-              className={`btn btn-sm ${mode === "manual" ? "btn-secondary" : "btn-outline-secondary"}`}
+              className={`btn btn-sm ${mode === "manual" ? "btn-primary" : "btn-outline-primary"}`}
               onClick={() => { setMode("manual"); setLearnQuestion(null); setAssessContext(null); pushTemplate(null); }}
             >
               Manual
@@ -745,33 +747,60 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
           )}
 
 
-          {/* Manual: template picker */}
+          {/* Manual: student's year skills picker */}
           {mode === "manual" && (
-            <div style={{ maxHeight: 160, overflowY: "auto" }}>
-              <div className="d-flex gap-2 mb-2">
+            <div style={{ maxHeight: 200, overflowY: "auto" }}>
+              <div className="d-flex gap-2 mb-2 align-items-center">
                 <input
                   className="form-control form-control-sm"
-                  placeholder="Search templates…"
+                  placeholder="Search skills…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
                 {activeTemplateId && (
-                  <button className="btn btn-sm btn-outline-secondary" onClick={() => pushTemplate(null)}>Clear</button>
+                  <button className="btn btn-sm btn-outline-secondary" onClick={() => { pushTemplate(null); setSearch(""); }}>Clear</button>
                 )}
               </div>
-              {filteredTemplates.slice(0, 50).map((t) => (
-                <button
-                  key={t.id}
-                  className={`d-block w-100 text-start btn btn-sm mb-1 ${activeTemplateId === t.id ? "btn-primary" : "btn-outline-secondary"}`}
-                  style={{ fontSize: 12 }}
-                  onClick={() => pushTemplate(t.id)}
-                >
-                  {t.title}
-                  {t.grade && <span className="text-muted ms-1">· Yr {t.grade}</span>}
-                </button>
-              ))}
-              {filteredTemplates.length === 0 && (
-                <div className="text-muted" style={{ fontSize: 12 }}>No templates found.</div>
+              {manualSkillLoading && <div className="text-muted" style={{ fontSize: 12 }}>Loading…</div>}
+              {!manualSkillLoading && manualSkills
+                .filter(s => !search || s.description.toLowerCase().includes(search.toLowerCase()))
+                .map((s) => {
+                  const isParent = s.children_count > 0;
+                  return (
+                    <button
+                      key={s.id}
+                      className={`d-block w-100 text-start btn btn-sm mb-1 ${
+                        isParent
+                          ? "btn-outline-secondary"
+                          : "btn-outline-primary"
+                      }`}
+                      style={{
+                        fontSize: 12,
+                        paddingLeft: `${s.depth * 12 + 6}px`,
+                        fontWeight: isParent ? 600 : 400,
+                        cursor: isParent ? "default" : "pointer",
+                        opacity: isParent ? 0.7 : 1,
+                      }}
+                      disabled={isParent}
+                      onClick={async () => {
+                        if (isParent) return;
+                        try {
+                          const res = await apiFetch("/api/templates/preview/", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ skill: s.id, grade: manualGrade }),
+                          });
+                          const data = await res.json();
+                          if (data.template_id) pushTemplate(data.template_id);
+                        } catch {}
+                      }}
+                    >
+                      {s.description}
+                    </button>
+                  );
+                })}
+              {!manualSkillLoading && manualSkills.filter(s => !search || s.description.toLowerCase().includes(search.toLowerCase())).length === 0 && (
+                <div className="text-muted" style={{ fontSize: 12 }}>No skills found.</div>
               )}
             </div>
           )}
@@ -815,11 +844,6 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
             )}
             {!studentLoadingPreview && studentPreview && studentId != null && (
               <>
-                {lastAnswer && (
-                  <div className={`alert alert-sm py-1 px-2 mb-2 ${lastAnswer.correct ? "alert-success" : "alert-danger"}`} style={{ fontSize: 13 }}>
-                    {lastAnswer.correct ? "✓ Correct" : "✗ Incorrect"} — answered: <strong>{lastAnswer.answer}</strong>
-                  </div>
-                )}
                 <PreviewPanel
                   mode="student"
                   templateId={studentTemplateId}

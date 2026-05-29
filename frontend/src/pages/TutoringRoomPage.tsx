@@ -17,6 +17,7 @@ export function TutoringRoomPage() {
   const [token, setToken] = useState<string | null>(null);
   const [livekitUrl, setLivekitUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [joined, setJoined] = useState(false);
 
   const pref = usePreferenceStore();
   const prefLoaded = usePreferenceStore((s) => s.loaded);
@@ -71,9 +72,61 @@ export function TutoringRoomPage() {
 
   if (!token || !livekitUrl) {
     return (
-      <div className="container mt-5 text-center">
-        <div className="spinner-border text-primary" role="status" />
-        <div className="mt-2">Connecting to session…</div>
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#1a1a1a" }}>
+        <div style={{ textAlign: "center", color: "#fff" }}>
+          <div className="spinner-border text-light" role="status" />
+          <div className="mt-3" style={{ color: "#aaa" }}>Connecting to session…</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!joined) {
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#1a1a1a" }}>
+        <div style={{
+          background: "#242424",
+          border: "1px solid #333",
+          borderRadius: 12,
+          padding: "40px 48px",
+          textAlign: "center",
+          maxWidth: 400,
+          width: "100%",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+        }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>📹</div>
+          <h2 style={{ color: "#fff", fontWeight: 700, marginBottom: 8, fontSize: 22 }}>
+            Ready to join?
+          </h2>
+          <p style={{ color: "#aaa", fontSize: 14, marginBottom: 8 }}>
+            Session: <span style={{ color: "#ddd", fontWeight: 500 }}>{roomName}</span>
+          </p>
+          <p style={{ color: "#888", fontSize: 13, marginBottom: 28, lineHeight: 1.5 }}>
+            Your browser will ask permission to use your camera and microphone. Please click <strong style={{ color: "#aaa" }}>Allow</strong> when prompted.
+          </p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#aaa", fontSize: 13 }}>
+              <span style={{ fontSize: 18 }}>🎤</span> Microphone
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#aaa", fontSize: 13 }}>
+              <span style={{ fontSize: 18 }}>📷</span> Camera
+            </div>
+          </div>
+          <button
+            className="btn btn-primary w-100"
+            style={{ padding: "10px 0", fontWeight: 600, fontSize: 15 }}
+            onClick={() => setJoined(true)}
+          >
+            Join Session
+          </button>
+          <button
+            className="btn btn-link w-100 mt-2"
+            style={{ color: "#666", fontSize: 13 }}
+            onClick={() => navigate(-1)}
+          >
+            Go back
+          </button>
+        </div>
       </div>
     );
   }

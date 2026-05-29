@@ -20,6 +20,7 @@ import { TutorSMSConversationPage } from "./pages/TutorSMSConversationPage";
 import { AdminSMSInboxPage } from "./pages/AdminSMSInboxPage";
 import { AdminSMSConversationPage } from "./pages/AdminSMSConversationPage";
 import { AdminEmailPage } from "./pages/AdminEmailPage";
+import { AdminMessagesDocsPage } from "./pages/AdminMessagesDocsPage";
 
 import { StudentListPage } from "./pages/StudentListPage";
 import { StudentEditPage } from "./pages/StudentEditPage";
@@ -197,6 +198,7 @@ function App() {
         <Route path="/admin/sms" element={<ProtectedRoute><AdminSMSInboxPage /></ProtectedRoute>} />
         <Route path="/admin/sms/:conversationId" element={<ProtectedRoute><AdminSMSConversationPage /></ProtectedRoute>} />
         <Route path="/admin/emails" element={<ProtectedRoute><AdminEmailPage /></ProtectedRoute>} />
+        <Route path="/admin/messages/docs" element={<ProtectedRoute><AdminMessagesDocsPage /></ProtectedRoute>} />
 
         <Route path="/tutors/:id" element={<ProtectedRoute><TutorHomePage /></ProtectedRoute>} />
         <Route path="/tutors/:id/booking" element={<ProtectedRoute><TutorBookingPage /></ProtectedRoute>} />

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { apiFetch } from "../../utils/apiFetch";
 import { dashboardPath } from "../../utils/dashboardPath";
 import { IncomingCallBanner } from "./IncomingCallBanner";
@@ -73,6 +73,33 @@ const NAV_STYLES = `
     background: rgba(232,119,34,0.18);
     color: #8a3f08;
   }
+  .sm-nav-dropdown { position: relative; }
+  .sm-nav-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: #fff;
+    border: 1px solid #F0EAE0;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    z-index: 200;
+    min-width: 140px;
+    padding: 4px 0;
+  }
+  .sm-nav-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.875rem;
+    color: #5C5249;
+    background: none;
+    border: none;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .sm-nav-dropdown-item:hover { background: #FFF5E8; color: #2D2D2D; }
 `;
 
 const DEFAULT_DEV_USERS = [
@@ -99,6 +126,32 @@ const HEADER_SUB_STYLE: React.CSSProperties = {
   color: "#5C5249",
   margin: 0,
 };
+
+function NavDropdown({ label, children }: { label: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  return (
+    <div ref={ref} className="sm-nav-dropdown">
+      <button className="sm-nav-link" onClick={() => setOpen((v) => !v)}>
+        {label} <span style={{ fontSize: "0.7em", verticalAlign: "middle" }}>▾</span>
+      </button>
+      {open && (
+        <div className="sm-nav-dropdown-menu" onClick={() => setOpen(false)}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
@@ -192,8 +245,11 @@ export function Layout({ children, hideNav, header }: { children: React.ReactNod
                 <Link className="sm-nav-link" to="/admin/tutors">Tutors</Link>
                 <Link className="sm-nav-link" to="/admin/students">Students</Link>
                 <Link className="sm-nav-link" to="/admin/payments">Payments</Link>
-                <Link className="sm-nav-link" to="/admin/sms">Messages</Link>
-                <Link className="sm-nav-link" to="/admin/emails">Emails</Link>
+                <NavDropdown label="Messages">
+                  <Link className="sm-nav-dropdown-item" to="/admin/sms">SMS</Link>
+                  <Link className="sm-nav-dropdown-item" to="/admin/emails">Emails</Link>
+                  <Link className="sm-nav-dropdown-item" to="/admin/messages/docs">Docs</Link>
+                </NavDropdown>
                 <Link className="sm-nav-link" to="/skills">Skills</Link>
                 <Link className="sm-nav-link" to="/skills-s6">Skills S6</Link>
                 <Link className="sm-nav-link" to="/templates">Templates</Link>

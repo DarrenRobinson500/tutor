@@ -3462,24 +3462,12 @@ class TutorJobViewSet(viewsets.ViewSet):
         else:
             pronoun = "They"
 
-        # Session date (Monday of that week for tutoring_done_week lookup)
-        session_date = outcome.date if outcome else None
-        if session_date:
-            # Monday of the session week
-            session_monday = session_date - datetime.timedelta(days=session_date.weekday())
-        else:
-            session_monday = None
-
-        # Focus areas covered this session
-        if session_monday:
-            session_focus = StudentFocusArea.objects.filter(
-                student=student,
-                tutoring_done_week=session_monday,
-            ).select_related('skill')
-        else:
-            session_focus = StudentFocusArea.objects.none()
-
+        # Focus areas — same set shown on the student home page
         from .competency import level_to_label as _level_to_label
+        session_focus = StudentFocusArea.objects.filter(
+            student=student,
+        ).select_related('skill').order_by('order')
+
         focus_items = [(fa.skill.description, fa.skill_id) for fa in session_focus if fa.skill]
         if focus_items:
             skill_ids = [sid for _, sid in focus_items]
@@ -5076,6 +5064,39 @@ class TutoringSessionViewSet(viewsets.ViewSet):
 
         return Response({"ok": True})
 
+    @action(detail=False, methods=["get"])
+    def student_skills(self, request):
+        """Return the student's year-level skills in syllabus order with hierarchy depth,
+        for use in the tutor chat manual question picker."""
+        room_name = (request.query_params.get("room_name") or "").strip()
+        if not room_name:
+            return Response({"error": "room_name required"}, status=400)
+        session = TutoringSession.objects.filter(room_name=room_name).first()
+        if not session:
+            return Response({"error": "Session not found"}, status=404)
+        try:
+            grade = session.student.student_profile.year_level or ""
+        except Exception:
+            grade = ""
+        if not grade:
+            return Response({"grade": "", "skills": []})
+
+        from .cache import get_matrix_cache, filter_matrix_by_grade
+        matrix = get_matrix_cache()
+        rows = filter_matrix_by_grade(matrix, grade)
+
+        skills_out = [
+            {
+                "id": row["id"],
+                "description": row["description"],
+                "depth": row["depth"],
+                "parent_id": row.get("parent_id"),
+                "children_count": row.get("children_count", 0),
+            }
+            for row in rows
+        ]
+        return Response({"grade": grade, "skills": skills_out})
+
     @action(detail=False, methods=["post"])
     def learn_mode(self, request):
         """
@@ -5139,6 +5160,7 @@ class TutoringSessionViewSet(viewsets.ViewSet):
             skill_codes=[skill_code],
             mode='learning',
             current_difficulty=difficulty,
+            linked_focus_area=fa,
             linked_tutoring_focus_area=fa,
         )
 
@@ -5365,6 +5387,14 @@ def editor_docs(request):
     print("Editor docs")
     import os
     doc_path = os.path.join(os.path.dirname(__file__), "docs/Editor Documentation.txt")
+    with open(doc_path, encoding="utf-8") as f:
+        content = f.read()
+    return Response({"content": content})
+
+
+def messages_docs(request):
+    import os
+    doc_path = os.path.join(os.path.dirname(__file__), "docs/messages.md")
     with open(doc_path, encoding="utf-8") as f:
         content = f.read()
     return Response({"content": content})
