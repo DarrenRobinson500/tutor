@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Layout } from "./components/Layout";
 import { apiFetch } from "../utils/apiFetch";
+import { ParentNav } from "./components/ParentNav";
+import "./ParentHomePage.css";
 
 interface FeedbackItem {
   id: number;
@@ -18,6 +19,7 @@ function fmtDate(iso: string) {
 
 export default function ParentFeedbackPage() {
   const { id } = useParams();
+
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [body, setBody] = useState("");
@@ -54,8 +56,10 @@ export default function ParentFeedbackPage() {
   }
 
   return (
-    <Layout>
-      <div className="container py-4" style={{ maxWidth: 700 }}>
+    <div className="ph-page">
+      <ParentNav parentId={id!} />
+
+      <div className="ph-body" style={{ maxWidth: 700, margin: "0 auto" }}>
         <h2 style={{ fontFamily: "Lora, Georgia, serif", fontWeight: 700, marginBottom: "0.25rem" }}>Feedback</h2>
         <p className="text-muted mb-4" style={{ fontSize: 15 }}>
           Share anything on your mind — questions, suggestions, or concerns. We read everything and aim to respond within a few days.
@@ -124,6 +128,6 @@ export default function ParentFeedbackPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   );
 }

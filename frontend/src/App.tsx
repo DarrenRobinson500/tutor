@@ -61,6 +61,8 @@ import { TeacherAssessmentSetupPage } from "./pages/TeacherAssessmentSetupPage";
 import { AssessmentQuestionPage } from "./pages/AssessmentQuestionPage";
 import DistributorHomePage from "./pages/DistributorHomePage";
 import AdminHomePage from "./pages/AdminHomePage";
+import AdminParentFeedbackPage from "./pages/AdminParentFeedbackPage";
+import AdminPrinciplesPage from "./pages/AdminPrinciplesPage";
 import LoginPage from "./pages/public/LoginPage";
 import ParentRegisterPage from "./pages/public/ParentRegisterPage";
 import TutorRegisterPage from "./pages/public/TutorRegisterPage";
@@ -155,6 +157,8 @@ function App() {
         <Route path="/tut" element={<Navigate to="/tutors" replace />} />
         <Route path="/comp" element={<HtmlRedirect to="/market-makers.html" />} />
         <Route path="/admin" element={<ProtectedRoute><AdminHomePage /></ProtectedRoute>} />
+        <Route path="/admin/feedback" element={<ProtectedRoute><AdminParentFeedbackPage /></ProtectedRoute>} />
+        <Route path="/admin/principles" element={<ProtectedRoute><AdminPrinciplesPage /></ProtectedRoute>} />
         <Route path="/register/distributor" element={<DistributorRegisterPage />} />
         <Route path="/ref/:code" element={<ReferralLandingPage />} />
         <Route path="/assessment-launch" element={<AssessmentLaunchPage />} />

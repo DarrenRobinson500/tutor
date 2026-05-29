@@ -545,12 +545,10 @@ export default function ParentHomePage() {
             <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" />
           </Link>
           <div className="ph-nav-links">
-            <Link to={`/parents/${parent.id}`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Dashboard</Link>
+            <Link to={`/parents/${parent.id}`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Home</Link>
             {hasTutor && <Link to={`/parents/${parent.id}/bookings`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Bookings</Link>}
             {hasTutor && <Link to={`/parents/${parent.id}/payments`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Payments</Link>}
-            <Link to={`/parents/${parent.id}/principles`} className="ph-nav-logout" style={{ textDecoration: "none" }}>
-              Helping your child
-            </Link>
+            <Link to={`/parents/${parent.id}/principles`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Helping your child</Link>
             <Link to={`/parents/${parent.id}/feedback`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Feedback</Link>
           </div>
         </div>
@@ -639,31 +637,6 @@ export default function ParentHomePage() {
                 />
               ))}
             </div>
-          )}
-
-          {/* Principles link */}
-          {children.length > 0 && (
-            <Link
-              to={`/parents/${parent.id}/principles`}
-              style={{
-                display: "block",
-                margin: "1.5rem 0 0.5rem",
-                padding: "1rem 1.5rem",
-                background: "#FFF8F0",
-                border: "1px solid #FFD4A8",
-                borderRadius: 12,
-                textDecoration: "none",
-                color: "#e8671a",
-                fontWeight: 600,
-                fontSize: "0.95rem",
-                textAlign: "center",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#FDECD8")}
-              onMouseLeave={e => (e.currentTarget.style.background = "#FFF8F0")}
-            >
-              How can I help {formatChildNamesForBtn(children.map(c => c.first_name))} learn maths?
-            </Link>
           )}
 
           {/* Add child */}

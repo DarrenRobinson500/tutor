@@ -17,6 +17,11 @@ interface DetailCoverage {
   total: number;
 }
 
+interface TmplCoverage {
+  validated: number;
+  total: number;
+}
+
 interface SkillRow {
   id: number;
   code: string;
@@ -27,6 +32,7 @@ interface SkillRow {
   detail?: string;
   cells: Record<string, CellData>;
   detail_coverage?: Record<string, DetailCoverage> | null;
+  template_coverage?: Record<string, TmplCoverage> | null;
 }
 
 interface MatrixResponse {
@@ -203,29 +209,50 @@ export function SkillsMatrix({ courseSet, prefKey = "skills.selected_grade" }: S
           const parentOf: Record<number, number | null> = {};
           for (const s of data.skills) parentOf[s.id] = s.parent_id;
 
+          // Aggregate detail_coverage (skill details) up to parents
           const agg: Record<number, Record<string, { covered: number; total: number }>> = {};
           const gradeTotal: Record<string, { covered: number; total: number }> = {};
+
+          // Aggregate template_coverage (template counts) up to parents
+          const tagg: Record<number, Record<string, { validated: number; total: number }>> = {};
+          const gradeTmplTotal: Record<string, { validated: number; total: number }> = {};
 
           for (const s of data.skills) {
             if (s.children_count > 0) continue;
             for (const diff of ["easy", "medium", "hard"]) {
               const dc = s.detail_coverage?.[diff];
-              if (!dc || dc.total === 0) continue;
-              let id: number | null = s.id;
-              while (id !== null) {
-                if (!agg[id]) agg[id] = {};
-                if (!agg[id][diff]) agg[id][diff] = { covered: 0, total: 0 };
-                agg[id][diff].covered += dc.covered;
-                agg[id][diff].total   += dc.total;
-                id = parentOf[id] ?? null;
+              if (dc && dc.total > 0) {
+                let id: number | null = s.id;
+                while (id !== null) {
+                  if (!agg[id]) agg[id] = {};
+                  if (!agg[id][diff]) agg[id][diff] = { covered: 0, total: 0 };
+                  agg[id][diff].covered += dc.covered;
+                  agg[id][diff].total   += dc.total;
+                  id = parentOf[id] ?? null;
+                }
+                if (!gradeTotal[diff]) gradeTotal[diff] = { covered: 0, total: 0 };
+                gradeTotal[diff].covered += dc.covered;
+                gradeTotal[diff].total   += dc.total;
               }
-              if (!gradeTotal[diff]) gradeTotal[diff] = { covered: 0, total: 0 };
-              gradeTotal[diff].covered += dc.covered;
-              gradeTotal[diff].total   += dc.total;
+
+              const tc = s.template_coverage?.[diff];
+              if (tc && tc.total > 0) {
+                let id: number | null = s.id;
+                while (id !== null) {
+                  if (!tagg[id]) tagg[id] = {};
+                  if (!tagg[id][diff]) tagg[id][diff] = { validated: 0, total: 0 };
+                  tagg[id][diff].validated += tc.validated;
+                  tagg[id][diff].total     += tc.total;
+                  id = parentOf[id] ?? null;
+                }
+                if (!gradeTmplTotal[diff]) gradeTmplTotal[diff] = { validated: 0, total: 0 };
+                gradeTmplTotal[diff].validated += tc.validated;
+                gradeTmplTotal[diff].total     += tc.total;
+              }
             }
           }
 
-          function mkCell(dc: { covered: number; total: number } | undefined, bold: boolean) {
+          function mkDetailCell(dc: { covered: number; total: number } | undefined, bold: boolean) {
             if (!dc || dc.total === 0) return <td style={{ textAlign: "center", color: "#adb5bd" }}>—</td>;
             const { covered, total } = dc;
             const color = covered === total ? "#198754" : covered > 0 ? "#fd7e14" : "#adb5bd";
@@ -236,14 +263,35 @@ export function SkillsMatrix({ courseSet, prefKey = "skills.selected_grade" }: S
             );
           }
 
+          function mkTmplCell(tc: { validated: number; total: number } | undefined, bold: boolean) {
+            if (!tc || tc.total === 0) return <td style={{ textAlign: "center", color: "#adb5bd" }}>—</td>;
+            const { validated, total } = tc;
+            const color = validated === total ? "#198754" : validated > 0 ? "#fd7e14" : "#adb5bd";
+            return (
+              <td style={{ textAlign: "center", fontWeight: bold ? 700 : 600, color, fontSize: 13 }}>
+                {validated}/{total}
+              </td>
+            );
+          }
+
+          const thCenter: React.CSSProperties = { width: 70, textAlign: "center" };
+          const thGroup: React.CSSProperties = { textAlign: "center", borderBottom: "1px solid #dee2e6", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6c757d" };
+
           return (
             <table className="skills-matrix">
               <thead>
                 <tr>
-                  <th className="skill-header">Skill</th>
-                  <th className="skill-header" style={{ width: 80, textAlign: "center" }}>Easy</th>
-                  <th className="skill-header" style={{ width: 80, textAlign: "center" }}>Medium</th>
-                  <th className="skill-header" style={{ width: 80, textAlign: "center" }}>Hard</th>
+                  <th className="skill-header" rowSpan={2}>Skill</th>
+                  <th className="skill-header" colSpan={3} style={thGroup}>Templates</th>
+                  <th className="skill-header" colSpan={3} style={thGroup}>Skill Details</th>
+                </tr>
+                <tr>
+                  <th className="skill-header" style={thCenter}>Easy</th>
+                  <th className="skill-header" style={thCenter}>Medium</th>
+                  <th className="skill-header" style={thCenter}>Hard</th>
+                  <th className="skill-header" style={thCenter}>Easy</th>
+                  <th className="skill-header" style={thCenter}>Medium</th>
+                  <th className="skill-header" style={thCenter}>Hard</th>
                 </tr>
               </thead>
               <tbody>
@@ -251,6 +299,8 @@ export function SkillsMatrix({ courseSet, prefKey = "skills.selected_grade" }: S
                   const isParent = skill.children_count > 0;
                   const getDc = (diff: string) =>
                     isParent ? agg[skill.id]?.[diff] : skill.detail_coverage?.[diff];
+                  const getTc = (diff: string) =>
+                    isParent ? tagg[skill.id]?.[diff] : skill.template_coverage?.[diff];
                   return (
                     <tr
                       key={skill.id}
@@ -264,17 +314,23 @@ export function SkillsMatrix({ courseSet, prefKey = "skills.selected_grade" }: S
                       <td style={{ paddingLeft: `${skill.depth * 20 + 10}px` }} title={skill.detail || undefined}>
                         {skill.description}
                       </td>
-                      {mkCell(getDc("easy"),   false)}
-                      {mkCell(getDc("medium"), false)}
-                      {mkCell(getDc("hard"),   false)}
+                      {mkTmplCell(getTc("easy"),   false)}
+                      {mkTmplCell(getTc("medium"), false)}
+                      {mkTmplCell(getTc("hard"),   false)}
+                      {mkDetailCell(getDc("easy"),   false)}
+                      {mkDetailCell(getDc("medium"), false)}
+                      {mkDetailCell(getDc("hard"),   false)}
                     </tr>
                   );
                 })}
                 <tr style={{ borderTop: "2px solid #dee2e6", background: "#f8f9fa" }}>
                   <td style={{ paddingLeft: 10, fontWeight: 700, fontSize: 13 }}>Total</td>
-                  {mkCell(gradeTotal["easy"],   true)}
-                  {mkCell(gradeTotal["medium"], true)}
-                  {mkCell(gradeTotal["hard"],   true)}
+                  {mkTmplCell(gradeTmplTotal["easy"],   true)}
+                  {mkTmplCell(gradeTmplTotal["medium"], true)}
+                  {mkTmplCell(gradeTmplTotal["hard"],   true)}
+                  {mkDetailCell(gradeTotal["easy"],   true)}
+                  {mkDetailCell(gradeTotal["medium"], true)}
+                  {mkDetailCell(gradeTotal["hard"],   true)}
                 </tr>
               </tbody>
             </table>

@@ -2668,17 +2668,41 @@ class SkillViewSet(viewsets.ModelViewSet):
                 diff = (row['difficulty'] or '').lower()
                 coverage_map.setdefault(sid, {}).setdefault(diff, set()).add(row['skill_detail_id'])
 
+            # Per-difficulty template counts (validated / total) for each leaf skill
+            from django.db.models import Q as _Q
+            diff_tmpl_rows = (
+                _Tmpl.objects
+                .filter(skill_detail__parent_id__in=leaf_ids, grade=grade)
+                .values('skill_detail__parent_id', 'difficulty')
+                .annotate(
+                    total=Count('id'),
+                    validated_count=Count('id', filter=_Q(validated=True)),
+                )
+            )
+            diff_tmpl_map: dict = {}
+            for row in diff_tmpl_rows:
+                sid = row['skill_detail__parent_id']
+                diff = (row['difficulty'] or '').lower()
+                diff_tmpl_map[(sid, diff)] = {
+                    'validated': row['validated_count'],
+                    'total': row['total'],
+                }
+
             for skill in filtered:
                 if skill['children_count'] > 0:
                     skill['detail_coverage'] = None
+                    skill['template_coverage'] = None
                     continue
                 sid = skill['id']
                 total = detail_total_map.get(sid, 0)
                 dc = {}
+                tc = {}
                 for diff in ('easy', 'medium', 'hard'):
                     covered = len(coverage_map.get(sid, {}).get(diff, set()))
                     dc[diff] = {'covered': covered, 'total': total}
+                    tc[diff] = diff_tmpl_map.get((sid, diff), {'validated': 0, 'total': 0})
                 skill['detail_coverage'] = dc
+                skill['template_coverage'] = tc
             # ─────────────────────────────────────────────────────────────────
 
             return Response({
@@ -3946,7 +3970,15 @@ class ParentFeedbackViewSet(viewsets.ViewSet):
         from .models import ParentFeedback
         user = request.user
         if getattr(user, 'role', '') == 'admin':
-            qs = ParentFeedback.objects.all().select_related('parent', 'responded_by')
+            from django.db.models import Q as _Q
+            try:
+                days = int(request.query_params.get('days', 7))
+            except (ValueError, TypeError):
+                days = 7
+            cutoff = timezone.now() - timedelta(days=days)
+            qs = (ParentFeedback.objects
+                  .filter(_Q(created_at__gte=cutoff) | _Q(responded_at__gte=cutoff))
+                  .select_related('parent', 'responded_by'))
         elif getattr(user, 'role', '') == 'parent':
             qs = ParentFeedback.objects.filter(parent=user).select_related('responded_by')
         else:

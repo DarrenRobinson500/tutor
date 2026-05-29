@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { apiFetch } from "../utils/apiFetch";
-import { dashboardPath } from "../utils/dashboardPath";
+import { ParentNav } from "./components/ParentNav";
 import { WeeklyBookingCalendar } from "./components/WeeklyBookingCalendar";
 import { PauseButton } from "./components/PausePicker";
 import "./ParentHomePage.css";
@@ -25,7 +25,7 @@ interface SlotData {
 
 export function ParentBookingsPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+
 
   const [children, setChildren] = useState<StudentHome[]>([]);
   const [slots, setSlots] = useState<Record<number, SlotData | null>>({});
@@ -33,16 +33,6 @@ export function ParentBookingsPage() {
   const [messages, setMessages] = useState<Record<number, string>>({});
   const [actionLoading, setActionLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
-
-  const storedUser = (() => { try { return JSON.parse(localStorage.getItem("user") ?? "{}"); } catch { return {}; } })();
-  const parentName = [storedUser.first_name, storedUser.last_name].filter(Boolean).join(" ");
-
-  function handleLogout() {
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh");
-    localStorage.removeItem("user");
-    navigate("/login?tab=parent");
-  }
 
   useEffect(() => { loadAll(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -143,22 +133,7 @@ export function ParentBookingsPage() {
 
   return (
     <div className="ph-page">
-      <nav className="ph-nav">
-        <div className="ph-nav-left">
-          <Link to={dashboardPath()} className="ph-nav-logo">
-            <img src="/subjectmatter_wordmark.svg" alt="SubjectMatter" />
-          </Link>
-          <div className="ph-nav-links">
-            <Link to={`/parents/${id}`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Dashboard</Link>
-            <Link to={`/parents/${id}/bookings`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Bookings</Link>
-            <Link to={`/parents/${id}/payments`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Payments</Link>
-          </div>
-        </div>
-        <div className="ph-nav-right">
-          {parentName && <span className="ph-nav-user">{parentName}</span>}
-          <button className="ph-nav-logout" onClick={handleLogout}>Sign out</button>
-        </div>
-      </nav>
+      <ParentNav parentId={id!} />
 
       <header className="ph-header">
         <div className="ph-header-inner">

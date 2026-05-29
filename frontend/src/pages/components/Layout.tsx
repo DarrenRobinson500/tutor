@@ -242,21 +242,25 @@ export function Layout({ children, hideNav, header }: { children: React.ReactNod
 
               {user?.role === "admin" && (<>
                 <Link className="sm-nav-link" to="/admin">Home</Link>
-                <Link className="sm-nav-link" to="/admin/tutors">Tutors</Link>
-                <Link className="sm-nav-link" to="/admin/students">Students</Link>
+                <NavDropdown label="People">
+                  <Link className="sm-nav-dropdown-item" to="/admin/tutors">Tutors</Link>
+                  <Link className="sm-nav-dropdown-item" to="/admin/students">Students</Link>
+                  <Link className="sm-nav-dropdown-item" to="/admin/principles">Principles</Link>
+                </NavDropdown>
                 <Link className="sm-nav-link" to="/admin/payments">Payments</Link>
                 <NavDropdown label="Messages">
                   <Link className="sm-nav-dropdown-item" to="/admin/sms">SMS</Link>
                   <Link className="sm-nav-dropdown-item" to="/admin/emails">Emails</Link>
+                  <Link className="sm-nav-dropdown-item" to="/admin/feedback">Feedback</Link>
                   <Link className="sm-nav-dropdown-item" to="/admin/messages/docs">Docs</Link>
                 </NavDropdown>
-                <Link className="sm-nav-link" to="/skills">Skills</Link>
-                <Link className="sm-nav-link" to="/skills-s6">Skills S6</Link>
-                <Link className="sm-nav-link" to="/templates">Templates</Link>
-                <Link className="sm-nav-link" to="/knowledge">Knowledge</Link>
-                <Link className="sm-nav-link" to="/feedback">Feedback</Link>
-                <Link className="sm-nav-link" to="/principles">Principles</Link>
-                <Link className="sm-nav-link" to="/docs">Docs</Link>
+                <NavDropdown label="Questions">
+                  <Link className="sm-nav-dropdown-item" to="/skills">Skills</Link>
+                  <Link className="sm-nav-dropdown-item" to="/skills-s6">Skills S6</Link>
+                  <Link className="sm-nav-dropdown-item" to="/templates">Templates</Link>
+                  <Link className="sm-nav-dropdown-item" to="/knowledge">Knowledge</Link>
+                  <Link className="sm-nav-dropdown-item" to="/docs">Docs</Link>
+                </NavDropdown>
                 <Link className="sm-nav-link" to="/admin/variables">Variables</Link>
               </>)}
 
