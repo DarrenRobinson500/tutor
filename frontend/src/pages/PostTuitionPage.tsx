@@ -338,13 +338,13 @@ export function PostTuitionPage() {
                 <p className="mb-3">Was this session productive?</p>
                 <div className="d-flex gap-2">
                   <button
-                    className="btn btn-success"
+                    className="btn btn-sm btn-outline-primary"
                     onClick={() => setSessionProductive(true)}
                   >
                     Yes
                   </button>
                   <button
-                    className="btn btn-outline-secondary"
+                    className="btn btn-sm btn-outline-primary"
                     onClick={() => setSessionProductive(false)}
                   >
                     No

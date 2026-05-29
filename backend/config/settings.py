@@ -210,6 +210,14 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'backend.tasks.create_post_session_jobs',
         'schedule': 300.0,
     },
+    'send-session-reminders': {
+        'task': 'backend.tasks.send_session_reminders',
+        'schedule': 1800.0,  # every 30 minutes
+    },
+    'flag-overdue-tutor-reviews': {
+        'task': 'backend.tasks.flag_overdue_tutor_reviews',
+        'schedule': crontab(hour=8, minute=0),  # 8am UTC = 6pm AEST
+    },
     'create-weekly-session-jobs': {
         'task': 'backend.tasks.create_weekly_session_jobs',
         'schedule': crontab(hour=20, minute=0),  # 8pm UTC = 6am AEST

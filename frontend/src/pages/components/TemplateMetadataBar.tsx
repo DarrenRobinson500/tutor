@@ -81,7 +81,7 @@ export function TemplateMetadataBar({
 
         <select
           className="form-select form-select-sm"
-          style={{ minWidth: 0, flex: 1 }}
+          style={{ minWidth: 0, flex: 1, maxWidth: 440 }}
           value={metadata.skill ?? ""}
           onChange={(e) => onChange({ skill: Number(e.target.value) })}
         >

@@ -169,6 +169,122 @@ def record_weekly_progress_snapshots():
 
 
 @shared_task
+def flag_overdue_tutor_reviews():
+    """
+    Runs daily. For every incomplete post_tuition_review TutorJob that is more
+    than 2 days old, creates a call_tutor_overdue_review AdminJob so admin knows
+    to follow up. Deduplicates by TutorJob ID stored in notes.
+    """
+    from django.utils import timezone
+    from .models import TutorJob, AdminJob
+
+    cutoff = timezone.now() - timedelta(days=2)
+    overdue = TutorJob.objects.filter(
+        job_type='post_tuition_review',
+        completed_at__isnull=True,
+        triggered_at__lt=cutoff,
+    ).select_related('tutor', 'student')
+
+    for job in overdue:
+        tag = f'tutor_job_id:{job.id}'
+        if AdminJob.objects.filter(job_type='call_tutor_overdue_review', notes__icontains=tag).exists():
+            continue
+        student_name = job.student.get_full_name() if job.student else 'unknown student'
+        AdminJob.objects.create(
+            job_type='call_tutor_overdue_review',
+            subject=job.tutor,
+            notes=(
+                f"{tag} — {job.tutor.get_full_name()} has not completed their post-tuition review "
+                f"for {student_name} (due {job.triggered_at.strftime('%-d %b %Y')})."
+            ),
+        )
+        print(f"FLAG_OVERDUE_REVIEWS: created AdminJob for tutor={job.tutor_id} TutorJob={job.id}")
+
+
+@shared_task
+def send_session_reminders():
+    """
+    Runs every 30 minutes. Sends a 24h reminder SMS to students whose next
+    session starts between 23 and 25 hours from now.
+    Deduplicates via message_type so each booking occurrence gets at most one reminder.
+    """
+    from datetime import datetime
+    from django.utils import timezone
+    from .models import BookingAdhoc, BookingWeekly, SMSSendJob, StudentProfile, TutorProfile
+
+    local_tz = timezone.get_current_timezone()
+    now = timezone.now()
+    window_start = now + timedelta(hours=23)
+    window_end   = now + timedelta(hours=25)
+
+    def _fmt_dt(dt):
+        local = dt.astimezone(local_tz)
+        day  = local.strftime("%a %-d %b")
+        time = local.strftime("%-I:%M%p").lower()
+        return f"{day} {time}"
+
+    def _queue_reminder(student, tutor, start_dt, msg_key):
+        # Dedup: skip if this reminder has already been queued or sent
+        if SMSSendJob.objects.filter(message_type=msg_key).exists():
+            return
+
+        try:
+            mobile = student.student_profile.mobile
+        except Exception:
+            mobile = None
+        if not mobile:
+            print(f"REMINDER: no mobile for student={student.id}, skipping")
+            return
+
+        try:
+            tutor_profile = TutorProfile.objects.filter(tutor=tutor).first()
+            tutor_mobile = tutor_profile.mobile if tutor_profile else ""
+        except Exception:
+            tutor_mobile = ""
+
+        body = (
+            f"Hi {student.first_name}, your next booking with {tutor.first_name} is "
+            f"{_fmt_dt(start_dt)}. "
+            f"If things change, call {tutor.first_name} to discuss on {tutor_mobile}."
+        )
+
+        from .models import get_or_create_conversation
+        conversation = get_or_create_conversation(tutor=tutor, student=student)
+        SMSSendJob.objects.create(
+            conversation=conversation,
+            to_number=mobile,
+            message_type=msg_key,
+            body=body,
+            scheduled_for=now,
+        )
+        print(f"REMINDER: queued for student={student.id} ({msg_key})")
+
+    # Adhoc bookings
+    for booking in BookingAdhoc.objects.filter(
+        start_datetime__gt=window_start,
+        start_datetime__lte=window_end,
+    ).select_related('tutor', 'student'):
+        _queue_reminder(
+            booking.student, booking.tutor,
+            booking.start_datetime,
+            f"reminder_24h_adhoc_{booking.id}",
+        )
+
+    # Weekly bookings
+    for booking in BookingWeekly.objects.filter(
+        tutor__isnull=False, student__isnull=False,
+    ).select_related('tutor', 'student'):
+        next_start = booking.next_occurrence()
+        if window_start < next_start <= window_end:
+            date_str = next_start.astimezone(local_tz).date().isoformat()
+            _queue_reminder(
+                booking.student, booking.tutor,
+                next_start,
+                f"reminder_24h_weekly_{booking.id}_{date_str}",
+            )
+
+
+@shared_task
 def create_weekly_session_jobs():
     """
     Runs daily. For every active tutor-student pair that has no BookingWeekly,

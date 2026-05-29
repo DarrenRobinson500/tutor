@@ -739,9 +739,15 @@ class AuthViewSet(viewsets.ViewSet):
         if not user.is_authenticated or user.role != "parent":
             return Response({"error": "Not authorised."}, status=403)
 
-        from .models import TutorStudent
+        from .models import TutorStudent, StudentFocusArea
         children_links = ParentChild.objects.filter(parent=user).select_related("child")
         from .competency import get_student_score as _get_student_score
+
+        child_ids = [link.child_id for link in children_links]
+        focus_by_child: dict = {}
+        for fa in StudentFocusArea.objects.filter(student_id__in=child_ids).select_related("skill").order_by("order", "id"):
+            focus_by_child.setdefault(fa.student_id, []).append(fa.skill.description)
+
         children_data = []
         for link in children_links:
             child = link.child
@@ -778,6 +784,7 @@ class AuthViewSet(viewsets.ViewSet):
                 "tutor_name": tutor_name,
                 "next_booking": child.next_booking(),
                 "syllabus_percent": syllabus_percent,
+                "focus_areas": focus_by_child.get(child.id, []),
             })
 
         if not user.welcome_email_sent:
@@ -3975,6 +3982,7 @@ class AdminJobViewSet(viewsets.ViewSet):
                 'last_name': job.subject.last_name if job.subject else '',
                 'email': job.subject.email if job.subject else '',
                 'triggered_at': job.triggered_at,
+                'notes': job.notes or '',
             }
             if job.job_type == 'approve_tutor':
                 profile = TutorProfile.objects.filter(tutor=job.subject).first()
@@ -5392,6 +5400,7 @@ def editor_docs(request):
     return Response({"content": content})
 
 
+@api_view(["GET"])
 def messages_docs(request):
     import os
     doc_path = os.path.join(os.path.dirname(__file__), "docs/messages.md")
@@ -6416,7 +6425,13 @@ class TestViewSet(viewsets.ViewSet):
             session.status = 'completed'
             session.completed_at = timezone.now()
             session.save()
-            return Response({'complete': True, 'session_id': session.id})
+            _recompute_session_competency(session)
+            _send_test_report_email(session)
+            skill_progress = [
+                {'code': r.skill_code, 'description': r.skill_description, 'result': r.highest_difficulty_reached}
+                for r in session.skill_results.all()
+            ]
+            return Response({'complete': True, 'session_id': session.id, 'skill_progress': skill_progress})
 
         # Get next question
         question = _advance_to_question(session)
@@ -6424,7 +6439,13 @@ class TestViewSet(viewsets.ViewSet):
             session.status = 'completed'
             session.completed_at = timezone.now()
             session.save()
-            return Response({'complete': True, 'session_id': session.id})
+            _recompute_session_competency(session)
+            _send_test_report_email(session)
+            skill_progress = [
+                {'code': r.skill_code, 'description': r.skill_description, 'result': r.highest_difficulty_reached}
+                for r in session.skill_results.all()
+            ]
+            return Response({'complete': True, 'session_id': session.id, 'skill_progress': skill_progress})
 
         # Build skill progress summary
         completed_results = list(session.skill_results.all())
@@ -6562,15 +6583,25 @@ def _send_test_report_email(session):
     import threading
 
     def _send():
-        from django.core.mail import EmailMessage as DjangoEmailMessage
+        from django.core.mail import EmailMultiAlternatives
         from django.conf import settings as _settings
         from .test_report import generate_test_report
         from .models import ParentChild, AdminEmailRecord
+        import os
 
         student_name = session.student.get_full_name() or session.student.username
+        student_first = (session.student.first_name or student_name.split()[0]).strip()
         date_str = (session.started_at or session.completed_at).strftime('%Y-%m-%d')
         subject = f"{student_name}'s Assessment Report — SubjectMatter"
         from_email = getattr(_settings, 'DEFAULT_FROM_EMAIL', 'noreply@subjectmatter.app')
+
+        # Load HTML template
+        template_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'emails', 'assessment_report.html')
+        try:
+            with open(template_path, encoding='utf-8') as f:
+                html_template = f.read()
+        except Exception:
+            html_template = None
 
         parent_links = ParentChild.objects.filter(child=session.student).select_related('parent')
         recipients = [(lnk.parent.get_full_name(), lnk.parent.email)
@@ -6601,26 +6632,34 @@ def _send_test_report_email(session):
 
         for name, email in recipients:
             first_name = name.split()[0] if name else ''
-            greeting = f"Hi {first_name}," if first_name else "Hi,"
-            body = (
-                f"{greeting}\n\n"
-                f"Please find attached the assessment report for {student_name}.\n\n"
-                f"SubjectMatter"
+            plain_body = (
+                f"Hi {first_name},\n\n"
+                f"{student_name} has just completed a maths assessment. "
+                f"The full report is attached as a PDF.\n\n"
+                f"The Subject Matter Team"
             )
+            html_body = None
+            if html_template:
+                html_body = (html_template
+                    .replace('[FIRST_NAME]', first_name)
+                    .replace('[STUDENT_NAME]', student_name)
+                    .replace('[STUDENT_FIRST]', student_first))
             status_val, error_val = 'sent', ''
             try:
-                msg = DjangoEmailMessage(
-                    subject=subject, body=body,
+                msg = EmailMultiAlternatives(
+                    subject=subject, body=plain_body,
                     from_email=from_email,
                     to=[f"{name} <{email}>" if name else email],
                 )
+                if html_body:
+                    msg.attach_alternative(html_body, 'text/html')
                 msg.attach(filename, pdf_bytes, 'application/pdf')
                 msg.send(fail_silently=False)
             except Exception as e:
                 status_val, error_val = 'failed', str(e)
             AdminEmailRecord.objects.create(
                 to_email=email, to_name=name,
-                subject=subject, body=body,
+                subject=subject, body=plain_body,
                 status=status_val, error=error_val,
             )
 
@@ -7804,9 +7843,10 @@ def admin_activity(request):
             for u in users
         ]
 
-    parents  = User.objects.filter(role='parent').order_by('-date_joined')[:50]
-    students = User.objects.filter(role='student').order_by('-date_joined')[:50]
-    tutors   = User.objects.filter(role='tutor').order_by('-date_joined')[:50]
+    one_week_ago = timezone.now() - timedelta(days=7)
+    parents  = User.objects.filter(role='parent',  date_joined__gte=one_week_ago).order_by('-date_joined')
+    students = User.objects.filter(role='student', date_joined__gte=one_week_ago).order_by('-date_joined')
+    tutors   = User.objects.filter(role='tutor',   date_joined__gte=one_week_ago).order_by('-date_joined')
 
     from .models import AdminJob
     removal_jobs = AdminJob.objects.filter(

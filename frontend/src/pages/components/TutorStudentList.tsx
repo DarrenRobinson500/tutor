@@ -12,6 +12,8 @@ export interface Student {
   active: boolean;
   year_level: string | null;
   area_of_study: string | null;
+  syllabus_percent: number | null;
+  next_booking: { start_iso: string; booking_type: string } | null;
 }
 
 export function TutorStudentList({ tutorId }: { tutorId: string }) {
@@ -31,6 +33,12 @@ export function TutorStudentList({ tutorId }: { tutorId: string }) {
     return `${digits.slice(0,4)} ${digits.slice(4,7)} ${digits.slice(7)}`;
   }
 
+  function formatBooking(b: Student["next_booking"]) {
+    if (!b) return "";
+    const d = new Date(b.start_iso);
+    return d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })
+      + " " + d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit", hour12: true }).toLowerCase();
+  }
 
   return (
     <ul className="list-group mt-3">
@@ -39,8 +47,9 @@ export function TutorStudentList({ tutorId }: { tutorId: string }) {
           <div className="col-2">Name</div>
           <div className="col-2">Mobile</div>
           <div className="col-1">Year</div>
-          <div className="col-1">Area</div>
-          <div className="col-6">Actions</div>
+          <div className="col-1">Progress</div>
+          <div className="col-2">Next Booking</div>
+          <div className="col-4">Actions</div>
         </div>
       </li>
 
@@ -68,9 +77,10 @@ export function TutorStudentList({ tutorId }: { tutorId: string }) {
               <div className="col-2">{formatMobile(s.mobile)}</div>
 
               <div className="col-1">{s.year_level || ""}</div>
-              <div className="col-1">{s.area_of_study || ""}</div>
+              <div className="col-1">{s.syllabus_percent != null ? `${s.syllabus_percent}%` : ""}</div>
+              <div className="col-2" style={{ fontSize: 13, color: "#555" }}>{formatBooking(s.next_booking)}</div>
 
-              <div className="col-6 d-flex flex-wrap gap-2">
+              <div className="col-4 d-flex flex-wrap gap-2">
                 <Link
                   className={`btn btn-sm ${s.active ? "btn-outline-primary" : "btn-outline-primary disabled"}`}
                   to={`/students/${s.user_id}`}

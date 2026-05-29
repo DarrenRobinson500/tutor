@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
-import { Layout, PageHeader } from "./components/Layout";
+import { Layout } from "./components/Layout";
 import { apiFetch } from "../utils/apiFetch";
 
 interface AdminJob {
   id: number;
-  job_type: "approve_tutor" | "approve_distributor" | "setup_bank_details";
+  job_type: "approve_tutor" | "approve_distributor" | "setup_bank_details" | "call_tutor_overdue_review";
   subject_id: number | null;
   first_name: string;
   last_name: string;
   email: string;
   triggered_at: string;
+  notes?: string;
   // tutor-specific
   qualification?: string;
   bio?: string;
@@ -37,18 +38,21 @@ const TYPE_LABEL: Record<string, string> = {
   approve_tutor: "Approve Tutor",
   approve_distributor: "Approve Distributor",
   setup_bank_details: "Setup Bank Details",
+  call_tutor_overdue_review: "Call Tutor — Overdue Review",
 };
 
 const TYPE_COLOUR: Record<string, string> = {
   approve_tutor: "#cfe2ff",
   approve_distributor: "#d1e7dd",
   setup_bank_details: "#fff3cd",
+  call_tutor_overdue_review: "#fde8e8",
 };
 
 const TYPE_BORDER: Record<string, string> = {
   approve_tutor: "#9ec5fe",
   approve_distributor: "#a3cfbb",
   setup_bank_details: "#ffc107",
+  call_tutor_overdue_review: "#f5a0a0",
 };
 
 function Stars({ value }: { value: number }) {
@@ -223,6 +227,11 @@ function PendingJobsTab() {
                   {job.bio}
                 </p>
               )}
+              {job.notes && (
+                <p className="mb-3" style={{ fontSize: "0.85rem", color: "#333", background: "rgba(0,0,0,0.04)", borderRadius: 6, padding: "8px 12px", margin: 0 }}>
+                  {job.notes.replace(/tutor_job_id:\d+\s*—\s*/, "")}
+                </p>
+              )}
               <div className="d-flex gap-2 mt-2">
                 <button className="btn btn-sm btn-success" disabled={working === job.id} onClick={() => approve(job)}>
                   {working === job.id ? "Approving…" : "Approve"}
@@ -355,7 +364,12 @@ function ActivityTab() {
   useEffect(() => {
     apiFetch("/api/admin/activity/")
       .then(r => r.json())
-      .then(setData)
+      .then(d => setData({
+        parents:       Array.isArray(d.parents)       ? d.parents       : [],
+        students:      Array.isArray(d.students)      ? d.students      : [],
+        tutors:        Array.isArray(d.tutors)         ? d.tutors        : [],
+        tutor_removals: Array.isArray(d.tutor_removals) ? d.tutor_removals : [],
+      }))
       .catch(() => setData({ parents: [], students: [], tutors: [], tutor_removals: [] }))
       .finally(() => setLoading(false));
   }, []);
@@ -440,36 +454,32 @@ function ActivityTab() {
 }
 
 export default function AdminHomePage() {
-  const [tab, setTab] = useState<"jobs" | "feedback" | "activity">("jobs");
   const storedUser = (() => { try { return JSON.parse(localStorage.getItem("user") ?? "{}"); } catch { return {}; } })();
   const firstName = storedUser.first_name ?? "Admin";
 
   return (
-    <Layout header={<PageHeader title={`Welcome back, ${firstName}.`} />}>
+    <Layout>
       <div className="container py-4" style={{ maxWidth: 900 }}>
 
+        <h1 style={{ fontFamily: "Lora, Georgia, serif", fontSize: "1.875rem", fontWeight: 700, color: "#2D2D2D", marginBottom: "2rem" }}>
+          Welcome back, {firstName}.
+        </h1>
 
-        <ul className="nav nav-tabs mb-4">
-          <li className="nav-item">
-            <button className={`nav-link ${tab === "jobs" ? "active" : ""}`} onClick={() => setTab("jobs")}>
-              Pending Jobs
-            </button>
-          </li>
-          <li className="nav-item">
-            <button className={`nav-link ${tab === "feedback" ? "active" : ""}`} onClick={() => setTab("feedback")}>
-              Feedback
-            </button>
-          </li>
-          <li className="nav-item">
-            <button className={`nav-link ${tab === "activity" ? "active" : ""}`} onClick={() => setTab("activity")}>
-              Activity
-            </button>
-          </li>
-        </ul>
+        <section className="mb-5">
+          <h5 className="fw-semibold mb-3">Pending Jobs</h5>
+          <PendingJobsTab />
+        </section>
 
-        {tab === "jobs" && <PendingJobsTab />}
-        {tab === "feedback" && <FeedbackTab />}
-        {tab === "activity" && <ActivityTab />}
+        <section className="mb-5">
+          <h5 className="fw-semibold mb-3">Feedback</h5>
+          <FeedbackTab />
+        </section>
+
+        <section className="mb-5">
+          <h5 className="fw-semibold mb-3">Activity</h5>
+          <ActivityTab />
+        </section>
+
       </div>
     </Layout>
   );

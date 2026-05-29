@@ -631,6 +631,15 @@ class StudentProfile(models.Model):
         booking_mode = u.booking_mode()
         # print("Booking mode:", booking_mode)
 
+        grade_key = str(self.year_level).strip().lower().replace("year", "").strip() if self.year_level else None
+        syllabus_percent: int | None = None
+        if grade_key:
+            try:
+                from .competency import get_student_score
+                syllabus_percent = round(get_student_score(u, grade_key) * 100)
+            except Exception:
+                pass
+
         return {
             # User + profile identifiers
             "user_id": u.id,
@@ -646,6 +655,7 @@ class StudentProfile(models.Model):
             # Student profile fields
             "year_level": self.year_level,
             "area_of_study": self.area_of_study,
+            "syllabus_percent": syllabus_percent,
             "mobile": self.mobile,
             "address": self.address,
             "min_questions_per_skill": self.min_questions_per_skill,
@@ -1001,6 +1011,7 @@ class AdminJob(models.Model):
         ('low_session_rating', 'Low Session Rating'),
         ('setup_bank_details', 'Setup Bank Details'),
         ('tutor_removed', 'Tutor Removed'),
+        ('call_tutor_overdue_review', 'Call Tutor — Overdue Review'),
     ]
     job_type = models.CharField(max_length=50, choices=JOB_TYPES)
     subject = models.ForeignKey(

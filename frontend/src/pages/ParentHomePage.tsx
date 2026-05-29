@@ -122,6 +122,7 @@ interface Child {
   tutor_name: string | null;
   next_booking: NextBooking | null;
   syllabus_percent: number | null;
+  focus_areas: string[];
 }
 
 interface ParentData {
@@ -300,9 +301,6 @@ function AssessmentsTab({ children }: { children: Child[] }) {
                         )}
                         {s.test_type && TYPE_BADGE[s.test_type] && (
                           <span className={`badge ${TYPE_BADGE[s.test_type][0]} ms-2`} style={{ fontSize: 11 }}>{TYPE_BADGE[s.test_type][1]}</span>
-                        )}
-                        {s.status === "abandoned" && (
-                          <span className="badge bg-secondary ms-2" style={{ fontSize: 11 }}>Abandoned</span>
                         )}
                       </div>
                       <div className="d-flex align-items-center gap-3">
@@ -600,7 +598,7 @@ export default function ParentHomePage() {
                 marginBottom: "-2px",
               }}
             >
-              {t === "overview" ? "Overview" : "Assessments"}
+              {t === "overview" ? "Overview" : "Reports"}
             </button>
           ))}
         </div>
@@ -636,6 +634,7 @@ export default function ParentHomePage() {
                   onLaunchAssessment={() => handleLaunchAssessment(child.id)}
                   onFindTutor={() => handleFindTutor(child)}
                   onRemoveTutor={() => handleRemoveTutor(child.id)}
+                  onViewReport={() => setTab("assessments")}
                 />
               ))}
             </div>
@@ -714,6 +713,7 @@ function ChildCard({
   onLaunchAssessment,
   onFindTutor,
   onRemoveTutor,
+  onViewReport,
 }: {
   child: Child;
   parentId: number;
@@ -721,6 +721,7 @@ function ChildCard({
   onLaunchAssessment: () => void;
   onFindTutor: () => void;
   onRemoveTutor: () => void;
+  onViewReport: () => void;
 }) {
   const initials = `${child.first_name[0] ?? ""}${child.last_name[0] ?? ""}`.toUpperCase();
   const hasTests = child.test_count > 0;
@@ -793,6 +794,23 @@ function ChildCard({
         <ProgressChart studentId={child.id} />
       </div>
 
+      {child.focus_areas.length > 0 && (
+        <div className="mt-3">
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Focus areas</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+            {child.focus_areas.map((fa, i) => (
+              <span key={i} style={{
+                fontSize: 12, padding: "2px 10px",
+                background: "var(--sm-bg-warm, #FFF8F0)",
+                border: "1px solid var(--sm-orange-light, #FFDBB5)",
+                borderRadius: 20,
+                color: "var(--sm-text, #2D2D2D)",
+              }}>{fa}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="ph-child-actions">
         <div className="ph-tooltip-wrap" data-tooltip="Your child works through the assessment on their own (it takes about 30 min). We'll identify their strengths and areas to focus on. No cost, no commitment.">
           <button
@@ -817,7 +835,7 @@ function ChildCard({
           </button>
         )}
         {hasTests && (
-          <button className="sm-btn-secondary" disabled>
+          <button className="sm-btn-secondary" onClick={onViewReport}>
             View Report
           </button>
         )}
@@ -888,6 +906,7 @@ function AddChildForm({
         tutor_name: null,
         next_booking: null,
         syllabus_percent: null,
+        focus_areas: [],
       });
     } catch {
       setError("Something went wrong. Please try again.");

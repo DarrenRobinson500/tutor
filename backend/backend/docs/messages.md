@@ -1,9 +1,7 @@
-# Subject Matter — Messaging Reference
+# Messaging Reference
 
-This document summarises every SMS and email notification sent by the platform, including what triggers it, who receives it, and the message content.
-
+This document summarises SMS and email notification sent by the platform, including what triggers it, who receives it, and the message content.
 ---
-
 ## SMS Notifications
 
 SMS messages are sent via ClickSend and queued through `SMSSendJob`. A debounce window (default: 10 minutes, configurable via the `sms_pause` variable) prevents duplicates — if the same conversation and message type is already pending, the existing job is updated rather than a new one created.
@@ -60,7 +58,6 @@ Triggered by the `booking_action` API when a booking is created, modified, confi
 | Admin approves a distributor account | Distributor | Account approval notification with login URL |
 | Admin assigns a new student to a tutor | Tutor | New student notification, including first session time if set |
 | Parent removes a student's tutor | Tutor | End of tutoring arrangement notification |
-
 ---
 
 ## Email Notifications
@@ -96,9 +93,7 @@ Emails are sent via Zoho (smtp.zoho.com.au, port 587). HTML templates are used w
 | Trigger | Recipient | Subject |
 |---|---|---|
 | Admin sends a bulk email from the Emails page | Custom address, all parents, all tutors, or all students | Admin-specified |
-
 ---
-
 ## Notes
 
 - **Debounce:** Booking SMS messages are debounced per conversation + message type. Rapid changes (e.g. editing a booking time twice) result in only one SMS being sent once the debounce window elapses.

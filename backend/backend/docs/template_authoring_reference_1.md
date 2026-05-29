@@ -5,9 +5,9 @@
 
 ## File format
 
-All templates are delivered as a single `templates_[ParentSkill]_[Year].yaml` file.
+All templates are delivered as a single `[ParentSkill]_[Year]_templates.yaml` file.
 The parent skill name and year is included in the filename, capitalised, e.g.
-`templates_Data_Year10.yaml`, `templates_Trigonometry_Year10.yaml`.
+`Data_Year10_templates.yaml`, `Trigonometry_Year10_templates.yaml`.
 
 ```yaml
 year: 10

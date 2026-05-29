@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { PreviewPanel } from "./components/PreviewPanel";
@@ -330,7 +330,10 @@ export function TestPage() {
     skillDescription: string | null;
   } | null>(null);
 
+  const startedRef = useRef(false);
   useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
     startTest();
     apiFetch(`/api/students/${studentId}/`)
       .then(r => r.json())
@@ -391,6 +394,7 @@ export function TestPage() {
         }),
       });
       const data = await res.json();
+      if (!res.ok) { setErrorMsg(data.error || "Failed to submit answer"); setStatus("error"); return; }
       if (data.complete) {
         if (data.mode === "learning") {
           setLearnComplete({
