@@ -558,9 +558,9 @@ export default function ParentHomePage() {
               key={u.label}
               onClick={() => devLoginAs(u.email, u.password)}
               style={{
-                fontSize: "0.75rem", padding: "0.2rem 0.6rem", borderRadius: 4,
-                border: "1px solid rgba(255,200,0,0.4)", background: "rgba(255,200,0,0.12)",
-                color: "rgba(255,220,80,0.9)", cursor: "pointer",
+                fontSize: "0.7rem", padding: "0.2rem 0.55rem", borderRadius: 4,
+                border: "1px solid rgba(232,119,34,0.3)", background: "rgba(232,119,34,0.08)",
+                color: "#b85c14", cursor: "pointer", fontFamily: "Inter, sans-serif",
               }}
             >
               {u.label}
