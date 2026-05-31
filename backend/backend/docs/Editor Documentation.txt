@@ -2985,7 +2985,7 @@ moves down (SVG convention). A typical canvas spans roughly -30 to +30 in x and
 COMPLETE EXAMPLES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-── Example 1: Simple  ──────────────────
+── Simple  ──────────────────
 
   parameters:
     a:
@@ -2999,7 +2999,7 @@ COMPLETE EXAMPLES
     solution: "{{ a }} + {{ b }} = {{ a + b }}"
 
 
-── Example 2: Formatting pipes ───────────────────────
+── Pipes ───────────────────────
 
   parameters:
     rate:
@@ -3015,7 +3015,7 @@ COMPLETE EXAMPLES
     answer: "{{ ans }}"
     solution: "{{ rate }} of {{ amount }} = {{ rate }} × {{ amount }} = {{ ans | dollar }}"
 
-── Example 3: Validation and Diagram ─────────────────────────
+── Diagram ─────────────────────────
 
   parameters:
     m:
@@ -3030,20 +3030,7 @@ COMPLETE EXAMPLES
     solution: "Read rise over run from the graph. The gradient is {{ m }}."
   diagram: "Cartesian(xmin: -6, xmax: 6, ymin: -9, ymax: 9, eq: '{{ m }}*x + {{ b }}')"
 
-── Example 6: List example for data questions ─────────────────────────────────────────
-
-  parameters:
-    data:
-      type: list
-      count: 5
-      size: small
-
-  question:
-    text: "What is the median of ${{ data | sorted }}$?"
-    answer: "{{ median(data) }}"
-    solution: "Sorted: ${{ data | sorted }}$. The middle value is {{ median(data) }}."
-
-── Example 7: Validation ensuring an integer answer  ───────────────────────────────────
+── Validation  ───────────────────────────────────
 
   parameters:
     data:
@@ -3060,7 +3047,20 @@ COMPLETE EXAMPLES
     solution: "Add the values: {{ sum(data) }}. Divide by {{ len(data) }}: \n {{ sum(data) }} \\div {{ len(data) }} = {{ mean(data) }}."
 
 
-── Example: Scenario ──────────────────────────────────────────
+── Parameters: List  ─────────────────────────────────────────
+
+  parameters:
+    data:
+      type: list
+      count: 5
+      size: small
+
+  question:
+    text: "What is the median of ${{ data | sorted }}$?"
+    answer: "{{ median(data) }}"
+    solution: "Sorted: ${{ data | sorted }}$. The middle value is {{ median(data) }}."
+
+── Parameters: Scenario ──────────────────────────────────────────
 
   parameters:
     item:
@@ -3089,8 +3089,40 @@ COMPLETE EXAMPLES
         correct: "unit == 'km'"
     solution: "The most appropriate unit to measure {{ question_text }} is {{ unit }}."
 
+── Paramters: Operation sign ──────────────────────────────────────────
 
-── Example: List for Data Questions ──────────────────────────────────────────
+parameters:
+  a:
+    size: small
+  b_0:
+    size: small
+    sign: pos
+  c:
+    size: small
+    sign: pos
+  b:
+    expr: b_0 * c
+
+  op_1:
+    type: choice
+    values: ["+", "-"]
+  op_2:
+    type: choice
+    values: ["*", "/"]
+
+  result:
+    expr: a op_1 b op_2 c
+
+validation:
+  - result > 0
+
+question:
+  text: "What is {{ a }} {{ op_1 | operation }} {{ b }} {{ op_2 | operation }} {{ c }}?"
+  answer: "{{ result }}"
+  solution: "{{ a }} {{ op_1 | operation }} {{ b }} {{ op_2 | operation }} {{ c }} = {{ result }}."
+
+
+── Functions: mode ──────────────────────────────────────────
     parameters:
         data:
           type: list
@@ -3106,7 +3138,35 @@ COMPLETE EXAMPLES
       answer: "{{ ans }}"
       solution: "**{{ mode(data) }}** appears most often. The mode is **{{ mode(data) }}**."
 
-── Example: Conditional Text ──────────────────────────────────────────
+── Question types: Multipart and multiple choice ──────────────────────────────────────────
+
+  parameters:
+    a:
+      type: fraction
+      size: small
+      proper: true
+    is_term:
+      expr: denominator(a) % 2 == 0 or denominator(a) % 5 == 0
+    ans:
+      expr: '"Yes" if is_term else "No"'
+
+  question:
+    text: "Consider the fraction {{ a | fraction }}."
+    parts:
+      - text: "Write {{ a | fraction }} as a decimal."
+        answer: "{{ a | decimal }}"
+        solution: "{{ a | fraction }} = {{ a | decimal }}"
+      - text: "Is {{ a | fraction }} a terminating decimal?"
+        choices:
+          - text: "Yes"
+            correct: is_term
+          - text: "No"
+            correct: not is_term
+        solution: "{{ ans }}, because the denominator {{ 'has' if is_term else 'does not have' }} only factors of 2 and 5."
+
+
+
+── Code: Conditional Text ──────────────────────────────────────────
 
     parameters:
       right_angle:
@@ -3121,7 +3181,7 @@ COMPLETE EXAMPLES
           correct: "not right_angle"
       solution: "A triangle {{ 'with' if right_angle else 'without'}} a 90° angle is {{ '' if right_angle else 'not '}}a right-angle triangle."
 
-── Example: For-Loop Table ──────────────────────────────────────────
+── Code: For-Loop Table ──────────────────────────────────────────
 
     Use {% for var in list %}...{% endfor %} to repeat a block for every item in a
     list parameter. This is most useful for building Markdown tables from data points.
@@ -3160,33 +3220,8 @@ COMPLETE EXAMPLES
     preserved. If > is used accidentally, the system will attempt to correct it
     automatically, but | is always the safe choice.
 
-── Example: Multipart question with multiple choice ──────────────────────────────────────────
 
-  parameters:
-    a:
-      type: fraction
-      size: small
-      proper: true
-    is_term:
-      expr: denominator(a) % 2 == 0 or denominator(a) % 5 == 0
-    ans:
-      expr: '"Yes" if is_term else "No"'
-
-  question:
-    text: "Consider the fraction {{ a | fraction }}."
-    parts:
-      - text: "Write {{ a | fraction }} as a decimal."
-        answer: "{{ a | decimal }}"
-        solution: "{{ a | fraction }} = {{ a | decimal }}"
-      - text: "Is {{ a | fraction }} a terminating decimal?"
-        choices:
-          - text: "Yes"
-            correct: is_term
-          - text: "No"
-            correct: not is_term
-        solution: "{{ ans }}, because the denominator {{ 'has' if is_term else 'does not have' }} only factors of 2 and 5."
-
-── Example: Equation input box for indices ──────────────────────────────────────────
+── Input boxes: Equation input box for indices ──────────────────────────────────────────
 
 Example — index notation (equation entry widget):
 
@@ -3202,54 +3237,6 @@ Example — index notation (equation entry widget):
     solution: "{{ base }}^{{ exp }} = {{ ans }}"
 
 
-── Example: Ensuring a value is an integer ──────────────────────────────────────────
-
-    parameters:
-      a:
-        size: small
-      b:
-        size: small
-      c:
-        size: small
-      total:
-        expr: a + b + c
-      mean:
-        expr: (a + b + c) / 3
-
-    validation:
-      - (a + b + c) % 3 == 0
-
-── Example: Variable operation sign ──────────────────────────────────────────
-
-parameters:
-  a:
-    size: small
-  b_0:
-    size: small
-    sign: pos
-  c:
-    size: small
-    sign: pos
-  b:
-    expr: b_0 * c
-
-  op_1:
-    type: choice
-    values: ["+", "-"]
-  op_2:
-    type: choice
-    values: ["*", "/"]
-
-  result:
-    expr: a op_1 b op_2 c
-
-validation:
-  - result > 0
-
-question:
-  text: "What is {{ a }} {{ op_1 | operation }} {{ b }} {{ op_2 | operation }} {{ c }}?"
-  answer: "{{ result }}"
-  solution: "{{ a }} {{ op_1 | operation }} {{ b }} {{ op_2 | operation }} {{ c }} = {{ result }}."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 KNOWLEDGE

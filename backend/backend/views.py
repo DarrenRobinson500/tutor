@@ -3384,7 +3384,8 @@ class TutorJobViewSet(viewsets.ViewSet):
         jobs = TutorJob.objects.filter(
             tutor=request.user,
             completed_at__isnull=True,
-            expires_at__gt=now,
+        ).filter(
+            Q(expires_at__gt=now) | Q(job_type='post_tuition_review')
         ).filter(
             Q(show_from__isnull=True) | Q(show_from__lte=now)
         ).select_related('student', 'booking_outcome')

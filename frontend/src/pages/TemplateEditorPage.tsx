@@ -757,6 +757,17 @@ const handleToggleValidated = async () => {
                   onClick={() => { setShowParamHelper(v => !v); setShowDiagramHelper(false); setShowKnowledgeHelper(false); }}
                 >＋ Parameter</button>
                 <button
+                  className="btn btn-sm btn-outline-warning"
+                  style={{ fontSize: 11 }}
+                  title="Remove $ signs and replace format_number with comma"
+                  onClick={() => {
+                    const cleaned = content
+                      .replace(/\$/g, "")
+                      .replace(/format_number/g, "comma");
+                    handleContentChange(cleaned);
+                  }}
+                >Clear</button>
+                <button
                   className="btn btn-sm btn-outline-secondary"
                   style={{ fontSize: 11 }}
                   onClick={handleRawAddPart}

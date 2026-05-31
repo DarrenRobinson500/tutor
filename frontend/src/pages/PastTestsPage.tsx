@@ -56,7 +56,10 @@ export function PastTestsPage() {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [downloading, setDownloading] = useState<number | null>(null);
 
-  async function downloadReport(sessionId: number) {
+  const storedUser = (() => { try { return JSON.parse(localStorage.getItem("user") ?? "{}"); } catch { return {}; } })();
+  const firstName: string = storedUser.first_name ?? "Student";
+
+  async function downloadReport(sessionId: number, startedAt: string) {
     setDownloading(sessionId);
     try {
       const res = await apiFetch(`/api/tests/${sessionId}/report/`);
@@ -68,8 +71,10 @@ export function PastTestsPage() {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
+      const d = new Date(startedAt);
+      const filename = `${firstName} ${d.getDate()} ${d.toLocaleDateString("en-AU", { month: "short" })} ${String(d.getFullYear()).slice(2)}.pdf`;
       a.href = url;
-      a.download = `progress_report_${sessionId}.pdf`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -126,9 +131,6 @@ export function PastTestsPage() {
                           {TYPE_BADGE[s.test_type][1]}
                         </span>
                       )}
-                      {s.status === "abandoned" && (
-                        <span className="badge bg-secondary ms-2" style={{ fontSize: 11 }}>Abandoned</span>
-                      )}
                     </div>
                     <div className="d-flex align-items-center gap-3">
                       <span className="text-muted" style={{ fontSize: 13 }}>
@@ -138,7 +140,7 @@ export function PastTestsPage() {
                         className="btn btn-outline-primary btn-sm"
                         style={{ fontSize: 12, padding: "2px 8px" }}
                         disabled={downloading === s.id}
-                        onClick={e => { e.stopPropagation(); downloadReport(s.id); }}
+                        onClick={e => { e.stopPropagation(); downloadReport(s.id, s.started_at); }}
                       >
                         {downloading === s.id ? "…" : "PDF"}
                       </button>

@@ -658,11 +658,24 @@ export function SectionedEditorPanel({
         const headerBtn = (() => {
           const btnStyle: React.CSSProperties = { fontSize: 10, padding: "1px 6px", lineHeight: 1.4, textTransform: "none", letterSpacing: 0, fontWeight: 400 };
           if (def.key === "parameters") return (
-            <button
-              className={showParamHelper ? "btn btn-xs btn-primary" : "btn btn-xs btn-outline-primary"}
-              style={btnStyle}
-              onClick={() => setShowParamHelper(v => !v)}
-            >＋ Parameter</button>
+            <div style={{ display: "flex", gap: 4 }}>
+              <button
+                className={showParamHelper ? "btn btn-xs btn-primary" : "btn btn-xs btn-outline-primary"}
+                style={btnStyle}
+                onClick={() => setShowParamHelper(v => !v)}
+              >＋ Parameter</button>
+              <button
+                className="btn btn-xs btn-outline-warning"
+                style={btnStyle}
+                title="Remove $ signs and replace format_number with comma"
+                onClick={() => {
+                  const cleaned = content
+                    .replace(/\$/g, "")
+                    .replace(/format_number/g, "comma");
+                  onChange(cleaned);
+                }}
+              >Clear</button>
+            </div>
           );
           if (def.key === "question") return (
             <button

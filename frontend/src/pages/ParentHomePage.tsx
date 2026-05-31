@@ -248,7 +248,7 @@ function AssessmentsTab({ children }: { children: Child[] }) {
     });
   }, [children]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function downloadReport(sessionId: number) {
+  async function downloadReport(sessionId: number, firstName: string, startedAt: string) {
     setDownloading(sessionId);
     try {
       const res = await apiFetch(`/api/tests/${sessionId}/report/`);
@@ -256,7 +256,9 @@ function AssessmentsTab({ children }: { children: Child[] }) {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = `progress_report_${sessionId}.pdf`;
+      const d = new Date(startedAt);
+      const filename = `${firstName} ${d.getDate()} ${d.toLocaleDateString("en-AU", { month: "short" })} ${String(d.getFullYear()).slice(2)}.pdf`;
+      a.href = url; a.download = filename;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 100);
     } finally { setDownloading(null); }
@@ -311,7 +313,7 @@ function AssessmentsTab({ children }: { children: Child[] }) {
                           className="btn btn-outline-primary btn-sm"
                           style={{ fontSize: 12, padding: "2px 8px" }}
                           disabled={downloading === s.id}
-                          onClick={e => { e.stopPropagation(); downloadReport(s.id); }}
+                          onClick={e => { e.stopPropagation(); downloadReport(s.id, child.first_name, s.started_at); }}
                         >
                           {downloading === s.id ? "…" : "PDF"}
                         </button>

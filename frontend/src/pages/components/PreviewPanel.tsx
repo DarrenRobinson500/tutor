@@ -391,6 +391,56 @@ export function PreviewPanel({
       return false;
     }
 
+    // Word-number comparison: accept "five million" when correct is "5000000" and vice versa.
+    // Also handles mixed forms like "500 million" === "five hundred million".
+    const _W: {[k:string]:number} = {zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+    const _S: {[k:string]:number} = {hundred:100,thousand:1000,million:1000000,billion:1000000000,trillion:1000000000000};
+    const parseWordNum = (raw: string): number | null => {
+      try {
+        const t = raw.trim().toLowerCase().replace(/-/g," ").replace(/\band\b/g," ").replace(/\s+/g," ").trim();
+        if (!t) return null;
+        // Pure numeric — not a word number
+        if (/^-?[\d]+(\.\d+)?$/.test(t)) return null;
+        // "500 million", "1.5 billion" — numeral + scale word
+        const mm = /^(-?[\d,]+(?:\.\d+)?)\s+(hundred|thousand|million|billion|trillion)$/.exec(t);
+        if (mm) {
+          const v = parseFloat(mm[1].replace(/,/g,""));
+          const sc = _S[mm[2]];
+          return (isNaN(v) || sc === undefined) ? null : v * sc;
+        }
+        // Pure word form: "five million", "five hundred million", etc.
+        const toks = t.split(" ").filter(w => w.length > 0);
+        for (let i = 0; i < toks.length; i++) {
+          const tok = toks[i];
+          if (_W[tok] === undefined && _S[tok] === undefined) return null;
+        }
+        let total = 0, cur = 0;
+        for (let i = 0; i < toks.length; i++) {
+          const tok = toks[i];
+          const wv = _W[tok];
+          const sv = _S[tok];
+          if (wv !== undefined) {
+            cur += wv;
+          } else if (sv !== undefined) {
+            if (tok === "hundred") {
+              cur = (cur > 0 ? cur : 1) * 100;
+            } else {
+              total += (cur > 0 ? cur : 1) * sv;
+              cur = 0;
+            }
+          }
+        }
+        return total + cur;
+      } catch { return null; }
+    };
+    const _wA = parseWordNum(String(input));
+    const _wB = parseWordNum(String(correct));
+    if (_wA !== null || _wB !== null) {
+      const numA = _wA !== null ? _wA : parseFloat(String(input).replace(/,/g,""));
+      const numB = _wB !== null ? _wB : parseFloat(String(correct).replace(/,/g,""));
+      if (!isNaN(numA) && !isNaN(numB)) return Math.abs(numA - numB) <= tolerance;
+    }
+
     // Parse mixed numbers from raw strings BEFORE normalization strips spaces.
     // "10 11/15" → 10 + 11/15. Must run first.
     const parseMixed = (s: string): number | null => {
