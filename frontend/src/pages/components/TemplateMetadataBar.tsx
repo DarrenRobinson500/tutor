@@ -156,7 +156,7 @@ export function TemplateMetadataBar({
           </span>
         )}
         {metadata.id && metadata.subject && (
-          <span className="badge bg-secondary" style={{ fontSize: 12, fontWeight: 500, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span className="badge bg-secondary" title={metadata.subject} style={{ fontSize: 12, fontWeight: 500, maxWidth: 440, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {metadata.subject}
           </span>
         )}
