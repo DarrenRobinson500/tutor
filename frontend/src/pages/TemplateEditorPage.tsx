@@ -178,6 +178,9 @@ const handleToggleValidated = async () => {
     }
   } else {
     setMetadata(prev => ({ ...prev, validated: data.validated }));
+    setFilteredList(prev => prev.map(t =>
+      t.id === currentId ? { ...t, validated: data.validated } : t
+    ));
   }
 };
 
