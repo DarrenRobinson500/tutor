@@ -338,6 +338,8 @@ class DecimalParameter(RandomParameter):
         super().__init__(name, "decimal", options)
         if "decimal_places" in options:
             dp = int(options["decimal_places"])
+        elif "dp" in options:
+            dp = int(options["dp"])
         elif "step" in options:
             # Infer dp from step: 0.05 → 2, 0.1 → 1, 0.25 → 2
             s = str(float(options["step"]))
@@ -355,11 +357,11 @@ class DecimalParameter(RandomParameter):
     def generate(self, context):
         print("DecimalParameter Context:", context)
 
-        dp = int(self.options.get("decimal_places", 1))
+        dp = int(self.options.get("decimal_places", self.options.get("dp", 1)))
         size = self.options.get("size")
         if size in self.SIZE_MAP:
             lo, hi, size_dp = self.SIZE_MAP[size]
-            if "decimal_places" not in self.options:
+            if "decimal_places" not in self.options and "dp" not in self.options:
                 dp = size_dp
         else:
             lo = float(self.options["min"])

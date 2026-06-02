@@ -678,6 +678,22 @@ export function PreviewPanel({
     // rounding error can be ~5e-9.  Use at least 1e-6 to absorb that noise.
     if (la !== null && lb !== null) return Math.abs(la - lb) <= Math.max(tolerance, 1e-6);
 
+    // Arithmetic expression: evaluate both sides numerically for pure-arithmetic
+    // expressions so that e.g. ".5-.8" matches "0.5-0.8". Only fires when both
+    // sides contain only digits, basic operators, parentheses, and decimal points.
+    const isArithExpr = (s: string) => s.length > 0 && /^[0-9+\-*/().^]+$/.test(s);
+    if (isArithExpr(a) && isArithExpr(b)) {
+      try {
+        const evalArith = (s: string): number =>
+          // eslint-disable-next-line no-new-func
+          Function('"use strict"; return (' + s.replace(/\^/g, '**') + ')')() as number;
+        const ea = evalArith(a), eb = evalArith(b);
+        if (typeof ea === 'number' && typeof eb === 'number' && isFinite(ea) && isFinite(eb)) {
+          return Math.abs(ea - eb) <= tolerance;
+        }
+      } catch { /* malformed expression — fall through */ }
+    }
+
     return false;
   }
 
