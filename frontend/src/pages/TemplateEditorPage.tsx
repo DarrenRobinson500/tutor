@@ -751,6 +751,7 @@ const handleToggleValidated = async () => {
       skills={skills}
       currentIndex={currentIndex}
       listLength={filteredList.length}
+      validatedCount={filteredList.filter(t => t.validated).length}
       onShowRelated={handleShowRelated}
       onShowLanguages={handleShowLanguages}
     />
@@ -793,12 +794,13 @@ const handleToggleValidated = async () => {
                   onClick={() => { setShowParamHelper(v => !v); setShowDiagramHelper(false); setShowKnowledgeHelper(false); }}
                 >＋ Parameter</button>
                 <button
-                  className="btn btn-sm btn-outline-warning"
+                  className="btn btn-sm btn-outline-primary"
                   style={{ fontSize: 11 }}
-                  title="Remove $ signs and replace format_number with comma"
+                  title="Remove $ signs, backslashes, and replace format_number with comma"
                   onClick={() => {
                     const cleaned = content
                       .replace(/\$/g, "")
+                      .replace(/\\/g, "")
                       .replace(/format_number/g, "comma");
                     handleContentChange(cleaned);
                   }}

@@ -25,6 +25,7 @@ interface TemplateMetadataBarProps {
   validated_filter?: "all" | "validated" | "unvalidated";
   currentIndex: number;
   listLength: number;
+  validatedCount: number;
 }
 
 
@@ -51,6 +52,7 @@ export function TemplateMetadataBar({
   skills,
   currentIndex,
   listLength,
+  validatedCount,
 }: TemplateMetadataBarProps) {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
@@ -172,6 +174,9 @@ export function TemplateMetadataBar({
           {listLength > 0 ? `${currentIndex + 1} / ${listLength}` : "0 / 0"}
         </span>
         <button className="btn btn-sm btn-outline-primary" onClick={onNext} disabled={currentIndex >= listLength - 1}>Next</button>
+        <span className="badge bg-secondary" style={{ fontSize: 12, fontWeight: 500 }}>
+          {validatedCount} of {listLength}
+        </span>
 
         {saveSuccess && <span style={{ color: "green", fontSize: 13 }}>Saved</span>}
         {saveError && <span style={{ color: "red", fontSize: 13 }}>{saveError}</span>}
