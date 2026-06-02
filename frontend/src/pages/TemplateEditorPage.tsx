@@ -49,14 +49,21 @@ export function TemplateEditorPage() {
   const [filteredList, setFilteredList] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [skills, setSkills] = useState<any[]>([]);
-  const [sortMode, setSortMode] = useState<"difficulty" | "skill_detail">("difficulty");
-  const sortModeRef = useRef<"difficulty" | "skill_detail">("difficulty");
+  const [sortMode, setSortMode] = useState<"difficulty" | "skill_detail">(
+    (savedSortMode as "difficulty" | "skill_detail") ?? "difficulty"
+  );
+  const sortModeRef = useRef<"difficulty" | "skill_detail">(
+    (savedSortMode as "difficulty" | "skill_detail") ?? "difficulty"
+  );
   sortModeRef.current = sortMode;
   const savedValidatedFilter = usePreferenceStore((s) =>
     s.get("template.validated_filter")
   );
   const savedLanguageFilter = usePreferenceStore((s) =>
     s.get("template.language_filter")
+  );
+  const savedSortMode = usePreferenceStore((s) =>
+    s.get("template.sort_mode")
   );
 
   const emptyMetadata = {
@@ -565,6 +572,7 @@ const handleToggleValidated = async () => {
     const newMode = sortMode === "difficulty" ? "skill_detail" : "difficulty";
     setSortMode(newMode);
     sortModeRef.current = newMode;
+    usePreferenceStore.getState().set("template.sort_mode", newMode);
     const sorted = sortTemplates(filteredList, newMode);
     setFilteredList(sorted);
     if (metadata.id) {
