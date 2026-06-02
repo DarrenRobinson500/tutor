@@ -19,6 +19,8 @@ interface TemplateMetadataBarProps {
   onToSkill: () => void;
   onNext: () => void;
   onPrev: () => void;
+  sortMode: "difficulty" | "skill_detail";
+  onToggleSort: () => void;
   skills: Array<{ id: number; description: string; parent_description?: string; root_description?: string; parent_is_root?: boolean }>;
   validated_filter?: "all" | "validated" | "unvalidated";
   currentIndex: number;
@@ -44,6 +46,8 @@ export function TemplateMetadataBar({
   saveSuccess,
   onNext,
   onPrev,
+  sortMode,
+  onToggleSort,
   skills,
   currentIndex,
   listLength,
@@ -160,6 +164,9 @@ export function TemplateMetadataBar({
 
       {/* Row 2: Action buttons */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+        <button className="btn btn-sm btn-outline-secondary" onClick={onToggleSort}>
+          Sort: {sortMode === "difficulty" ? "Difficulty" : "Skill Detail"}
+        </button>
         <button className="btn btn-sm btn-outline-primary" onClick={onPrev} disabled={currentIndex <= 0}>Previous</button>
         <span style={{ fontSize: 13, color: "#555", minWidth: 54, textAlign: "center" }}>
           {listLength > 0 ? `${currentIndex + 1} / ${listLength}` : "0 / 0"}

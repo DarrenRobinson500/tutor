@@ -567,7 +567,7 @@ class ListParameter(RandomParameter):
             lo = int(self.options.get("min", 1))
             hi = int(self.options.get("max", 10))
 
-        distinct = self.options.get("distinct", False)
+        distinct = self.options.get("distinct", False) or self.options.get("unique", False)
         if distinct:
             pool = list(range(lo, hi + 1))
             if len(pool) < count:

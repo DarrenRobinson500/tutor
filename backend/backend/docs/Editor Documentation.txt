@@ -3122,6 +3122,55 @@ question:
   solution: "{{ a }} {{ op_1 | operation }} {{ b }} {{ op_2 | operation }} {{ c }} = {{ result }}."
 
 
+── Functions: min and max ──────────────────────────────────────────
+    parameters:
+      data:
+        type: list
+        count: 3
+        min: 100
+        max: 999
+    question:
+      text: >
+        Four numbers: {{ data }}.
+      parts:
+        - text: "Which is the smallest number?"
+          answer: "{{ min(data) }}"
+          solution: >
+            **{{ min(data) }}** is the largest.
+
+        - text: "Which is the largest number?"
+          answer: "{{ max(data) }}"
+          solution: >
+            **{{ max(data) }}** is the largest.
+
+── Functions: 2nd largest ──────────────────────────────────────────
+
+    parameters:
+      a:
+        size: small
+      b:
+        size: small
+      c:
+        size: small
+      second:
+        expr: "sorted([a, b, c])[-2]"
+      large: max(a, b, c) * 100 + min (a, b, c) + second * 10
+      small: min(a, b, c) * 100 + max (a, b, c) + second * 10
+
+    validation:
+      - a != b
+      - a != c
+      - b != c
+
+    question:
+      text: "Use the digits {{ a }}, {{ b }} {{ c }} to make different 3-digit numbers."
+      parts:
+        - text: "What is the largest 3-digit number you can make using these numbers (each used once)?"
+          answer: "{{ large }}"
+          answer_format: integer
+        - text: "What is the smallest 3-digit number you can make?"
+          answer: "{{ small }}"
+
 ── Functions: mode ──────────────────────────────────────────
     parameters:
         data:

@@ -29,10 +29,29 @@ interface PreviewResponse {
   substituted_yaml: string;
 }
 
+const DIFFICULTY_ORDER: Record<string, number> = { easy: 1, medium: 2, hard: 3 };
+
+function sortTemplates(list: any[], mode: "difficulty" | "skill_detail"): any[] {
+  return [...list].sort((a, b) => {
+    const diffA = DIFFICULTY_ORDER[a.difficulty] ?? 99;
+    const diffB = DIFFICULTY_ORDER[b.difficulty] ?? 99;
+    const skillA = (a.skill_detail ?? "").toLowerCase();
+    const skillB = (b.skill_detail ?? "").toLowerCase();
+    if (mode === "difficulty") {
+      return diffA !== diffB ? diffA - diffB : skillA.localeCompare(skillB);
+    }
+    const s = skillA.localeCompare(skillB);
+    return s !== 0 ? s : diffA - diffB;
+  });
+}
+
 export function TemplateEditorPage() {
   const [filteredList, setFilteredList] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [skills, setSkills] = useState<any[]>([]);
+  const [sortMode, setSortMode] = useState<"difficulty" | "skill_detail">("difficulty");
+  const sortModeRef = useRef<"difficulty" | "skill_detail">("difficulty");
+  sortModeRef.current = sortMode;
   const savedValidatedFilter = usePreferenceStore((s) =>
     s.get("template.validated_filter")
   );
@@ -213,8 +232,9 @@ const handleToggleValidated = async () => {
       });
       const listRes = await apiFetch(`/api/templates/filtered/?${queryParams.toString()}`);
       const list = await listRes.json();
-      setFilteredList(list);
-      const idx = list.findIndex((t: any) => t.id === tpl.id);
+      const sorted = sortTemplates(list, sortModeRef.current);
+      setFilteredList(sorted);
+      const idx = sorted.findIndex((t: any) => t.id === tpl.id);
       setCurrentIndex(idx >= 0 ? idx : 0);
 
       const res = await apiFetch("/api/templates/preview/", {
@@ -252,10 +272,11 @@ const handleToggleValidated = async () => {
       });
       const listRes = await apiFetch(`/api/templates/filtered/?${qp.toString()}`);
       const list = await listRes.json();
-      setFilteredList(list);
+      const sorted = sortTemplates(list, sortModeRef.current);
+      setFilteredList(sorted);
       setCurrentIndex(0);
-      if (list.length > 0) {
-        navigate(`/templates/${list[0].id}`, { replace: true });
+      if (sorted.length > 0) {
+        navigate(`/templates/${sorted[0].id}`, { replace: true });
       }
     }
     loadFiltered();
@@ -529,13 +550,26 @@ const handleToggleValidated = async () => {
 
       const res = await apiFetch(`/api/templates/filtered/?${params.toString()}`);
       const list = await res.json();
+      const sorted = sortTemplates(list, sortModeRef.current);
 
-      setFilteredList(list);
+      setFilteredList(sorted);
       setCurrentIndex(0);
 
-      if (list.length > 0) {
-        navigate(`/templates/${list[0].id}`);
+      if (sorted.length > 0) {
+        navigate(`/templates/${sorted[0].id}`);
       }
+    }
+  };
+
+  const handleToggleSort = () => {
+    const newMode = sortMode === "difficulty" ? "skill_detail" : "difficulty";
+    setSortMode(newMode);
+    sortModeRef.current = newMode;
+    const sorted = sortTemplates(filteredList, newMode);
+    setFilteredList(sorted);
+    if (metadata.id) {
+      const idx = sorted.findIndex((t: any) => t.id === metadata.id);
+      setCurrentIndex(idx >= 0 ? idx : 0);
     }
   };
 
@@ -712,6 +746,8 @@ const handleToggleValidated = async () => {
       saveSuccess={saveSuccess}
       onNext={goNext}
       onPrev={goPrev}
+      sortMode={sortMode}
+      onToggleSort={handleToggleSort}
       skills={skills}
       currentIndex={currentIndex}
       listLength={filteredList.length}
