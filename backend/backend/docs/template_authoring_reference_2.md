@@ -80,6 +80,150 @@ hyp:
   expr: (a**2 + b**2) ** 0.5
 ```
 
+### Prefer typed parameters and pipes over scenario enumeration
+
+When the system can generate a value of the right type automatically, use a
+**typed parameter** rather than a `scenario` table that manually lists every
+possible value. Typed parameters produce more varied questions and are
+significantly shorter to write.
+
+The engine understands several numeric types and can convert between them
+using pipes in question text and solutions. This means you do not need to
+store fraction, decimal and percentage forms as separate scenario columns —
+declare the value once and pipe it to the form you need.
+
+#### Available typed parameter types
+
+| Type | Declaration | What the engine generates |
+|---|---|---|
+| `fraction` | `type: fraction` | A rational number (e.g. `1/4`, `2/3`, `3/8`) |
+| `integer` | `min: N, max: M` | A whole number in the given range |
+| `decimal` | `min: N, max: M, step: 0.1` | A decimal in the given range |
+| `percent` | `min: N, max: M, step: 5` | A percentage value |
+
+Use `size: small` on `fraction` to restrict to simple fractions (halves,
+thirds, quarters, fifths, eighths, tenths). Use `size: medium` for slightly
+larger denominators.
+
+#### Available conversion pipes
+
+| Pipe | Input → Output | Example |
+|---|---|---|
+| `\| percent` | fraction → percentage string | `1/4` → `25%` |
+| `\| fraction` | decimal/percent → fraction string | `0.25` → `1/4` |
+| `\| decimal` | fraction/percent → decimal | `1/4` → `0.25` |
+
+Pipes work in `text:`, `solution:`, `choices:` text, and diagram labels.
+They do **not** belong in `answer:` fields (use the raw parameter there).
+
+#### When to use typed parameters vs scenario
+
+Use a **typed parameter** when:
+- The values are mathematically interchangeable (any fraction, any integer
+  in a range)
+- The question logic does not depend on specific hand-chosen values
+- Conversion between forms (fraction ↔ decimal ↔ percent) is all that varies
+
+Use a **`scenario` table** when:
+- Specific combinations of values are required (e.g. exact trig values,
+  named real-world contexts, word-problem stories)
+- The difficulty or question wording changes substantially across rows
+- Values cannot be generated from a type alone (e.g. `"triangle"` vs
+  `"rectangle"` context labels)
+
+#### Example — prefer typed over manual enumeration
+
+```yaml
+# ✗ Don't do this — manually enumerates fraction/decimal/percent triples
+parameters:
+  scenario:
+    type: scenario
+    rows:
+      - [50, 20, 10, "1/2", 0.5]
+      - [25, 40, 10, "1/4", 0.25]
+      - [75, 80, 60, "3/4", 0.75]
+      - [50, 100, 50, "1/2", 0.5]
+  pct:    scenario[0]
+  total:  scenario[1]
+  result: scenario[2]
+  frac:   scenario[3]
+  dec:    scenario[4]
+question:
+  text: "Find ${{ pct }}\%$ of ${{ total }}$."
+  parts:
+    - text: "${{ pct }}\%$ is the same as which fraction?"
+      choices:
+        - text: "${{ frac }}$"
+          correct: true
+        - text: "$\\dfrac{ {{pct}} }{10}$"
+          correct: false
+        - text: "$\\dfrac{1}{pct}$"
+          correct: false
+      solution: >
+        ${{ pct }}\% = {{ frac }} = {{ dec }}$
+    - text: "Calculate ${{ pct }}\%$ of ${{ total }}$."
+      answer: "{{ result }}"
+      answer_format: integer
+      solution: >
+        ${{ frac }} \times {{ total }} = {{ result }}$
+
+# ✓ Do this — declare once, pipe to the form needed
+parameters:
+  a:
+    type: fraction
+    size: small
+  b:
+    min: 10
+    max: 200
+    step: 10
+question:
+  text: "Find {{ a | percent }} of ${{ b }}$."
+  parts:
+    - text: "Express {{ a | percent }} as a fraction."
+      answer: "{{ a }}"
+      answer_format: fraction
+    - text: "Calculate {{ a | fraction }} of ${{ b }}$."
+      answer: "{{ a * b }}"
+      answer_format: integer
+      solution: >
+        ${{ a | fraction }} \times {{ b }} = {{ a * b }}$
+```
+
+The second version generates far more varied questions (any simple fraction,
+any multiple of 10 between 10 and 200) without any manual row listing.
+
+#### Mixing typed parameters with scenario
+
+When a question needs both a typed numeric value and a fixed context, use a
+`scenario` for the context and a typed parameter for the number:
+
+```yaml
+parameters:
+  scenario:
+    type: scenario
+    rows:
+      - ["apples", "a fruit stall"]
+      - ["students", "a class"]
+      - ["books", "a library shelf"]
+  noun:    scenario[0]
+  context: scenario[1]
+  a:
+    type: fraction
+    size: small
+  n:
+    min: 20
+    max: 100
+    step: 5
+question:
+  text: >
+    {{ context | capitalize }} has ${{ n }}$ {{ noun }}.
+    {{ a | percent }} are on sale.
+  parts:
+    - text: "How many {{ noun }} are on sale?"
+      answer: "{{ a * n }}"
+      answer_format: integer
+```
+
 ---
 
 ## Answer fields
@@ -441,6 +585,9 @@ Common flags to watch for:
 - [ ] 3 templates per assessable skill detail (easy, medium, hard)
 - [ ] Unassessable skill details noted in a comment, no templates produced
 - [ ] `scenario` used everywhere instead of `choice` + `validation`
+- [ ] Typed parameters (`type: fraction`, range integers, etc.) used where values are mathematically interchangeable — not manual scenario rows
+- [ ] Conversion pipes (`| percent`, `| fraction`, `| decimal`) used in question text and solutions instead of storing redundant columns in scenario rows
+- [ ] `scenario` reserved for fixed context labels, word-problem stories, and hand-chosen value combinations
 - [ ] `answer_format:` used instead of pipe on answer + `format_instruction`
 - [ ] Pipes kept in `solution:` text
 - [ ] No open-text prose `answer:` fields — all qualitative questions use `choices:`

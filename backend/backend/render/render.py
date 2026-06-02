@@ -22,12 +22,38 @@ _DEFAULT_FORMAT_INSTRUCTIONS = {
     "proper_fraction":      "Enter as a mixed number, e.g. 2 1/3",
     "scientific_notation":  "Enter in scientific notation, e.g. 3.2 × 10^3",
     "log":                  "Enter your answer in the form: log_2(10)",
+    "comma_0":              "Give your answer as a whole number with commas, e.g. 1,234",
+    "comma_1":              "Give your answer to 1 decimal place with commas, e.g. 1,234.5",
+    "comma_2":              "Give your answer to 2 decimal places with commas, e.g. 1,234.56",
+    "comma_3":              "Give your answer to 3 decimal places with commas, e.g. 1,234.567",
+    "percent_0":            "Enter as a whole-number percentage, e.g. 25%",
+    "percent_1":            "Enter as a percentage to 1 decimal place, e.g. 12.5%",
+    "percent_2":            "Enter as a percentage to 2 decimal places, e.g. 12.50%",
+    "percent_3":            "Enter as a percentage to 3 decimal places, e.g. 12.500%",
 }
 
 # Match {{{...}}} (LaTeX-brace-wrapped expression) before {{...}} (plain expression).
 # Group 1 = triple-brace expression (result wrapped in { } for LaTeX)
 # Group 2 = double-brace expression (result substituted as-is)
 EXPR_PATTERN = re.compile(r"\{\{\{((?:[^}]|\}(?!\}))*)\}\}\}|\{\{([^{].*?)\}\}")
+
+# Inline math $...$ and bare fraction detection for auto-\frac conversion
+_MATH_INLINE_RE = re.compile(r'\$([^$\n]+)\$')
+_BARE_FRAC_RE   = re.compile(r'(-?\d+)/(\d+)')
+
+
+def _auto_frac_in_math(text: str) -> str:
+    """Within inline $...$ math blocks, convert bare n/d strings to \\frac{n}{d}.
+
+    Applies only to digit-only numerator/denominator pairs so variable expressions
+    (e.g. $a/b$) are left untouched. Already-formatted \\frac{}{} strings contain
+    no bare slash between digits and are never affected.
+    """
+    def _convert(m):
+        inner = _BARE_FRAC_RE.sub(r'\\frac{\1}{\2}', m.group(1))
+        return '$' + inner + '$'
+    return _MATH_INLINE_RE.sub(_convert, text)
+
 
 # Jinja2-style block tags
 _IF_TAG     = re.compile(r'\{%-?\s*if\s+(.*?)\s*-?%\}', re.DOTALL)
@@ -446,6 +472,9 @@ class Render:
         # Wrap negative or multi-digit values after ^ or _ in LaTeX braces.
         # e.g. $x^-4$ → $x^{-4}$, $x^12$ → $x^{12}$. Skip if already braced.
         substituted = re.sub(r'(\^|_)(?!\{)(-\d+|\d{2,})', r'\1{\2}', substituted)
+        # In display mode, auto-convert bare n/d fraction strings inside $...$ to \frac{n}{d}.
+        if formatter == "formatted":
+            substituted = _auto_frac_in_math(substituted)
         return substituted
 
 

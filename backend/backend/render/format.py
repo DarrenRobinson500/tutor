@@ -138,6 +138,39 @@ def _decimal_alias(dp: int):
 for _i in range(0, 6):
     FORMAT_REGISTRY[f"decimal_{_i}"] = _decimal_alias(_i)
 
+
+def _comma_alias(dp: int):
+    class _Fmt(FormatType):
+        name = f"comma_{dp}"
+        def format(self, value, _dp=dp):
+            if isinstance(value, str) and "/" in value:
+                from fractions import Fraction as _F
+                value = float(_F(value))
+            if _dp == 0:
+                return f"{int(round(float(value))):,}"
+            return f"{float(value):,.{_dp}f}"
+    _Fmt.__name__ = f"Comma{dp}Format"
+    return _Fmt
+
+for _i in range(0, 6):
+    FORMAT_REGISTRY[f"comma_{_i}"] = _comma_alias(_i)
+
+
+def _percent_alias(dp: int):
+    class _Fmt(FormatType):
+        name = f"percent_{dp}"
+        def format(self, value, _dp=dp):
+            if isinstance(value, str) and "/" in value:
+                from fractions import Fraction as _F
+                value = float(_F(value))
+            return f"{float(value) * 100:.{_dp}f}%"
+    _Fmt.__name__ = f"Percent{dp}Format"
+    return _Fmt
+
+for _i in range(0, 6):
+    FORMAT_REGISTRY[f"percent_{_i}"] = _percent_alias(_i)
+
+
 @register_format_type
 class DollarFormat(FormatType):
     name = "dollar"
