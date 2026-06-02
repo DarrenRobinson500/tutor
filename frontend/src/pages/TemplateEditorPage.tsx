@@ -46,6 +46,15 @@ function sortTemplates(list: any[], mode: "difficulty" | "skill_detail"): any[] 
 }
 
 export function TemplateEditorPage() {
+  const savedValidatedFilter = usePreferenceStore((s) =>
+    s.get("template.validated_filter")
+  );
+  const savedLanguageFilter = usePreferenceStore((s) =>
+    s.get("template.language_filter")
+  );
+  const savedSortMode = usePreferenceStore((s) =>
+    s.get("template.sort_mode")
+  );
   const [filteredList, setFilteredList] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [skills, setSkills] = useState<any[]>([]);
@@ -56,15 +65,6 @@ export function TemplateEditorPage() {
     (savedSortMode as "difficulty" | "skill_detail") ?? "difficulty"
   );
   sortModeRef.current = sortMode;
-  const savedValidatedFilter = usePreferenceStore((s) =>
-    s.get("template.validated_filter")
-  );
-  const savedLanguageFilter = usePreferenceStore((s) =>
-    s.get("template.language_filter")
-  );
-  const savedSortMode = usePreferenceStore((s) =>
-    s.get("template.sort_mode")
-  );
 
   const emptyMetadata = {
     id: null,
