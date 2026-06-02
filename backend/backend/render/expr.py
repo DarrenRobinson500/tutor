@@ -177,6 +177,16 @@ class ExpressionNode:
         if isinstance(param, (ExprParameter, CaseParameter)):
             return v
 
+        # PercentParameter and DecimalParameter store their numeric value as a
+        # decimal string (e.g. "0.1", "2.50") purely for formatting purposes.
+        # Convert to float so arithmetic like `pct * length` works correctly
+        # rather than causing Python string repetition ("0.1" * 90 → "0.10.1…").
+        if isinstance(param, (PercentParameter, DecimalParameter)):
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                pass
+
         # Decimal strings: keep for round_dp / decimal_digit precision
         if re.fullmatch(r'-?\d+\.\d+', v.strip()):
             return v
