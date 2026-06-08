@@ -54,7 +54,7 @@ def _send_tutor_welcome_email(tutor):
     from django.core.mail import EmailMultiAlternatives, send_mail
     from django.conf import settings
 
-    site = (getattr(settings, "FRONTEND_URL", "") or "").rstrip("/") or "https://subject-matter.com.au"
+    site = (getattr(settings, "FRONTEND_URL", "") or "").rstrip("/") or "https://www.subject-matter.com.au"
     domain = site.replace("https://", "").replace("http://", "")
 
     plain = (
@@ -109,7 +109,7 @@ def _send_parent_welcome_emails(parent, children_data):
     from django.core.mail import EmailMultiAlternatives, send_mail
     from django.conf import settings
 
-    site = (getattr(settings, "FRONTEND_URL", "") or "").rstrip("/") or "https://subject-matter.com.au"
+    site = (getattr(settings, "FRONTEND_URL", "") or "").rstrip("/") or "https://www.subject-matter.com.au"
 
     child_first_names = [c.get("first_name", "") for c in children_data if c.get("first_name")]
     if len(child_first_names) == 0:
@@ -329,6 +329,10 @@ class AuthViewSet(viewsets.ViewSet):
             print("Login: invalid credentials")
             return Response({"error": "Invalid credentials"}, status=400)
 
+        if user.is_superuser and getattr(user, 'role', None) != 'admin':
+            user.role = 'admin'
+            user.save(update_fields=['role'])
+
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
         edit_syllabus = False
@@ -391,6 +395,8 @@ class AuthViewSet(viewsets.ViewSet):
             last_name=parent_last,
             role="parent",
         )
+        from .models import ParentProfile
+        ParentProfile.objects.create(user=parent_user, mobile=parent_mobile or None)
 
         child_user = User.objects.create(
             username=child_email,
@@ -775,6 +781,7 @@ class AuthViewSet(viewsets.ViewSet):
                 "id": child.id,
                 "first_name": child.first_name,
                 "last_name": child.last_name,
+                "username": child.username,
                 "email": child.email,
                 "year_level": year_level,
                 "school_name": profile.school_name if profile else None,
@@ -795,12 +802,19 @@ class AuthViewSet(viewsets.ViewSet):
                 target=_send_parent_welcome_emails, args=(user, children_data), daemon=True
             ).start()
 
+        from .models import ParentProfile
+        try:
+            parent_mobile = ParentProfile.objects.get(user=user).mobile or None
+        except ParentProfile.DoesNotExist:
+            parent_mobile = None
+
         return Response({
             "parent": {
                 "id": user.id,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "email": user.email,
+                "mobile": parent_mobile,
             },
             "children": children_data,
         })
@@ -1220,6 +1234,12 @@ class QuestionViewSet(viewsets.ViewSet):
             return Response({"error": "Student not found"}, status=404)
         print("Found student")
 
+        # Ownership check: a parent may only record answers for their own children
+        if request.user.role == 'parent':
+            from .models import ParentChild
+            if not ParentChild.objects.filter(parent=request.user, child=student).exists():
+                return Response({"error": "Forbidden"}, status=403)
+
         # Validate template
         try:
             template = Template.objects.get(id=template_id)
@@ -1439,6 +1459,11 @@ class TemplateViewSet(viewsets.ModelViewSet):
     queryset = Template.objects.all().order_by("-id")
     serializer_class = TemplateSerializer
     permission_classes = [AllowAny]
+
+    def get_permissions(self):
+        if self.request.method in ('DELETE', 'POST', 'PUT', 'PATCH'):
+            return [IsAuthenticated()]
+        return [AllowAny()]
 
     def list(self, request, *args, **kwargs):
         import yaml, re as _re
@@ -1789,6 +1814,9 @@ class TemplateViewSet(viewsets.ModelViewSet):
                 if first_error is None:
                     first_error = f"DB error: {e}"
                 errors += 1
+
+        import backend.cache as _cache
+        _cache.MATRIX_CACHE = None
 
         result = {"created": created, "skipped": skipped, "errors": errors}
         if first_error:
@@ -2725,10 +2753,30 @@ class TutorViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
+    def list(self, request, *args, **kwargs):
+        from .models import TutorProfile
+        tutors = self.get_queryset()
+        profiles = {p.tutor_id: p for p in TutorProfile.objects.filter(tutor__in=tutors)}
+        data = []
+        for t in tutors:
+            p = profiles.get(t.id)
+            data.append({
+                "id": t.id,
+                "first_name": t.first_name,
+                "last_name": t.last_name,
+                "email": t.email,
+                "username": t.username,
+                "role": t.role,
+                "assisted_assessment": p.assisted_assessment if p else False,
+            })
+        return Response(data)
+
     @action(detail=True, methods=["get"])
     def home(self, request, pk=None):
         tutor = self.get_object()
         profile = tutor.get_tutor_profile()
+        if not profile:
+            return Response({"error": "Profile not found"}, status=404)
         return Response(profile.to_dict())
 
     @action(detail=True, methods=["get"])
@@ -2821,6 +2869,16 @@ class TutorViewSet(viewsets.ModelViewSet):
         profile.looking_for_students = not profile.looking_for_students
         profile.save()
         return Response({"looking_for_students": profile.looking_for_students})
+
+    @action(detail=True, methods=["post"])
+    def toggle_assisted_assessment(self, request, pk=None):
+        if getattr(request.user, 'role', '') != 'admin':
+            return Response({'error': 'Forbidden'}, status=403)
+        tutor = self.get_object()
+        profile = tutor.get_tutor_profile()
+        profile.assisted_assessment = not profile.assisted_assessment
+        profile.save()
+        return Response({"assisted_assessment": profile.assisted_assessment})
 
     @action(detail=False, methods=["get"], url_path="available")
     def available(self, request):
@@ -3005,9 +3063,19 @@ class TutorViewSet(viewsets.ModelViewSet):
     def edit(self, request, pk=None):
         print("Tutor edit")
         user = self.get_object()
+
+        if request.user.role == 'tutor' and request.user.pk != user.pk:
+            return Response({"error": "You can only edit your own profile"}, status=403)
+
         profile = user.get_tutor_profile()
 
         fields = request.data.get("fields", {})
+        if isinstance(fields, str):
+            import json as _json
+            try:
+                fields = _json.loads(fields)
+            except (ValueError, TypeError):
+                fields = {}
         print("Tutor edit (fields)", fields)
 
         # Update User fields
@@ -3349,16 +3417,17 @@ class TutorViewSet(viewsets.ModelViewSet):
 def _get_parent_mobile(student):
     """Return a mobile number to contact the parent/guardian for a student.
 
-    Priority: parent User linked via ParentChild → StudentProfile.mobile fallback.
-    Parents don't have a dedicated profile model, so we fall back to the student's
-    contact mobile (which for minors is typically the parent's number).
+    Priority: ParentProfile.mobile → StudentProfile.mobile fallback.
     """
-    from .models import ParentChild, StudentProfile
+    from .models import ParentChild, StudentProfile, ParentProfile
     parent_link = ParentChild.objects.filter(child=student).select_related('parent').first()
     if parent_link:
-        # Check if parent has a student profile (unlikely) or use student's mobile
-        # Parents don't have a ParentProfile, so fall through to student mobile
-        pass
+        try:
+            pp = ParentProfile.objects.get(user=parent_link.parent)
+            if pp.mobile:
+                return pp.mobile
+        except ParentProfile.DoesNotExist:
+            pass
 
     try:
         sp = StudentProfile.objects.get(user=student)
@@ -3422,8 +3491,8 @@ class TutorJobViewSet(viewsets.ViewSet):
                 'tutor_id': request.user.id,
                 'booking_type': 'adhoc',
                 'booking_id': b.id,
-                'booking_date': b.start_datetime.date().isoformat(),
-                'booking_time': b.start_datetime.strftime('%H:%M'),
+                'booking_date': timezone.localtime(b.start_datetime).date().isoformat(),
+                'booking_time': timezone.localtime(b.start_datetime).strftime('%H:%M'),
             })
 
         unconfirmed_weekly = (
@@ -4446,7 +4515,7 @@ class FocusAreaViewSet(viewsets.ViewSet):
 class StudentViewSet(viewsets.ModelViewSet):
     queryset = User.objects.filter(role="student").select_related("student_profile")
     serializer_class = StudentSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def list(self, request, *args, **kwargs):
         users = self.get_queryset().prefetch_related("tutors__tutor")
@@ -5536,6 +5605,189 @@ def admin_variables(request):
     from django.core.cache import cache
     cache.delete(f'global_setting_{key}')
     GlobalSetting.set(key, str(value))
+    return Response({'ok': True})
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_sms_job(request, pk):
+    from .models import SMSSendJob
+    try:
+        job = SMSSendJob.objects.get(pk=pk, conversation__tutor=request.user)
+    except SMSSendJob.DoesNotExist:
+        return Response({'error': 'Not found'}, status=404)
+    job.cancelled = True
+    job.save(update_fields=['cancelled'])
+    return Response({'ok': True})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def assisted_assessment_slots(request):
+    """Return available time slots across all tutors with assisted_assessment=True."""
+    from .models import TutorProfile, TutorAvailability, BookingWeekly
+
+    WEEKDAY_MAP = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    DAY_FULL    = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    SESSION_MINS = 60
+
+    profiles = TutorProfile.objects.filter(
+        assisted_assessment=True
+    ).select_related('tutor')
+
+    def to_minutes(t):
+        return t.hour * 60 + t.minute
+
+    def overlaps(s, e, bs_t, be_t):
+        return s < to_minutes(be_t) and e > to_minutes(bs_t)
+
+    # key → (weekday, start_time, end_time); value → first tutor_id found for that slot
+    seen: dict = {}
+    for profile in profiles:
+        tutor = profile.tutor
+        bookings = list(
+            BookingWeekly.objects.filter(tutor=tutor)
+            .values_list('weekday', 'start_time', 'end_time')
+        )
+        for av in TutorAvailability.objects.filter(tutor=tutor).order_by('weekday', 'start_time'):
+            cursor = to_minutes(av.start_time)
+            window_end = to_minutes(av.end_time)
+            while cursor + SESSION_MINS <= window_end:
+                slot_end = cursor + SESSION_MINS
+                blocked = any(
+                    av.weekday == wd and overlaps(cursor, slot_end, bs, be)
+                    for wd, bs, be in bookings
+                )
+                if not blocked:
+                    sh, sm = divmod(cursor, 60)
+                    eh, em = divmod(slot_end, 60)
+                    key = (av.weekday, f'{sh:02d}:{sm:02d}')
+                    if key not in seen:
+                        seen[key] = {
+                            'tutor_id':   tutor.id,
+                            'tutor_name': tutor.get_full_name() or tutor.first_name,
+                            'weekday':    av.weekday,
+                            'day':        WEEKDAY_MAP[av.weekday],
+                            'day_full':   DAY_FULL[av.weekday],
+                            'start_time': f'{sh:02d}:{sm:02d}',
+                            'end_time':   f'{eh:02d}:{em:02d}',
+                        }
+                cursor += SESSION_MINS
+
+    slots = sorted(seen.values(), key=lambda s: (s['weekday'], s['start_time']))
+    return Response(slots)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def assisted_assessment_book(request):
+    """Queue SMS confirmations to tutor and parent for an assisted assessment booking."""
+    from .models import TutorProfile, StudentProfile, ParentChild, SMSSendJob
+    from .models import get_or_create_conversation
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+
+    User = get_user_model()
+    parent = request.user
+    if getattr(parent, 'role', '') != 'parent':
+        return Response({'error': 'Forbidden'}, status=403)
+
+    child_id   = request.data.get('child_id')
+    tutor_id   = request.data.get('tutor_id')
+    day_full   = request.data.get('day_full')
+    date_str   = request.data.get('date')
+    start_time = request.data.get('start_time')
+    end_time   = request.data.get('end_time')
+
+    if not all([child_id, tutor_id, day_full, date_str, start_time, end_time]):
+        return Response({'error': 'Missing fields'}, status=400)
+
+    if not ParentChild.objects.filter(parent=parent, child_id=child_id).exists():
+        return Response({'error': 'Forbidden'}, status=403)
+
+    try:
+        child = User.objects.get(pk=child_id)
+        tutor = User.objects.get(pk=tutor_id)
+    except User.DoesNotExist:
+        return Response({'error': 'Not found'}, status=404)
+
+    from .models import ParentProfile
+    try:
+        parent_mobile = ParentProfile.objects.get(user=parent).mobile or None
+    except ParentProfile.DoesNotExist:
+        parent_mobile = None
+
+    if not parent_mobile:
+        return Response({'error': 'No contact number on file. Please update your details.'}, status=400)
+
+    try:
+        tutor_profile = TutorProfile.objects.get(tutor=tutor)
+        tutor_mobile = tutor_profile.mobile
+    except TutorProfile.DoesNotExist:
+        tutor_mobile = None
+
+    def fmt(t_str):
+        h, m = map(int, t_str.split(':'))
+        p = 'am' if h < 12 else 'pm'
+        h12 = h % 12 or 12
+        return f"{h12}:{m:02d}{p}" if m else f"{h12}{p}"
+
+    time_display = f"{fmt(start_time)} – {fmt(end_time)}"
+    conversation = get_or_create_conversation(tutor=tutor, student=child)
+
+    if tutor_mobile:
+        SMSSendJob.objects.create(
+            conversation=conversation,
+            to_number=tutor_mobile,
+            body=(
+                f"Hi {tutor.first_name}, {parent.get_full_name()} has booked an Assisted Assessment "
+                f"for {child.first_name} on {day_full} at {time_display}. "
+                f"Parent contact: {parent_mobile}. Please call {parent.first_name} to confirm details."
+            ),
+            scheduled_for=timezone.now(),
+        )
+
+    SMSSendJob.objects.create(
+        conversation=conversation,
+        to_number=parent_mobile,
+        body=(
+            f"Hi {parent.first_name}, your Assisted Assessment booking for {child.first_name} "
+            f"with {tutor.first_name} is confirmed for {day_full} at {time_display}. "
+            f"We'll be in touch to confirm the details."
+        ),
+        scheduled_for=timezone.now(),
+    )
+
+    from datetime import datetime, timedelta
+    import zoneinfo
+    from django.utils.timezone import make_aware
+    tz = zoneinfo.ZoneInfo('Australia/Sydney')
+    start_dt = make_aware(datetime.strptime(f"{date_str} {start_time}", "%Y-%m-%d %H:%M"), tz)
+    end_dt   = start_dt + timedelta(minutes=30)
+    from .models import BookingAdhoc
+    booking = BookingAdhoc.objects.create(
+        tutor=tutor,
+        student=child,
+        start_datetime=start_dt,
+        end_datetime=end_dt,
+        confirmed=False,
+        status='pending',
+        is_assisted_assessment=True,
+        created_by=parent,
+    )
+
+    from .cache import invalidate_adhoc_bookings
+    invalidate_adhoc_bookings(tutor.id)
+
+    from .models import TutorJob
+    TutorJob.objects.get_or_create(
+        tutor=tutor,
+        student=child,
+        job_type='confirm_appointment',
+        booking_ref=f"adhoc_{booking.id}_confirm",
+        defaults={'expires_at': start_dt},
+    )
+
     return Response({'ok': True})
 
 
@@ -6821,7 +7073,7 @@ def _send_student_welcome_email(student, plaintext_password, teacher_class, teac
     from django.core.mail import EmailMultiAlternatives, send_mail
     from django.conf import settings as _settings
 
-    login_url = (getattr(_settings, 'FRONTEND_URL', 'https://subject-matter.com.au') or '').rstrip('/') + '/login'
+    login_url = (getattr(_settings, 'FRONTEND_URL', 'https://www.subject-matter.com.au') or '').rstrip('/') + '/login'
     teacher_name = teacher.get_full_name()
     subject = f"Your Subject Matter login for {teacher_class.name}"
 

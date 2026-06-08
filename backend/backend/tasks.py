@@ -83,7 +83,7 @@ def create_post_session_jobs():
     adhoc_qs = BookingAdhoc.objects.filter(
         end_datetime__gt=window_start,
         end_datetime__lte=now,
-    ).select_related('tutor', 'student')
+    ).exclude(status='pending').select_related('tutor', 'student')
 
     for booking in adhoc_qs:
         ref = f"adhoc_{booking.id}"
@@ -195,7 +195,7 @@ def flag_overdue_tutor_reviews():
             subject=job.tutor,
             notes=(
                 f"{tag} — {job.tutor.get_full_name()} has not completed their post-tuition review "
-                f"for {student_name} (due {job.triggered_at.strftime('%-d %b %Y')})."
+                f"for {student_name} (due {job.triggered_at.day} {job.triggered_at.strftime('%b %Y')})."
             ),
         )
         print(f"FLAG_OVERDUE_REVIEWS: created AdminJob for tutor={job.tutor_id} TutorJob={job.id}")
@@ -219,8 +219,11 @@ def send_session_reminders():
 
     def _fmt_dt(dt):
         local = dt.astimezone(local_tz)
-        day  = local.strftime("%a %-d %b")
-        time = local.strftime("%-I:%M%p").lower()
+        # Use %d/%I and strip leading zeros manually for cross-platform compat
+        # (%-d / %-I are Linux-only; %#d / %#I are Windows-only)
+        day  = f"{local.strftime('%a')} {local.day} {local.strftime('%b')}"
+        hour = local.hour % 12 or 12
+        time = f"{hour}:{local.strftime('%M%p')}".lower()
         return f"{day} {time}"
 
     def _queue_reminder(student, tutor, start_dt, msg_key):

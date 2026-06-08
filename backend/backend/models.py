@@ -67,10 +67,16 @@ class User(AbstractUser):
             return f"{full_name} ({self.username})"
         return self.username
 
+    def save(self, *args, **kwargs):
+        if self.is_superuser and self.role != 'admin':
+            self.role = 'admin'
+        super().save(*args, **kwargs)
+
     def get_student_profile(self):
-        if self.role == "student":
-            profile = StudentProfile.objects.filter(user=self).first()
-        if not profile and self.role == "student":
+        if self.role != "student":
+            return None
+        profile = StudentProfile.objects.filter(user=self).first()
+        if not profile:
             profile = StudentProfile.objects.create(user=self)
         return profile
 
@@ -81,8 +87,11 @@ class User(AbstractUser):
             if link: return link.tutor
         if self.role == "parent":
             child_link = ParentChild.objects.filter(parent=self).first()
-            if child_link: tutor_link = TutorStudent.objects.filter(student=child_link.child).first()
-            if tutor_link: return TutorProfile.objects.filter(tutor=tutor_link.tutor).first()
+            tutor_link = None
+            if child_link:
+                tutor_link = TutorStudent.objects.filter(student=child_link.child).first()
+            if tutor_link:
+                return tutor_link.tutor
         return None
 
     def get_tutor_profile(user):
@@ -386,17 +395,18 @@ class User(AbstractUser):
             ).select_related("student")
         )
 
-        # Group appointments by date for fast lookup
+        # Group appointments by local date for fast lookup
         appointments_by_date = defaultdict(list)
         for appt in appointments:
-            date_key = appt.start_datetime.date()
+            date_key = timezone.localtime(appt.start_datetime).date()
             appointments_by_date[date_key].append(appt)
 
         appt_start_times = defaultdict(set)
 
         for appt in appointments:
-            date_key = appt.start_datetime.date()
-            start_time = appt.start_datetime.time().replace(second=0, microsecond=0)
+            local_start = timezone.localtime(appt.start_datetime)
+            date_key = local_start.date()
+            start_time = local_start.time().replace(second=0, microsecond=0)
             appt_start_times[date_key].add(start_time)
 
         # ── 2. Fetch blocked days for the week
@@ -553,6 +563,7 @@ class BookingAdhoc(models.Model):
     end_datetime = models.DateTimeField()
     confirmed = models.BooleanField(default=False)
     status = models.CharField(max_length=20)
+    is_assisted_assessment = models.BooleanField(default=False)
     created_by = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="appointments_created")
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -563,7 +574,7 @@ class BookingAdhoc(models.Model):
         return self.start_datetime > timezone.now() + timedelta(hours=notice_hours)
 
     def duration(self):
-        return (self.end_datetime.hour * 60 + self.end_datetime.minute) - (self.start_datetime.hour * 60 + self.start_datetime.minute)
+        return int((self.end_datetime - self.start_datetime).total_seconds() / 60)
 
     def to_dict(self):
         # Localise datetimes
@@ -585,6 +596,7 @@ class BookingAdhoc(models.Model):
             "confirmed": self.confirmed,
             "duration_minutes": duration_minutes,
             "booking_type": "adhoc",
+            "is_assisted_assessment": self.is_assisted_assessment,
             "student_can_edit": self.student_can_edit(),
             "tutor_name": self.tutor.get_full_name() if self.tutor else None,
             "tutor_id": self.tutor.id if self.tutor else None,
@@ -597,6 +609,12 @@ class ParentChild(models.Model):
 
     class Meta:
         unique_together = ("parent", "child")
+
+class ParentProfile(models.Model):
+    user   = models.OneToOneField(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="parent_profile")
+    mobile = models.CharField(max_length=20, blank=True, null=True)
+
+    def __str__(self): return f"ParentProfile {self.user}"
 
 class TutorStudent(models.Model):
     tutor = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="students")
@@ -713,6 +731,7 @@ class TutorProfile(models.Model):
     # Availability
     looking_for_students = models.BooleanField(default=True)
     edit_syllabus = models.BooleanField(default=False)
+    assisted_assessment = models.BooleanField(default=False)
 
     # Stripe Connect
     stripe_account_id = models.CharField(max_length=200, blank=True, null=True)
@@ -977,6 +996,7 @@ class TutorJob(models.Model):
         ('payment_overdue_7', 'Payment Overdue — 7 Days'),
         ('payment_overdue_14', 'Payment Overdue — 14 Days — Sessions Paused'),
         ('confirm_payment_receipt', 'Confirm Payment Receipt'),
+        ('confirm_appointment', 'Confirm Appointment'),
     ]
     tutor = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tutor_jobs')
     student = models.ForeignKey(django_settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='student_jobs')

@@ -154,7 +154,7 @@ function App() {
         <Route path="/competitions" element={<CompetitionPage />} />
         {/* Short aliases */}
         <Route path="/dist" element={<Navigate to="/distributors" replace />} />
-        <Route path="/tut" element={<Navigate to="/tutors" replace />} />
+        <Route path="/tut" element={<Navigate to="/register/tutor" replace />} />
         <Route path="/comp" element={<HtmlRedirect to="/market-makers.html" />} />
         <Route path="/admin" element={<ProtectedRoute><AdminHomePage /></ProtectedRoute>} />
         <Route path="/admin/feedback" element={<ProtectedRoute><AdminParentFeedbackPage /></ProtectedRoute>} />

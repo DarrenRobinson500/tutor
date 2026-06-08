@@ -164,6 +164,8 @@ def _fix_parameters_indentation(content: str) -> str:
     """
     try:
         parsed = load_template_yaml(content)
+        if not isinstance(parsed, dict):
+            parsed = {}
     except Exception:
         parsed = {}
 

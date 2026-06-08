@@ -1,3 +1,2 @@
-from django.test import TestCase
-
-# Create your tests here.
+# Tests have moved to backend/backend/tests/
+from backend.backend.tests import *  # noqa

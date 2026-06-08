@@ -1,9 +1,13 @@
 from django.contrib import admin
 from .models import *
 
-admin.site.register([User, ])
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    list_display = ("__str__", "role", "email")
+    list_filter = ("role",)
+    search_fields = ("username", "email", "first_name", "last_name")
 admin.site.register([BookingWeekly, WeeklyProgressSnapshot, Payment])
-admin.site.register([TutorAvailability, TutorProfile, TutorStudent, StudentProfile, DistributorProfile])
+admin.site.register([TutorAvailability, TutorProfile, TutorStudent, ParentProfile, StudentProfile, DistributorProfile])
 admin.site.register([TeacherProfile, TeacherClass, TeacherClassStudent])
 admin.site.register([ClassAssessment, AssessmentStudentResult])
 admin.site.register([Skill, Note, Year])

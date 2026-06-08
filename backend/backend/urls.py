@@ -48,6 +48,9 @@ urlpatterns = [
     path("admin/activity/",               admin_activity,          name="admin_activity"),
     path("settings/",                     system_settings,         name="system_settings"),
     path("admin/variables/",              admin_variables,         name="admin_variables"),
+    path("sms-jobs/<int:pk>/delete/",      delete_sms_job,            name="delete_sms_job"),
+    path("assisted-assessment/slots/",    assisted_assessment_slots, name="assisted_assessment_slots"),
+    path("assisted-assessment/book/",     assisted_assessment_book,  name="assisted_assessment_book"),
 ]
 
 urlpatterns += router.urls

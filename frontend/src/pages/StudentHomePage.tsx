@@ -171,7 +171,7 @@ export function StudentHomePage() {
       <div className="container mt-4">
         <div className="d-flex flex-wrap gap-2 mb-2">
           <Link to={`/students/${id}/test?type=dynamic`} className="btn btn-success btn-sm">
-            Start Skills Test
+            Start Assessment
           </Link>
         </div>
 

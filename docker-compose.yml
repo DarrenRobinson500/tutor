@@ -1,0 +1,91 @@
+services:
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: tutor
+      POSTGRES_USER: tutor
+      POSTGRES_PASSWORD: tutor
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tutor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: python manage.py migrate
+    volumes:
+      - ./backend:/app/backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://tutor:tutor@postgres:5432/tutor
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: no
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app/backend
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://tutor:tutor@postgres:5432/tutor
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: celery -A config worker -l info
+    volumes:
+      - ./backend:/app/backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://tutor:tutor@postgres:5432/tutor
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - ./backend:/app/backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://tutor:tutor@postgres:5432/tutor
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:

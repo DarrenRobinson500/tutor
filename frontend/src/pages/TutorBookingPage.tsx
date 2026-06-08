@@ -447,6 +447,7 @@ const createAdhoc = () => {
       <th>Created</th>
       <th>Scheduled For</th>
       <th>Send</th>
+      <th></th>
     </tr>
   </thead>
   <tbody>
@@ -459,11 +460,22 @@ const createAdhoc = () => {
         <td>
           {Math.max(0, Math.floor(job.time_until_sent_seconds))}s
         </td>
+        <td>
+          <button
+            className="btn btn-outline-danger btn-sm"
+            onClick={async () => {
+              await apiFetch(`/api/sms-jobs/${job.id}/delete/`, { method: "DELETE" });
+              setSmsJobs(jobs => jobs.filter(j => j.id !== job.id));
+            }}
+          >
+            Delete
+          </button>
+        </td>
       </tr>
     ))}
     {smsJobs.length === 0 && (
       <tr>
-        <td colSpan={5} className="text-center text-muted">
+        <td colSpan={6} className="text-center text-muted">
           No pending SMS jobs.
         </td>
       </tr>

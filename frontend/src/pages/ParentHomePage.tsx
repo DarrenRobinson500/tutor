@@ -108,12 +108,14 @@ interface NextBooking {
   day_str: string;
   booking_type: "weekly" | "adhoc";
   tutor_name: string | null;
+  is_assisted_assessment?: boolean;
 }
 
 interface Child {
   id: number;
   first_name: string;
   last_name: string;
+  username: string;
   year_level: string | null;
   school_name: string | null;
   test_count: number;
@@ -131,6 +133,7 @@ interface ParentData {
     first_name: string;
     last_name: string;
     email: string;
+    mobile: string | null;
   };
   children: Child[];
 }
@@ -368,6 +371,7 @@ export default function ParentHomePage() {
   const [isFirstVisit, setIsFirstVisit] = useState(false);
   const [tab, setTab] = useState<"overview" | "assessments">("overview");
   const [removingChild, setRemovingChild] = useState<Child | null>(null);
+  const [assistedAssessmentChild, setAssistedAssessmentChild] = useState<Child | null>(null);
   const [devUsers, setDevUsers] = useState([
     { label: "Admin",   email: "Darren",  password: "Darren"  },
     { label: "Parent",  email: "Amanda",  password: "Amanda"  },
@@ -636,6 +640,7 @@ export default function ParentHomePage() {
                   onFindTutor={() => handleFindTutor(child)}
                   onRemoveTutor={() => handleRemoveTutor(child.id)}
                   onViewReport={() => setTab("assessments")}
+                  onAssistedAssessment={() => setAssistedAssessmentChild(child)}
                 />
               ))}
             </div>
@@ -666,6 +671,223 @@ export default function ParentHomePage() {
           onCancel={() => setRemovingChild(null)}
         />
       )}
+
+      {assistedAssessmentChild && (
+        <AssistedAssessmentModal
+          child={assistedAssessmentChild}
+          parentMobile={data?.parent.mobile ?? null}
+          onClose={() => setAssistedAssessmentChild(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Assisted Assessment modal ───────────────────────────────── */
+interface AASlot {
+  tutor_id: number;
+  tutor_name: string;
+  weekday: number;
+  day: string;
+  day_full: string;
+  start_time: string;
+  end_time: string;
+}
+
+function fmtMobile(mobile: string): string {
+  let digits = mobile.replace(/\D/g, "");
+  if (digits.startsWith("61") && digits.length === 11) digits = "0" + digits.slice(2);
+  if (digits.length === 10 && digits.startsWith("0")) {
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+  }
+  return mobile;
+}
+
+function fmtSlotTime(t: string) {
+  const [h, m] = t.split(":").map(Number);
+  const period = h < 12 ? "am" : "pm";
+  const h12 = h % 12 || 12;
+  return m ? `${h12}:${m.toString().padStart(2, "0")}${period}` : `${h12}${period}`;
+}
+
+// weekday: 0=Mon … 6=Sun (Python convention). Returns the next occurrence of
+// that weekday, including today if it matches.
+function nextDateForWeekday(weekday: number): Date {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const jsTarget = (weekday + 1) % 7; // convert to JS: 0=Sun,1=Mon…
+  let daysAhead = jsTarget - today.getDay();
+  if (daysAhead <= 0) daysAhead += 7; // never show today — always next occurrence
+  const d = new Date(today);
+  d.setDate(today.getDate() + daysAhead);
+  return d;
+}
+
+function fmtSlotDate(weekday: number): string {
+  return nextDateForWeekday(weekday).toLocaleDateString("en-AU", {
+    day: "numeric", month: "long",
+  });
+}
+
+function AssistedAssessmentModal({
+  child,
+  parentMobile,
+  onClose,
+}: {
+  child: Child;
+  parentMobile: string | null;
+  onClose: () => void;
+}) {
+  const [slots, setSlots] = useState<AASlot[] | null>(null);
+  const [selected, setSelected] = useState<AASlot | null>(null);
+  const [step, setStep] = useState<"slots" | "confirm" | "done">("slots");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    apiFetch("/api/assisted-assessment/slots/")
+      .then(r => r.json())
+      .then(setSlots)
+      .catch(() => setSlots([]));
+  }, []);
+
+  async function handleConfirm() {
+    if (!selected) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const res = await apiFetch("/api/assisted-assessment/book/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          child_id: child.id,
+          tutor_id: selected.tutor_id,
+          day_full: selected.day_full,
+          date: (() => { const d = nextDateForWeekday(selected.weekday); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })(),
+          start_time: selected.start_time,
+          end_time: selected.end_time,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setError(d.error || "Something went wrong."); return; }
+      setStep("done");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Group slots by day (today's weekday shows as next week via nextDateForWeekday)
+  const byDay: Record<string, AASlot[]> = {};
+  (slots ?? []).forEach(s => {
+    (byDay[s.day_full] ??= []).push(s);
+  });
+  const days = Object.keys(byDay).sort((a, b) =>
+    nextDateForWeekday(byDay[a][0].weekday).getTime() - nextDateForWeekday(byDay[b][0].weekday).getTime()
+  );
+
+  const overlayStyle: React.CSSProperties = {
+    position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
+    display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+  };
+  const boxStyle: React.CSSProperties = {
+    background: "#fff", borderRadius: 16, padding: "2rem",
+    maxWidth: 540, width: "90%", maxHeight: "85vh", overflowY: "auto",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+  };
+
+  return (
+    <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={boxStyle}>
+        <h3 style={{ marginBottom: "0.4rem", fontFamily: "var(--font-display, Lora, serif)", fontSize: "1.2rem" }}>
+          Assisted Assessment
+        </h3>
+        <p style={{ color: "var(--sm-text-muted, #8A7F74)", fontSize: "0.88rem", marginBottom: "1.25rem" }}>
+          {selected ? selected.tutor_name.split(" ")[0] : "A tutor"} will guide {child.first_name} through the assessment live. Pay after.
+        </p>
+
+        {step === "slots" && (
+          <>
+            {slots === null && <p style={{ color: "var(--sm-text-muted)" }}>Loading available times…</p>}
+            {slots !== null && days.length === 0 && (
+              <p style={{ color: "var(--sm-text-muted)" }}>No availability at the moment. Please check back soon.</p>
+            )}
+            {days.map(day => (
+              <div key={day} style={{ marginBottom: "1rem" }}>
+                <div style={{ fontWeight: 600, fontSize: "0.85rem", marginBottom: "0.4rem", color: "var(--sm-text-muted, #8A7F74)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  {day} · {fmtSlotDate(byDay[day][0].weekday)}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                  {byDay[day].map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { setSelected(s); setStep("confirm"); }}
+                      style={{
+                        border: "1px solid var(--sm-orange-light, #FFDBB5)",
+                        borderRadius: 8, padding: "0.45rem 0.85rem",
+                        background: "var(--sm-bg-warm, #FFF8F0)",
+                        cursor: "pointer", fontSize: "0.88rem",
+                        color: "var(--sm-text, #2D2D2D)",
+                      }}
+                    >
+                      {fmtSlotTime(s.start_time)} – {fmtSlotTime(s.end_time)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
+              <button className="sm-btn-secondary" onClick={onClose}>Cancel</button>
+            </div>
+          </>
+        )}
+
+        {step === "confirm" && selected && (
+          <>
+            <div style={{
+              background: "var(--sm-bg-warm, #FFF8F0)",
+              border: "1px solid var(--sm-orange-light, #FFDBB5)",
+              borderRadius: 10, padding: "1rem", marginBottom: "1.25rem",
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                {selected.day_full} {fmtSlotDate(selected.weekday)} · {fmtSlotTime(selected.start_time)} – {fmtSlotTime(selected.end_time)}
+              </div>
+              <div style={{ fontSize: "0.88rem", color: "var(--sm-text-muted)" }}>
+                {child.first_name} · with {selected.tutor_name}
+              </div>
+            </div>
+
+            <p style={{ fontSize: "0.9rem", marginBottom: "1.5rem" }}>
+              A confirmation SMS will be sent to{" "}
+              <strong>{parentMobile ? fmtMobile(parentMobile) : "your registered number"}</strong>.{" "}
+              Your number will be sent to {selected.tutor_name.split(" ")[0]} (who will help {child.first_name}) so that he can confirm details with you.
+            </p>
+
+            {error && <p style={{ color: "#dc3545", fontSize: "0.88rem", marginBottom: "0.75rem" }}>{error}</p>}
+
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+              <button className="sm-btn-secondary" onClick={() => setStep("slots")} disabled={submitting}>
+                Back
+              </button>
+              <button className="sm-btn-primary" onClick={handleConfirm} disabled={submitting}>
+                {submitting ? "Booking…" : "Confirm Booking"}
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === "done" && (
+          <>
+            <p style={{ fontSize: "0.95rem", marginBottom: "1.5rem" }}>
+              Booked! SMS confirmations have been sent. {selected?.tutor_name.split(" ")[0]} will be in touch to confirm the final details.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button className="sm-btn-primary" onClick={onClose}>Close</button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -690,6 +912,7 @@ function ChildCard({
   onFindTutor,
   onRemoveTutor,
   onViewReport,
+  onAssistedAssessment,
 }: {
   child: Child;
   parentId: number;
@@ -698,6 +921,7 @@ function ChildCard({
   onFindTutor: () => void;
   onRemoveTutor: () => void;
   onViewReport: () => void;
+  onAssistedAssessment: () => void;
 }) {
   const initials = `${child.first_name[0] ?? ""}${child.last_name[0] ?? ""}`.toUpperCase();
   const hasTests = child.test_count > 0;
@@ -736,11 +960,9 @@ function ChildCard({
         </div>
       )}
 
-      {child.next_booking && (
-        <Link
-          to={`/parents/${parentId}/bookings`}
-          style={{ textDecoration: "none" }}
-        >
+      {child.next_booking && (() => {
+        const isAA = child.next_booking.is_assisted_assessment;
+        const cardInner = (
           <div style={{
             display: "flex",
             alignItems: "flex-start",
@@ -750,20 +972,34 @@ function ChildCard({
             borderRadius: "var(--radius-md, 8px)",
             padding: "0.65rem 0.85rem",
             fontSize: 13,
-            cursor: "pointer",
+            cursor: isAA ? "default" : "pointer",
           }}>
             <span style={{ fontSize: 16, lineHeight: 1.3, flexShrink: 0 }}>📅</span>
             <div>
               <div style={{ fontWeight: 600, color: "var(--sm-text, #2D2D2D)", marginBottom: 1 }}>
-                Next appointment
+                {isAA ? "Assisted Assessment" : "Next appointment"}
               </div>
               <div style={{ color: "var(--sm-text-secondary, #5A5047)" }}>
                 {fmtBooking(child.next_booking)}
               </div>
+              {isAA && (
+                <div style={{ marginTop: "0.4rem", color: "var(--sm-text-secondary, #5A5047)", fontSize: 12 }}>
+                  10 minutes before the session ask {child.first_name} to login to{" "}
+                  <a href="https://www.subject-matter.com.au" target="_blank" rel="noreferrer" style={{ color: "inherit" }}>
+                    www.subject-matter.com.au
+                  </a>{" "}
+                  with username: <strong>{child.username}</strong> and their password.
+                </div>
+              )}
             </div>
           </div>
-        </Link>
-      )}
+        );
+        return isAA ? cardInner : (
+          <Link to={`/parents/${parentId}/bookings`} style={{ textDecoration: "none" }}>
+            {cardInner}
+          </Link>
+        );
+      })()}
 
       <div className="mt-3">
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Progress</div>
@@ -799,9 +1035,14 @@ function ChildCard({
           </button>
         </div>
         {!child.tutor_name && (
-          <div className="ph-tooltip-wrap" data-tooltip="A qualified tutor joins your child in a live session to walk them through each question. Great for younger learners or children who benefit from a little extra support. Book a time that suits you.">
-            <button className="sm-btn-secondary" disabled style={{ width: "100%" }}>
-              Assisted Assessment $20
+          <div className="ph-tooltip-wrap" data-tooltip="A qualified tutor joins your child in a live session to walk them through each question. Great for younger learners or children who benefit from a little extra support. Book a time that suits you. Pay when you're happy with the assessment.">
+            <button
+              className="sm-btn-secondary"
+              onClick={onAssistedAssessment}
+              style={{ width: "100%" }}
+              disabled={!!child.next_booking?.is_assisted_assessment}
+            >
+              {child.next_booking?.is_assisted_assessment ? "Assisted Assessment Booked" : "Assisted Assessment $20"}
             </button>
           </div>
         )}
@@ -874,6 +1115,7 @@ function AddChildForm({
         id: d.id,
         first_name: d.first_name,
         last_name: d.last_name,
+        username: d.username,
         year_level: d.year_level,
         school_name: d.school_name,
         test_count: 0,

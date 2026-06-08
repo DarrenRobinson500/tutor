@@ -91,7 +91,7 @@ export function TutorJobsPanel({ tutorId }: { tutorId: string }) {
     });
 
     const stored: StoredJob[] = storedRaw.filter((j: any) =>
-      j.student_id == null || activeStudentIds.has(j.student_id)
+      j.student_id == null || activeStudentIds.has(j.student_id) || j.job_type === 'confirm_appointment'
     ).map((j: any) => {
       let to = (JOB_LINKS[j.job_type] ?? (() => `/tutors/${tutorId}`))(String(j.tutor_id), j.student_id, j.id);
       if (j.job_type === 'post_tuition_review' && j.booking_date) {

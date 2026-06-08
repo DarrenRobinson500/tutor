@@ -164,7 +164,6 @@ User accounts are created by an admin via Django admin:
 | `CUSTOM_DOMAIN` | Custom domain for ALLOWED_HOSTS | — |
 | `EMAIL_HOST_USER` | SMTP email address | — |
 | `EMAIL_HOST_PASSWORD` | SMTP password | — |
-| `SMS_SEND` | Enable SMS sending (`true`/`false`) | — |
 | `CLICKSEND_USERNAME` | ClickSend API username | — |
 | `CLICKSEND_API_KEY` | ClickSend API key | — |
 | `CLICKSEND_FROM_NUMBER` | SMS sender number | — |

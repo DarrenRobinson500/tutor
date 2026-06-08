@@ -10,6 +10,7 @@ interface Tutor {
   email: string;
   username: string;
   role: string;
+  assisted_assessment: boolean;
 }
 
 export function TutorListPage() {
@@ -25,6 +26,14 @@ export function TutorListPage() {
       .catch(() => setTutors([]));
   }, []);
 
+  async function toggleAssistedAssessment(tutor: Tutor) {
+    const res = await apiFetch(`/api/tutors/${tutor.id}/toggle_assisted_assessment/`, { method: "POST" });
+    const data = await res.json();
+    setTutors(prev => prev.map(t =>
+      t.id === tutor.id ? { ...t, assisted_assessment: data.assisted_assessment } : t
+    ));
+  }
+
   return (
   <Layout>
     <div className="container mt-4">
@@ -33,17 +42,41 @@ export function TutorListPage() {
         <a className="btn btn-outline-primary" href="/admin/tutors/new">+ New Tutor</a>
       </div>
 
-      <ul className="list-group mt-3">
-        {Array.isArray(tutors) && tutors.map((t: any) => (
-          <li key={t.id} className="list-group-item d-flex justify-content-between">
-            <span>{t.first_name} {t.last_name}</span>
-            <a className="btn btn-outline-primary btn-sm" href={`/tutor/${t.id}`}>
-              View Tutor Home
-            </a>
-          </li>
-        ))}
-
-      </ul>
+      <table className="table table-bordered align-middle mt-3">
+        <thead className="table-light">
+          <tr>
+            <th>Name</th>
+            <th style={{ width: 200 }}>Assisted Assessment</th>
+            <th style={{ width: 160 }}></th>
+          </tr>
+        </thead>
+        <tbody>
+          {tutors.map((t) => (
+            <tr key={t.id}>
+              <td>{t.first_name} {t.last_name}</td>
+              <td>
+                <div className="form-check form-switch">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    checked={t.assisted_assessment}
+                    onChange={() => toggleAssistedAssessment(t)}
+                  />
+                  <label className="form-check-label">
+                    {t.assisted_assessment ? "Available" : "Not available"}
+                  </label>
+                </div>
+              </td>
+              <td>
+                <a className="btn btn-outline-primary btn-sm" href={`/tutor/${t.id}`}>
+                  View Tutor Home
+                </a>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   </Layout>
   );

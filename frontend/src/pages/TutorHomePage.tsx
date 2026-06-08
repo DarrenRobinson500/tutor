@@ -110,6 +110,7 @@ export function TutorHomePage() {
   }, [id]);
 
   if (!tutor) return <div className="container mt-4">Loading…</div>;
+  if (tutor.error) return <div className="container mt-4 text-muted">{tutor.error}</div>;
 
   return (
     <Layout header={<PageHeader title={`Welcome back, ${tutor.name.split(" ")[0]}.`} />}>

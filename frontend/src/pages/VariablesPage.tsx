@@ -81,6 +81,39 @@ export function VariablesPage() {
     );
   }
 
+  function renderToggleRow(key: string, label: string, description: string) {
+    const current = (drafts[key] ?? "False").toLowerCase();
+    const checked = current === "true" || current === "1" || current === "yes";
+    const dirty = drafts[key] !== (settings[key] ?? "False");
+    return (
+      <tr key={key}>
+        <td style={{ width: 220, fontWeight: 500 }}>{label}</td>
+        <td style={{ width: 200 }}>
+          <div className="form-check form-switch mt-1">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              role="switch"
+              checked={checked}
+              onChange={e => setDraft(key, e.target.checked ? "True" : "False")}
+            />
+            <label className="form-check-label">{checked ? "Enabled" : "Disabled"}</label>
+          </div>
+        </td>
+        <td style={{ width: 80 }}>
+          <button
+            className="btn btn-sm btn-primary"
+            disabled={!dirty}
+            onClick={() => save(key)}
+          >
+            {saved[key] ? "Saved ✓" : "Save"}
+          </button>
+        </td>
+        <td className="text-muted" style={{ fontSize: "0.8rem" }}>{description}</td>
+      </tr>
+    );
+  }
+
   if (loading) return <Layout><p className="p-4">Loading…</p></Layout>;
 
   return (
@@ -95,6 +128,7 @@ export function VariablesPage() {
             {SYSTEM_KEYS.map(({ key, label, description }) =>
               renderRow(key, label, description, key.includes("fee") ? "number" : "number")
             )}
+            {renderToggleRow("sms_send", "SMS Send", "When enabled, SMS messages are sent via ClickSend. When disabled, messages are logged but not delivered.")}
           </tbody>
         </table>
 

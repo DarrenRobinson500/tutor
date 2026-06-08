@@ -246,7 +246,6 @@ if SENDGRID_API_KEY:
         INSTALLED_APPS.append('anymail')
 
 # SMS (ClickSend)
-SMS_SEND = os.environ.get("SMS_SEND")
 CLICKSEND_USERNAME = os.environ.get("CLICKSEND_USERNAME")
 CLICKSEND_API_KEY = os.environ.get("CLICKSEND_API_KEY")
 CLICKSEND_FROM_NUMBER = os.environ.get("CLICKSEND_FROM_NUMBER")
