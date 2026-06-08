@@ -3773,6 +3773,13 @@ class TutorJobViewSet(viewsets.ViewSet):
         amount_distributor = (distributor_fee_per_hour * mins / 60).quantize(decimal.Decimal('0.01')) if distributor else decimal.Decimal('0.00')
         amount_paid = (amount_tutor + amount_platform + amount_distributor).quantize(decimal.Decimal('0.01'))
 
+        # Assessment sessions have a flat $20 fee
+        if job.booking_ref and job.booking_ref.startswith("aa_session_"):
+            amount_paid = decimal.Decimal('20.00')
+            amount_platform = decimal.Decimal('0.00')
+            amount_distributor = decimal.Decimal('0.00')
+            amount_tutor = decimal.Decimal('20.00')
+
         # Check if payment already applied
         payment_id = outcome.payment_id if outcome else None
         already_applied = payment_id is not None
@@ -3867,6 +3874,13 @@ class TutorJobViewSet(viewsets.ViewSet):
         amount_platform    = (platform_fee_per_hour    * mins / 60).quantize(decimal.Decimal('0.01'))
         amount_distributor = (distributor_fee_per_hour * mins / 60).quantize(decimal.Decimal('0.01')) if distributor else decimal.Decimal('0.00')
         amount_paid = (amount_tutor + amount_platform + amount_distributor).quantize(decimal.Decimal('0.01'))
+
+        # Assessment sessions have a flat $20 fee
+        if job.booking_ref and job.booking_ref.startswith("aa_session_"):
+            amount_paid = decimal.Decimal('20.00')
+            amount_platform = decimal.Decimal('0.00')
+            amount_distributor = decimal.Decimal('0.00')
+            amount_tutor = decimal.Decimal('20.00')
 
         payment = Payment.objects.create(
             student=student,
@@ -5064,6 +5078,112 @@ def _session_focus_area_question(session, student, grade, state, result):
     })
 
 
+def _create_aa_post_session_records(session, student, grade, grade_key, leaf_skills, skill_index, syllabus_percent):
+    """After an assisted-assessment completes: create test report records and a post-tuition review job."""
+    import threading
+    from datetime import timedelta
+    try:
+        from .models import (
+            TestSession as _TS, TestSkillResult as _TSR,
+            StudentSkillCompetency as _SSC, StudentProfile as _SP,
+            TutorJob as _TJ, BookingOutcome as _BO,
+        )
+
+        covered = min(skill_index, len(leaf_skills))
+        _skill_ids = [s['id'] for s in leaf_skills[:covered]]
+        _comp_map = {c.skill_id: c.level for c in _SSC.objects.filter(student=student, skill_id__in=_skill_ids)}
+
+        # ── Test report ──
+        _now = timezone.now()
+        _test_session = _TS.objects.create(
+            student=student,
+            status='completed',
+            started_at=session.created_at,
+            completed_at=_now,
+            mode='test',
+        )
+        _DIFF_MAP = {0: 'none', 1: 'easy', 2: 'medium', 3: 'hard', 4: 'hard', 5: 'hard', 6: 'hard'}
+        for _skill in leaf_skills[:covered]:
+            _lvl = _comp_map.get(_skill['id'], 0)
+            _diff = _DIFF_MAP.get(_lvl, 'easy')
+            _TSR.objects.create(
+                session=_test_session,
+                skill_code=str(_skill['id']),
+                skill_description=_skill['description'],
+                highest_difficulty_reached=_diff,
+                questions_asked=max(1, _lvl),
+                questions_correct=max(0, _lvl - 1) if _lvl > 0 else 0,
+            )
+        threading.Thread(target=_send_test_report_email, args=(_test_session,), daemon=True).start()
+
+        # ── Post-tuition review job ──
+        tutor = session.tutor
+        parent_name = _get_parent_name(student)
+        student_name = student.first_name or "Your child"
+        tutor_name = tutor.first_name or tutor.get_full_name() or "Your tutor"
+
+        try:
+            _sp = _SP.objects.get(user=student)
+            gender = (_sp.gender or "").lower()
+            yr = str(_sp.year_level or grade).strip().lower().replace("year", "").strip()
+        except _SP.DoesNotExist:
+            gender = ""
+            yr = str(grade).strip().lower().replace("year", "").strip()
+
+        pronoun = "He" if gender == "male" else "She" if gender == "female" else "They"
+        possessive = "His" if gender == "male" else "Her" if gender == "female" else "Their"
+
+        _top_skills = sorted(
+            leaf_skills[:covered],
+            key=lambda s: _comp_map.get(s['id'], 0),
+            reverse=True,
+        )[:3]
+        _topics = [s['description'] for s in _top_skills if _comp_map.get(s['id'], 0) > 0]
+        if not _topics:
+            _topics = [s['description'] for s in _top_skills[:3]]
+        if len(_topics) == 1:
+            topics_str = _topics[0]
+        elif len(_topics) == 2:
+            topics_str = f"{_topics[0]} and {_topics[1]}"
+        elif _topics:
+            topics_str = ", ".join(_topics[:-1]) + f" and {_topics[-1]}"
+        else:
+            topics_str = "various topics"
+
+        _pct = str(syllabus_percent) if syllabus_percent is not None else "?"
+        _hi = f"Hi {parent_name}," if parent_name else "Hi,"
+        pre_message = (
+            f"{_hi} great news! {student_name} did brilliantly in the assessment today. "
+            f"{possessive} best topics were {topics_str}. "
+            f"{pronoun} is {_pct}% of the way through year {yr}. "
+            f"Let me know if you'd like regular sessions and we'll keep powering through the syllabus. "
+            f"Keep up the encouragement at home. {tutor_name}."
+        )
+
+        _expires_at = timezone.now() + timedelta(days=14)
+        _booking_ref = f"aa_session_{session.id}"
+        _job, _created = _TJ.objects.get_or_create(
+            tutor=tutor,
+            student=student,
+            job_type='post_tuition_review',
+            booking_ref=_booking_ref,
+            defaults={'expires_at': _expires_at, 'session': session},
+        )
+        if _created:
+            _outcome = _BO.objects.create(
+                tutor=tutor,
+                student=student,
+                date=_now.date(),
+                time=_now.time().replace(second=0, microsecond=0),
+                parent_message=pre_message,
+            )
+            _job.booking_outcome = _outcome
+            _job.save(update_fields=['booking_outcome'])
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+
 def _session_assessment_question(session, student, grade, state, result):
     from .cache import get_matrix_cache, filter_matrix_by_grade
     matrix = get_matrix_cache()
@@ -5105,7 +5225,21 @@ def _session_assessment_question(session, student, grade, state, result):
     if skill_index >= len(leaf_skills) or template is None:
         session.session_state = state
         session.save(update_fields=["session_state"])
-        return Response({"template_id": None, "complete": True, "total_skills": len(leaf_skills)})
+        from .competency import get_student_score
+        from .models import WeeklyProgressSnapshot
+        grade_key = str(grade).strip().lower().replace("year", "").strip()
+        try:
+            ratio = get_student_score(student, grade_key)
+            syllabus_percent = round(ratio * 100)
+            WeeklyProgressSnapshot.objects.create(
+                student=student,
+                score=round(ratio * 100, 1),
+                source='assessment',
+            )
+        except Exception:
+            syllabus_percent = None
+        _create_aa_post_session_records(session, student, grade, grade_key, leaf_skills, skill_index, syllabus_percent)
+        return Response({"template_id": None, "complete": True, "total_skills": len(leaf_skills), "syllabus_percent": syllabus_percent})
 
     current_skill_id = leaf_skills[skill_index]["id"]
     used_ids = (used_ids + [template.id])[-100:]

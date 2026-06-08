@@ -35,7 +35,7 @@ const LEVEL_LABELS = [
   "Competent", "Advanced", "Mastered",
 ];
 
-export function ProgressChart({ studentId, overallPct }: { studentId: number | string; overallPct?: number }) {
+export function ProgressChart({ studentId, overallPct, yearLevel }: { studentId: number | string; overallPct?: number; yearLevel?: string | null }) {
   const [data, setData] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -70,9 +70,11 @@ export function ProgressChart({ studentId, overallPct }: { studentId: number | s
 
       {/* Overall score trend */}
       <div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-          {latestScore}% Percent of Year 7 Complete
-        </div>
+        {latestScore > 0 && (
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            {latestScore}% of Year {yearLevel ? yearLevel.replace(/^year\s*/i, "") : "?"} Complete
+          </div>
+        )}
         <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 4 }}>Goal: 100% by end of year</div>
         {hasSnapshots && (
           <ResponsiveContainer width="100%" height={140}>

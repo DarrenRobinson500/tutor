@@ -4,15 +4,82 @@ import { RoomEvent } from "livekit-client";
 import { apiFetch } from "../../utils/apiFetch";
 import { PreviewPanel } from "./PreviewPanel";
 import { Latex } from "./Latex";
+import { DraggableCalculator } from "./Calculator";
 import type { PreviewResponse, StudentRecordResponse } from "../../types/PreviewResponse";
 
 const TOPIC = "session";
 
 type Mode = "learn" | "assessment" | "manual";
 
+function TutorNotesWidget({ templateId }: { templateId: number }) {
+  const [noteText, setNoteText] = useState("");
+  const [notes, setNotes] = useState<{ id: number; text: string }[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    apiFetch(`/api/notes/?template=${templateId}`)
+      .then(r => r.json())
+      .then(data => setNotes(Array.isArray(data) ? data : (data.results ?? [])))
+      .catch(() => {});
+  }, [templateId]);
+
+  async function handleAdd() {
+    if (!noteText.trim()) return;
+    setSaving(true);
+    try {
+      const res = await apiFetch("/api/notes/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template: templateId, text: noteText.trim() }),
+      });
+      if (res.ok) {
+        const note = await res.json();
+        setNotes(prev => [note, ...prev]);
+        setNoteText("");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: "1.5rem" }}>
+      <div className="d-flex gap-2 align-items-center">
+        <input
+          type="text"
+          className="form-control form-control-sm"
+          style={{ maxWidth: 320 }}
+          placeholder="Add a note about this question…"
+          value={noteText}
+          onChange={e => setNoteText(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") handleAdd(); }}
+          disabled={saving}
+        />
+        <button
+          className="btn btn-sm btn-outline-secondary"
+          onClick={handleAdd}
+          disabled={saving || !noteText.trim()}
+          style={{ whiteSpace: "nowrap" }}
+        >
+          Add Note
+        </button>
+      </div>
+      {notes.length > 0 && (
+        <div className="mt-1">
+          {notes.map(n => (
+            <div key={n.id} className="text-muted border-bottom py-1" style={{ fontSize: 13 }}>
+              {n.text}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface SessionEvent {
   topic: string;
-  type: "set_template" | "answer_result" | "session_complete" | "select_focus_area" | "assessment_next";
+  type: "set_template" | "answer_result" | "session_complete" | "select_focus_area" | "assessment_next" | "assessment_complete";
   template_id?: number | null;
   session_id?: number;
   learn_mode?: boolean;
@@ -20,6 +87,8 @@ interface SessionEvent {
   // answer_result / assessment_next fields
   answer?: string;
   correct?: boolean;
+  // assessment_complete fields
+  syllabus_percent?: number | null;
   // session_complete fields
   student_id?: number;
   stars_before?: number | null;
@@ -88,6 +157,7 @@ interface AssessmentContext {
   difficulty?: string;
   complete?: boolean;
   error?: string;
+  syllabus_percent?: number | null;
 }
 
 function renderStars(count: number | null | undefined, max = 4): string {
@@ -227,6 +297,13 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
   // ── Assessment mode (tutor) ────────────────────────────────────────────────
   const [assessContext, setAssessContext] = useState<AssessmentContext | null>(null);
 
+  // ── Assessment complete (student) ──────────────────────────────────────────
+  const [assessmentDone, setAssessmentDone] = useState(false);
+  const [assessmentPct, setAssessmentPct] = useState<number | null>(null);
+
+  // ── Calculator ────────────────────────────────────────────────────────────
+  const [showCalculator, setShowCalculator] = useState(false);
+
   const initialised = useRef(false);
   const lastAnswerRef = useRef<{ answer: string; correct: boolean } | null>(null);
   // Carries a tutor-computed preview from the LiveKit event into the activeTemplateId
@@ -306,6 +383,15 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
           if (isTutor) {
             const correct = event.correct ?? lastAnswerRef.current?.correct ?? false;
             requestAssessmentQuestion(correct ? "correct" : "wrong");
+          }
+          return;
+        }
+
+        // ── assessment_complete: show congratulatory message to student ──────
+        if (event.type === "assessment_complete") {
+          if (!isTutor) {
+            setAssessmentDone(true);
+            setAssessmentPct(event.syllabus_percent ?? null);
           }
           return;
         }
@@ -672,6 +758,14 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
 
         if (data.complete) {
           await pushTemplate(null);
+          room.localParticipant.publishData(
+            new TextEncoder().encode(JSON.stringify({
+              topic: TOPIC,
+              type: "assessment_complete",
+              syllabus_percent: data.syllabus_percent ?? null,
+            })),
+            { reliable: true, topic: TOPIC }
+          );
           return;
         }
 
@@ -742,6 +836,13 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
               title="Refresh page"
             >
               ↺ Refresh
+            </button>
+            <button
+              className="btn btn-sm btn-outline-secondary"
+              onClick={() => setShowCalculator(v => !v)}
+              title="Toggle calculator"
+            >
+              🧮
             </button>
           </div>
 
@@ -873,7 +974,15 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
       {/* ── Question display ── */}
       <div style={{ flex: 1, overflowY: "auto", padding: 12 }}>
         {!isTutor && (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, marginBottom: 4 }}>
+            <button
+              className="btn btn-sm btn-outline-secondary"
+              onClick={() => setShowCalculator(v => !v)}
+              title="Toggle calculator"
+              style={{ fontSize: 12 }}
+            >
+              🧮
+            </button>
             <button
               className="btn btn-sm btn-outline-secondary"
               onClick={() => window.location.reload()}
@@ -948,17 +1057,34 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
               />
             )}
             {!actionLoading && !loadingPreview && !activeTemplateId && !(isTutor && learnComplete && completeData) && (
-              <div className="text-muted text-center mt-4" style={{ fontSize: 14 }}>
-                {isTutor
-                  ? mode === "manual"
-                    ? "Select a template above to push a question."
-                    : mode === "learn" && learnComplete
-                      ? "Learning complete for this week."
-                      : mode === "learn" && learnError
-                        ? learnError
-                        : "Loading first question…"
-                  : "Waiting for tutor to send a question…"}
-              </div>
+              !isTutor && assessmentDone ? (
+                <div className="text-center mt-4 px-3">
+                  <div style={{ fontSize: 22, marginBottom: 8 }}>🎉</div>
+                  <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 6 }}>
+                    Congratulations!
+                  </div>
+                  <div style={{ fontSize: 14, color: "var(--sm-text-secondary, #5A5047)" }}>
+                    You have now completed{" "}
+                    {assessmentPct !== null
+                      ? <strong>{assessmentPct}%</strong>
+                      : "a great portion"
+                    }{" "}
+                    of the year's work. Well done!
+                  </div>
+                </div>
+              ) : (
+                <div className="text-muted text-center mt-4" style={{ fontSize: 14 }}>
+                  {isTutor
+                    ? mode === "manual"
+                      ? "Select a template above to push a question."
+                      : mode === "learn" && learnComplete
+                        ? "Learning complete for this week."
+                        : mode === "learn" && learnError
+                          ? learnError
+                          : "Loading first question…"
+                    : "Waiting for tutor to send a question…"}
+                </div>
+              )
             )}
             {!loadingPreview && activeTemplateId && preview && (
               (isTutor && mode === "learn") ? (
@@ -1034,6 +1160,7 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
                       Waiting for student to answer…
                     </div>
                   )}
+                  <TutorNotesWidget templateId={activeTemplateId} />
                 </div>
               ) : isTutor ? (
                 /* ── Tutor: Manual / Assessment editor view ── */
@@ -1073,6 +1200,9 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
           </>
         )}
       </div>
+      {showCalculator && (
+        <DraggableCalculator onClose={() => setShowCalculator(false)} />
+      )}
     </div>
   );
 }

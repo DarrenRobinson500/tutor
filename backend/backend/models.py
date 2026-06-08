@@ -970,6 +970,7 @@ class WeeklyProgressSnapshot(models.Model):
     SOURCE_CHOICES = [
         ('post_session', 'Post Session'),
         ('scheduled', 'Scheduled'),
+        ('assessment', 'Assessment'),
     ]
     student = models.ForeignKey(
         django_settings.AUTH_USER_MODEL,

@@ -1085,10 +1085,12 @@ function ChildCard({
         );
       })()}
 
-      <div className="mt-3">
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Progress</div>
-        <ProgressChart studentId={child.id} />
-      </div>
+      {(child.syllabus_percent ?? 0) > 0 && (
+        <div className="mt-3">
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Progress</div>
+          <ProgressChart studentId={child.id} yearLevel={child.year_level} />
+        </div>
+      )}
 
       {child.focus_areas.length > 0 && (
         <div className="mt-3">

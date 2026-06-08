@@ -466,6 +466,11 @@ class Render:
             else:
                 result = node.format()
 
+            # If the result is a string containing {{ }} tokens (e.g. a scenario
+            # row that embeds parameter references), expand them recursively.
+            if isinstance(result, str) and '{{' in result:
+                result = self._process_string(result, formatter)
+
             return "{" + result + "}" if triple else result
 
         substituted = EXPR_PATTERN.sub(repl, text)
