@@ -12,12 +12,12 @@ type Mode = "learn" | "assessment" | "manual";
 
 interface SessionEvent {
   topic: string;
-  type: "set_template" | "answer_result" | "session_complete" | "select_focus_area";
+  type: "set_template" | "answer_result" | "session_complete" | "select_focus_area" | "assessment_next";
   template_id?: number | null;
   session_id?: number;
   learn_mode?: boolean;
   preview?: any;
-  // answer_result fields
+  // answer_result / assessment_next fields
   answer?: string;
   correct?: boolean;
   // session_complete fields
@@ -228,6 +228,10 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
   const [assessContext, setAssessContext] = useState<AssessmentContext | null>(null);
 
   const initialised = useRef(false);
+  const lastAnswerRef = useRef<{ answer: string; correct: boolean } | null>(null);
+  // Carries a tutor-computed preview from the LiveKit event into the activeTemplateId
+  // useEffect so the student uses the identical parametrised question without re-fetching.
+  const pendingPreviewRef = useRef<{ templateId: number; preview: PreviewResponse } | null>(null);
 
   // Restore active template + learn mode on reconnect / late mount
   useEffect(() => {
@@ -291,7 +295,18 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
 
         // ── answer_result ────────────────────────────────────────────────────
         if (event.type === "answer_result") {
-          setLastAnswer({ answer: event.answer ?? "", correct: !!event.correct });
+          const ar = { answer: event.answer ?? "", correct: !!event.correct };
+          lastAnswerRef.current = ar;
+          setLastAnswer(ar);
+          return;
+        }
+
+        // ── assessment_next: student finished answering, tutor auto-advances ─
+        if (event.type === "assessment_next") {
+          if (isTutor) {
+            const correct = event.correct ?? lastAnswerRef.current?.correct ?? false;
+            requestAssessmentQuestion(correct ? "correct" : "wrong");
+          }
           return;
         }
 
@@ -365,6 +380,9 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
                 .finally(() => setStudentLoadingPreview(false));
             }
           } else {
+            if (event.preview && event.template_id) {
+              pendingPreviewRef.current = { templateId: event.template_id, preview: event.preview };
+            }
             setActiveTemplateId(event.template_id ?? null);
           }
         } else {
@@ -407,9 +425,17 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
     return () => { room.off(RoomEvent.DataReceived, handleData); };
   }, [room, isTutor]);
 
-  // Fetch preview whenever activeTemplateId changes (all modes / roles)
+  // Fetch preview whenever activeTemplateId changes (all modes / roles).
+  // Skip the fetch when the tutor already computed and pushed a preview via the LiveKit event.
   useEffect(() => {
     if (!activeTemplateId) { setPreview(null); return; }
+    const pending = pendingPreviewRef.current;
+    if (pending && pending.templateId === activeTemplateId) {
+      pendingPreviewRef.current = null;
+      setPreview(pending.preview);
+      setTutorPreviewKey((k) => k + 1);
+      return;
+    }
     setLoadingPreview(true);
     apiFetch(`/api/templates/${activeTemplateId}/preview/`)
       .then((r) => r.json())
@@ -626,8 +652,17 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
       }).then((r) => r.json());
 
       setAssessContext(data);
-      if (data.template_id) await pushTemplate(data.template_id);
-      else if (!data.complete) await pushTemplate(null);
+      if (data.template_id) {
+        // Fetch preview once so both tutor and student see the identical parametrised question.
+        const questionPreview = await apiFetch(`/api/templates/${data.template_id}/preview/`)
+          .then((r) => r.json())
+          .catch(() => null);
+        setPreview(questionPreview);
+        setTutorPreviewKey((k) => k + 1);
+        await pushTemplate(data.template_id, { preview: questionPreview });
+      } else if (!data.complete) {
+        await pushTemplate(null);
+      }
     } finally {
       setActionLoading(false);
     }
@@ -685,6 +720,13 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
             >
               Manual
             </button>
+            <button
+              className="btn btn-sm btn-outline-secondary ms-auto"
+              onClick={() => window.location.reload()}
+              title="Refresh page"
+            >
+              ↺ Refresh
+            </button>
           </div>
 
           {/* Learn mode context */}
@@ -737,15 +779,9 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
             </div>
           )}
 
-          {/* Assessment Correct / Wrong */}
-          {mode === "assessment" && !assessContext?.complete && activeTemplateId && (
-            <div className="d-flex gap-2 mb-1">
-              <button className="btn btn-sm btn-success" disabled={actionLoading}
-                onClick={() => requestAssessmentQuestion("correct")}>✓ Correct</button>
-              <button className="btn btn-sm btn-danger" disabled={actionLoading}
-                onClick={() => requestAssessmentQuestion("wrong")}>✗ Wrong</button>
-              {actionLoading && <span className="spinner-border spinner-border-sm text-secondary align-self-center ms-1" />}
-            </div>
+          {/* Assessment: loading spinner while fetching next question */}
+          {mode === "assessment" && actionLoading && (
+            <span className="spinner-border spinner-border-sm text-secondary ms-1 mb-1" />
           )}
 
 
@@ -811,6 +847,18 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
 
       {/* ── Question display ── */}
       <div style={{ flex: 1, overflowY: "auto", padding: 12 }}>
+        {!isTutor && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+            <button
+              className="btn btn-sm btn-outline-secondary"
+              onClick={() => window.location.reload()}
+              title="Refresh page"
+              style={{ fontSize: 12 }}
+            >
+              ↺ Refresh
+            </button>
+          </div>
+        )}
 
         {/* Student: learn complete */}
         {!isTutor && studentLearnComplete && (
@@ -980,7 +1028,16 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
                     templateId={activeTemplateId}
                     studentId={studentId}
                     preview={preview}
-                    onStudentNext={() => { /* tutor advances in assessment mode */ }}
+                    onStudentNext={(result) => {
+                      room.localParticipant.publishData(
+                        new TextEncoder().encode(JSON.stringify({
+                          topic: TOPIC,
+                          type: "assessment_next",
+                          correct: result?.correct ?? false,
+                        })),
+                        { reliable: true, topic: TOPIC }
+                      );
+                    }}
                     onImmediateAnswer={handleImmediateAnswer}
                     disableOnWrong={true}
                   />

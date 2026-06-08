@@ -176,7 +176,7 @@ export function PreviewPanel({
   const inputsDisabled = isCorrect === true || (!!disableOnWrong && isCorrect === false);
 
   useEffect(() => {
-    if (mode !== "student" || !effectiveTemplateId) { setNotes([]); return; }
+    if (mode !== "editor" || !effectiveTemplateId) { setNotes([]); return; }
     apiFetch(`/api/notes/?template=${effectiveTemplateId}`)
       .then(r => r.json())
       .then(data => setNotes(Array.isArray(data) ? data : (data.results ?? [])))
@@ -1626,7 +1626,7 @@ export function PreviewPanel({
         </div>
       )}
 
-      {mode === "student" && effectiveTemplateId && (
+      {mode === "editor" && effectiveTemplateId && (
         <div style={{ marginTop: "2rem" }}>
           <div className="d-flex gap-2 align-items-center">
             <input
