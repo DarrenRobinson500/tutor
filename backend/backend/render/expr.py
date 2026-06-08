@@ -295,6 +295,10 @@ class ExpressionNode:
                 result = max(self.evaluated_value, key=abs)
                 return _fmt_num(result)
 
+            if self.format_type == "min_abs":
+                result = min(self.evaluated_value, key=abs)
+                return _fmt_num(result)
+
             vals = sorted(self.evaluated_value) if self.format_type == "sorted" \
                    else self.evaluated_value
             return ", ".join(_fmt_num(v) for v in vals)
