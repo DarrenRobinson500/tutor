@@ -394,9 +394,10 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
             previewQuestion: event.preview?.question?.slice?.(0, 60),
           });
           if (event.learn_mode && event.preview) {
+            if (event.template_id) {
+              pendingPreviewRef.current = { templateId: event.template_id, preview: event.preview };
+            }
             setActiveTemplateId(event.template_id ?? null);
-            setPreview(event.preview);
-            setTutorPreviewKey((k) => k + 1);
           } else if (event.learn_mode && event.template_id) {
             setActiveTemplateId(event.template_id ?? null);
             apiFetch(`/api/sessions/state/?room_name=${encodeURIComponent(roomName)}`)
@@ -476,6 +477,11 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
         preview: opts?.preview ?? null,
       }),
     }).catch(() => {});
+    // Set ref BEFORE setActiveTemplateId so the useEffect uses this preview
+    // instead of fetching independently (which would produce different random params).
+    if (templateId != null && opts?.preview) {
+      pendingPreviewRef.current = { templateId, preview: opts.preview };
+    }
     setActiveTemplateId(templateId);
   };
 
@@ -523,8 +529,7 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
       setLearnSessionId(data.session_id);
       const q: LearnQuestion = data.question;
       setLearnQuestion(q);
-      setPreview(q.preview);
-      setTutorPreviewKey((k) => k + 1);
+      // pushTemplate stores q.preview in pendingPreviewRef; useEffect applies it.
       await pushTemplate(q.template_id, { sessionId: data.session_id, learnMode: true, preview: q.preview });
     } finally {
       setActionLoading(false);
@@ -646,22 +651,33 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
   async function requestAssessmentQuestion(result: "correct" | "wrong" | null) {
     setActionLoading(true);
     try {
-      const data: AssessmentContext = await apiFetch("/api/sessions/next_question/", {
-        method: "POST",
-        body: JSON.stringify({ room_name: roomName, mode: "assessment", result }),
-      }).then((r) => r.json());
+      let currentResult = result;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const data: AssessmentContext = await apiFetch("/api/sessions/next_question/", {
+          method: "POST",
+          body: JSON.stringify({ room_name: roomName, mode: "assessment", result: currentResult }),
+        }).then((r) => r.json());
 
-      setAssessContext(data);
-      if (data.template_id) {
-        // Fetch preview once so both tutor and student see the identical parametrised question.
-        const questionPreview = await apiFetch(`/api/templates/${data.template_id}/preview/`)
-          .then((r) => r.json())
-          .catch(() => null);
-        setPreview(questionPreview);
-        setTutorPreviewKey((k) => k + 1);
-        await pushTemplate(data.template_id, { preview: questionPreview });
-      } else if (!data.complete) {
-        await pushTemplate(null);
+        setAssessContext(data);
+
+        if (data.template_id) {
+          // Fetch preview once — pushTemplate stores it in pendingPreviewRef so the
+          // activeTemplateId useEffect uses it directly (no independent re-fetch).
+          const questionPreview = await apiFetch(`/api/templates/${data.template_id}/preview/`)
+            .then((r) => r.json())
+            .catch(() => null);
+          await pushTemplate(data.template_id, { preview: questionPreview });
+          return;
+        }
+
+        if (data.complete) {
+          await pushTemplate(null);
+          return;
+        }
+
+        // No template returned for this skill — skip to the next one automatically.
+        console.warn(`[Assessment] no template on attempt ${attempt + 1}, advancing`);
+        currentResult = null;
       }
     } finally {
       setActionLoading(false);
@@ -779,9 +795,18 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
             </div>
           )}
 
-          {/* Assessment: loading spinner while fetching next question */}
-          {mode === "assessment" && actionLoading && (
-            <span className="spinner-border spinner-border-sm text-secondary ms-1 mb-1" />
+          {/* Assessment: Next button + loading spinner */}
+          {mode === "assessment" && !assessContext?.complete && (
+            <div className="d-flex align-items-center gap-2 mb-1">
+              <button
+                className="btn btn-sm btn-outline-primary"
+                disabled={actionLoading}
+                onClick={() => requestAssessmentQuestion(lastAnswerRef.current?.correct ? "correct" : lastAnswerRef.current ? "wrong" : null)}
+              >
+                Next question →
+              </button>
+              {actionLoading && <span className="spinner-border spinner-border-sm text-secondary" />}
+            </div>
           )}
 
 
@@ -1017,6 +1042,7 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
                   mode="editor"
                   preview={preview}
                   templateContent=""
+                  noteTemplateId={activeTemplateId ?? undefined}
                   onEditorNext={(newPreview) => setPreview(newPreview)}
                 />
               ) : (

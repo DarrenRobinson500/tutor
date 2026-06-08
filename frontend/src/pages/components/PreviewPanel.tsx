@@ -21,6 +21,8 @@ interface PreviewPanelEditorProps extends PreviewPanelBase {
   mode: "editor";
   templateContent: string;
   onEditorNext: (newPreview: PreviewResponse) => void;
+  /** Template ID used only for loading/saving notes in the editor (e.g. tutoring session). */
+  noteTemplateId?: number;
 
   // explicitly forbidden in editor mode
   templateId?: never;
@@ -109,7 +111,9 @@ export function PreviewPanel({
   sessionTemplateIds,
   disableOnWrong,
   extraInputActions,
+  ...rest
 }: PreviewPanelProps) {
+  const noteTemplateId: number | undefined = (rest as any).noteTemplateId;
   const [selected, setSelected] = useState<number | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [flagged, setFlagged] = useState(false);
@@ -172,7 +176,7 @@ export function PreviewPanel({
     setTimeout(() => textInputRef.current?.focus(), 50);
   }, [focusKey]);
 
-  const effectiveTemplateId = templateId ?? localTemplateId;
+  const effectiveTemplateId = templateId ?? noteTemplateId ?? localTemplateId;
   const inputsDisabled = isCorrect === true || (!!disableOnWrong && isCorrect === false);
 
   useEffect(() => {

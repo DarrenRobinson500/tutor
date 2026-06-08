@@ -979,6 +979,7 @@ const handleToggleValidated = async () => {
                 preview={preview}
                 mode="editor"
                 templateContent={content}
+                noteTemplateId={id ? Number(id) : undefined}
                 onEditorNext={(newPreview) => {
                   setPreview(newPreview);
 //                   goNext();
