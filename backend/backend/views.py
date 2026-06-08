@@ -130,7 +130,7 @@ def _send_parent_welcome_emails(parent, children_data):
     parent_plain = (
         f"Hi {parent.first_name},\n\n"
         f"Welcome to Subject Matter! You're all set to get started.\n\n"
-        f"Log in any time at subject-matter.com.au — select Parent, then enter your email and password. "
+        f"Log in any time at www.subject-matter.com.au — select Parent, then enter your email and password. "
         f"{assessment_sentence}\n\n"
         f"From your dashboard you can:\n"
         f"· View your child's upcoming sessions\n"
@@ -5095,7 +5095,7 @@ def _create_aa_post_session_records(session, student, grade, grade_key, leaf_ski
         _test_session = _TS.objects.create(
             student=student,
             status='completed',
-            started_at=session.created_at,
+            started_at=_now,
             completed_at=_now,
             mode='test',
         )
@@ -5176,15 +5176,27 @@ def _create_aa_post_session_records(session, student, grade, grade_key, leaf_ski
             )
             _job.booking_outcome = _outcome
             _job.save(update_fields=['booking_outcome'])
-    except Exception:
+    except Exception as _e:
         import traceback
+        print(f"ERROR in _create_aa_post_session_records (session {session.id}): {_e}")
         traceback.print_exc()
 
 
 def _session_assessment_question(session, student, grade, state, result):
-    from .cache import get_matrix_cache, filter_matrix_by_grade
-    matrix = get_matrix_cache()
-    leaf_skills = [s for s in filter_matrix_by_grade(matrix, grade) if s["children_count"] == 0]
+    from django.db.models import Count as _Count, Q as _Q
+    grade_str = str(grade)
+    all_leaf_skills = (
+        Skill.objects
+        .filter(is_detail=False)
+        .annotate(non_detail_children=_Count('children', filter=_Q(children__is_detail=False)))
+        .filter(non_detail_children=0)
+        .order_by('order_index', 'id')
+    )
+    leaf_skills = [
+        {"id": s.id, "description": s.description}
+        for s in all_leaf_skills
+        if _skill_matches_year(s, grade_str)
+    ]
     if not leaf_skills:
         return Response({"template_id": None, "error": "No skills available for this grade"})
 
@@ -5446,6 +5458,46 @@ class TutoringSessionViewSet(viewsets.ViewSet):
                     'competence_label': _ltl(entry.level),
                 }
             )
+
+        # If this was an assessment session, ensure post-session records exist.
+        # This is a safety net: normally triggered by _session_assessment_question
+        # when the assessment completes, but covers early session end or silent failures.
+        if session.session_mode == 'assessment':
+            from .models import TutorJob as _TJ
+            booking_ref = f"aa_session_{session.id}"
+            if not _TJ.objects.filter(booking_ref=booking_ref).exists():
+                try:
+                    grade = session.student.student_profile.year_level
+                except Exception:
+                    grade = None
+                if grade:
+                    from django.db.models import Count as _Count, Q as _Q
+                    grade_str = str(grade)
+                    all_leaf = (
+                        Skill.objects
+                        .filter(is_detail=False)
+                        .annotate(non_detail_children=_Count('children', filter=_Q(children__is_detail=False)))
+                        .filter(non_detail_children=0)
+                        .order_by('order_index', 'id')
+                    )
+                    leaf_skills = [
+                        {"id": s.id, "description": s.description}
+                        for s in all_leaf
+                        if _skill_matches_year(s, grade_str)
+                    ]
+                    state = session.session_state or {}
+                    skill_index = state.get("skill_index", 0)
+                    from .competency import get_student_score as _gss
+                    from .models import WeeklyProgressSnapshot as _WPS
+                    grade_key = grade_str.strip().lower().replace("year", "").strip()
+                    try:
+                        syllabus_percent = round(_gss(session.student, grade_key) * 100)
+                    except Exception:
+                        syllabus_percent = None
+                    _create_aa_post_session_records(
+                        session, session.student, grade, grade_key,
+                        leaf_skills, skill_index, syllabus_percent,
+                    )
 
         return Response({"ok": True})
 
@@ -5901,7 +5953,7 @@ def assisted_assessment_book(request):
             body=(
                 f"Hi {tutor.first_name}, {parent.get_full_name()} has booked an Assisted Assessment "
                 f"for {child.first_name} on {day_full} at {time_display}. "
-                f"Parent contact: {parent_mobile}. Please call {parent.first_name} to confirm details."
+                f"Please call or message {parent.first_name} on {parent_mobile} to confirm."
             ),
             scheduled_for=timezone.now(),
         )
@@ -5937,15 +5989,6 @@ def assisted_assessment_book(request):
 
     from .cache import invalidate_adhoc_bookings
     invalidate_adhoc_bookings(tutor.id)
-
-    from .models import TutorJob
-    TutorJob.objects.get_or_create(
-        tutor=tutor,
-        student=child,
-        job_type='confirm_appointment',
-        booking_ref=f"adhoc_{booking.id}_confirm",
-        defaults={'expires_at': start_dt},
-    )
 
     return Response({'ok': True})
 

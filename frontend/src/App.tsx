@@ -169,6 +169,8 @@ function App() {
 
         {/* PROTECTED — parent */}
         <Route path="/parents/:id" element={<ProtectedRoute><ParentHomePage /></ProtectedRoute>} />
+        <Route path="/parents/:id/reports" element={<ProtectedRoute><ParentHomePage /></ProtectedRoute>} />
+        <Route path="/parents/:id/details" element={<ProtectedRoute><ParentHomePage /></ProtectedRoute>} />
         <Route path="/parents/:id/payments" element={<ProtectedRoute><ParentPaymentsPage /></ProtectedRoute>} />
         <Route path="/parents/:id/bookings" element={<ProtectedRoute><ParentBookingsPage /></ProtectedRoute>} />
         <Route path="/parents/:id/find-tutor" element={<ProtectedRoute><RequestTutorPage /></ProtectedRoute>} />

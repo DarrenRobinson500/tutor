@@ -47,25 +47,32 @@ SMS_TEMPLATES = {
 
 DEBOUNCE_TYPES = set(SMS_TEMPLATES.keys())
 
+# When a message of type X is enqueued, cancel any pending messages of these types
+# for the same conversation (they are now superseded).
+SUPERSEDES = {
+    'confirmed':        {'updated'},
+    'cancelled_adhoc':  {'updated', 'confirmed', 'create_adhoc', 'create_weekly'},
+    'cancelled_weekly': {'updated', 'confirmed', 'create_adhoc', 'create_weekly'},
+}
+
 def create_sms_body(booking, message_type, user_role):
     combined_type = f"{user_role}_{message_type}"
     if combined_type not in SMS_TEMPLATES:
         print("Unknown message type:", combined_type)
         raise ValueError(f"Unknown SMS message type: {combined_type}")
 
-    # print("Create sms body:", booking)
-
     weekday = booking["day_str"]
     date_and_time = format_sms_datetime(booking["start_iso"])
     start = booking["start_time"]
     end = booking["end_time"]
 
+    student_raw = booking.get("student_name") or ""
     context = {
         "date_and_time": date_and_time,
         "weekday": weekday,
         "start": start,
         "end": end,
-        "student_name": booking.get("student_name"),
+        "student_name": student_raw.split()[0] if student_raw else student_raw,
         "tutor_name": (booking.get("tutor_name") or "").split()[0] or booking.get("tutor_name"),
     }
 
@@ -78,7 +85,7 @@ def send_approval_sms(mobile: str, first_name: str, role: str, approved_user, ad
         return
     body = (
         f"Hi {first_name}, your SubjectMatter {role} account has been approved. Welcome aboard."
-        f"You can now log in at subject-matter.com.au"
+        f"You can now log in at www.subject-matter.com.au"
     )
     conversation = get_or_create_conversation(tutor=approved_user, student=admin_user)
     SMSSendJob.objects.create(
@@ -99,6 +106,16 @@ def sms_enqueue(booking, message_type, user_role):
     body = create_sms_body(booking, message_type, user_role)
     now = timezone.now()
     scheduled_for = now + SMS_PAUSE
+
+    # Cancel any pending messages that this one supersedes
+    superseded = SUPERSEDES.get(message_type, set())
+    if superseded:
+        superseded_types = {f"{user_role}_{t}" for t in superseded}
+        SMSSendJob.objects.filter(
+            conversation=conversation,
+            message_type__in=superseded_types,
+            cancelled=False,
+        ).update(cancelled=True)
 
     job = SMSSendJob.objects.filter(
         conversation=conversation,

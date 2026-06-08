@@ -885,7 +885,7 @@ function AssistedAssessmentModal({
     <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={boxStyle}>
         <h3 style={{ marginBottom: "0.4rem", fontFamily: "var(--font-display, Lora, serif)", fontSize: "1.2rem" }}>
-          Assisted Assessment
+          Assisted Assessment - Select a time
         </h3>
         <p style={{ color: "var(--sm-text-muted, #8A7F74)", fontSize: "0.88rem", marginBottom: "1.25rem" }}>
           {selected ? selected.tutor_name.split(" ")[0] : "A tutor"} will guide {child.first_name} through the assessment live. Pay after.
