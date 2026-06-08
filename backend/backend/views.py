@@ -820,6 +820,34 @@ class AuthViewSet(viewsets.ViewSet):
         })
 
     @action(detail=False, methods=["post"])
+    def update_parent_details(self, request):
+        """PATCH /api/auth/update_parent_details/ — update parent name, email, mobile."""
+        from .models import ParentProfile
+
+        user = request.user
+        if not user.is_authenticated or user.role != "parent":
+            return Response({"error": "Not authorised."}, status=403)
+
+        first_name = request.data.get("first_name", "").strip()
+        last_name  = request.data.get("last_name", "").strip()
+        email      = request.data.get("email", "").strip()
+        mobile     = request.data.get("mobile", "").strip() or None
+
+        if first_name:
+            user.first_name = first_name
+        if last_name:
+            user.last_name = last_name
+        if email:
+            user.email = email
+        user.save(update_fields=["first_name", "last_name", "email"])
+
+        profile, _ = ParentProfile.objects.get_or_create(user=user)
+        profile.mobile = mobile
+        profile.save(update_fields=["mobile"])
+
+        return Response({"ok": True})
+
+    @action(detail=False, methods=["post"])
     def select_tutor(self, request):
         """Connect a child to a tutor and book the recurring weekly slot."""
         from .models import TutorStudent, BookingWeekly, ParentChild

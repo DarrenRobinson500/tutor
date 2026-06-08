@@ -184,6 +184,83 @@ function PendingPaymentBanner({ payments, onPay }: { payments: PendingPayment[];
   );
 }
 
+/* ── My details tab ──────────────────────────────────────────── */
+
+function MyDetailsTab({
+  parent,
+  onSaved,
+}: {
+  parent: ParentData["parent"];
+  onSaved: (updated: Partial<ParentData["parent"]>) => void;
+}) {
+  const [firstName, setFirstName] = useState(parent.first_name);
+  const [lastName,  setLastName]  = useState(parent.last_name);
+  const [email,     setEmail]     = useState(parent.email);
+  const [mobile,    setMobile]    = useState(parent.mobile ?? "");
+  const [saving,    setSaving]    = useState(false);
+  const [saved,     setSaved]     = useState(false);
+  const [err,       setErr]       = useState("");
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true); setErr(""); setSaved(false);
+    try {
+      const res = await apiFetch("/api/auth/update_parent_details/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ first_name: firstName, last_name: lastName, email, mobile }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setErr(d.error || "Save failed."); return; }
+      onSaved({ first_name: firstName, last_name: lastName, email, mobile: mobile || null });
+      setSaved(true);
+    } catch {
+      setErr("Network error.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const fieldStyle: React.CSSProperties = {
+    width: "100%", padding: "0.5rem 0.75rem", fontSize: "0.95rem",
+    border: "1px solid var(--sm-border-light, #E8E0D6)",
+    borderRadius: "var(--radius-sm, 6px)", fontFamily: "inherit",
+    background: "#fff",
+  };
+  const labelStyle: React.CSSProperties = {
+    display: "block", fontSize: "0.82rem", fontWeight: 600,
+    color: "var(--sm-text-muted, #8A7F74)", marginBottom: "0.25rem",
+  };
+
+  return (
+    <form onSubmit={handleSave} style={{ maxWidth: 480, paddingTop: "1.5rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+        <div>
+          <label style={labelStyle}>First name</label>
+          <input style={fieldStyle} value={firstName} onChange={e => setFirstName(e.target.value)} required />
+        </div>
+        <div>
+          <label style={labelStyle}>Last name</label>
+          <input style={fieldStyle} value={lastName} onChange={e => setLastName(e.target.value)} required />
+        </div>
+      </div>
+      <div style={{ marginBottom: "1rem" }}>
+        <label style={labelStyle}>Email</label>
+        <input style={fieldStyle} type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+      </div>
+      <div style={{ marginBottom: "1.5rem" }}>
+        <label style={labelStyle}>Mobile</label>
+        <input style={fieldStyle} type="tel" value={mobile} onChange={e => setMobile(e.target.value)} placeholder="04xx xxx xxx" />
+      </div>
+      {err && <p style={{ color: "#C0392B", marginBottom: "0.75rem", fontSize: "0.9rem" }}>{err}</p>}
+      {saved && <p style={{ color: "#27AE60", marginBottom: "0.75rem", fontSize: "0.9rem" }}>Details saved.</p>}
+      <button type="submit" className="sm-btn-primary" disabled={saving} style={{ minWidth: 120 }}>
+        {saving ? "Saving…" : "Save changes"}
+      </button>
+    </form>
+  );
+}
+
 /* ── Assessments tab ─────────────────────────────────────────── */
 
 interface SkillResult {
@@ -369,7 +446,7 @@ export default function ParentHomePage() {
   const [launchingFor, setLaunchingFor] = useState<number | null>(null);
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
-  const [tab, setTab] = useState<"overview" | "assessments">("overview");
+  const [tab, setTab] = useState<"overview" | "assessments" | "details">("overview");
   const [removingChild, setRemovingChild] = useState<Child | null>(null);
   const [assistedAssessmentChild, setAssistedAssessmentChild] = useState<Child | null>(null);
   const [devUsers, setDevUsers] = useState([
@@ -589,7 +666,7 @@ export default function ParentHomePage() {
       {/* ── Tabs ─────────────────────────────────── */}
       <div className="ph-body" style={{ paddingBottom: 0 }}>
         <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--sm-border-light, #E8E0D6)" }}>
-          {(["overview", "assessments"] as const).map(t => (
+          {(["overview", "assessments", "details"] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -603,7 +680,7 @@ export default function ParentHomePage() {
                 marginBottom: "-2px",
               }}
             >
-              {t === "overview" ? "Overview" : "Reports"}
+              {t === "overview" ? "Overview" : t === "assessments" ? "Reports" : "My details"}
             </button>
           ))}
         </div>
@@ -660,6 +737,13 @@ export default function ParentHomePage() {
         </>}
 
         {tab === "assessments" && <AssessmentsTab children={children} />}
+
+        {tab === "details" && (
+          <MyDetailsTab
+            parent={parent}
+            onSaved={(updated) => setData(d => d ? { ...d, parent: { ...d.parent, ...updated } } : d)}
+          />
+        )}
 
       </main>
 
