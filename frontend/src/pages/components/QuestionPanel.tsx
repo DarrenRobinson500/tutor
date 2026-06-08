@@ -407,17 +407,18 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
     return () => { room.off(RoomEvent.DataReceived, handleData); };
   }, [room, isTutor]);
 
-  // Fetch preview for non-learn modes (tutor manual, or student non-learn)
+  // Fetch preview whenever activeTemplateId changes (all modes / roles)
   useEffect(() => {
     if (!activeTemplateId) { setPreview(null); return; }
-    if (!isTutor || mode === "manual") {
-      setLoadingPreview(true);
-      apiFetch(`/api/templates/${activeTemplateId}/preview/`)
-        .then((r) => r.json())
-        .then(setPreview)
-        .catch(() => setPreview(null))
-        .finally(() => setLoadingPreview(false));
-    }
+    setLoadingPreview(true);
+    apiFetch(`/api/templates/${activeTemplateId}/preview/`)
+      .then((r) => r.json())
+      .then((p) => {
+        setPreview(p);
+        setTutorPreviewKey((k) => k + 1); // force PreviewPanel remount with fresh data
+      })
+      .catch(() => setPreview(null))
+      .finally(() => setLoadingPreview(false));
   }, [activeTemplateId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Push template to student + persist on server ───────────────────────────
@@ -638,6 +639,7 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
     setLearnSessionId(null);
     setLearnComplete(false);
     setLearnError(null);
+    setPreview(null); // clear stale learn-mode preview while new question loads
     await requestAssessmentQuestion(null);
   }
 
@@ -886,7 +888,7 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
               </div>
             )}
             {!loadingPreview && activeTemplateId && preview && (
-              mode === "learn" ? (
+              (isTutor && mode === "learn") ? (
                 /* ── Learn mode: unified question view mirrors student's view ── */
                 <div style={{ padding: 12, fontSize: 18 }}>
                   {/* Question text */}
@@ -960,8 +962,8 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
                     </div>
                   )}
                 </div>
-              ) : (
-                /* ── Manual / Assessment mode: full editor view ── */
+              ) : isTutor ? (
+                /* ── Tutor: Manual / Assessment editor view ── */
                 <PreviewPanel
                   key={tutorPreviewKey}
                   mode="editor"
@@ -969,6 +971,20 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
                   templateContent=""
                   onEditorNext={(newPreview) => setPreview(newPreview)}
                 />
+              ) : (
+                /* ── Student: Assessment question with answer input ── */
+                activeTemplateId != null && studentId != null ? (
+                  <PreviewPanel
+                    key={activeTemplateId}
+                    mode="student"
+                    templateId={activeTemplateId}
+                    studentId={studentId}
+                    preview={preview}
+                    onStudentNext={() => { /* tutor advances in assessment mode */ }}
+                    onImmediateAnswer={handleImmediateAnswer}
+                    disableOnWrong={true}
+                  />
+                ) : null
               )
             )}
           </>
