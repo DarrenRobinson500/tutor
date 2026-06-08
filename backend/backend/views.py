@@ -5193,7 +5193,7 @@ def _session_assessment_question(session, student, grade, state, result):
         .order_by('order_index', 'id')
     )
     leaf_skills = [
-        {"id": s.id, "description": s.description}
+        {"id": s.id, "code": s.code, "description": s.description}
         for s in all_leaf_skills
         if _skill_matches_year(s, grade_str)
     ]
@@ -5204,10 +5204,6 @@ def _session_assessment_question(session, student, grade, state, result):
     skill_index = state.get("skill_index", 0)
     difficulty = state.get("difficulty", "easy")
     used_ids = state.get("used_template_ids", [])
-
-    # Update mastery for the skill just answered
-    if result in ("correct", "wrong") and state.get("current_skill_id"):
-        _update_skill_mastery(student, state["current_skill_id"], result == "correct")
 
     if result == "correct":
         diff_idx = DIFFICULTIES.index(difficulty) if difficulty in DIFFICULTIES else 0
@@ -5220,11 +5216,30 @@ def _session_assessment_question(session, student, grade, state, result):
         skill_index += 1
         difficulty = "easy"
 
+    def _find_template(skill_code, diff, excl_ids):
+        """Grade-free lookup matching _get_next_template used by the standalone test."""
+        qs = Template.objects.filter(
+            skill_detail__parent__code=skill_code,
+            difficulty__iexact=diff,
+            validated=True,
+            language='en',
+        ).exclude(id__in=excl_ids)
+        return qs.order_by("?").first()
+
     # Skip skills with no templates
     attempts = 0
     template = None
     while skill_index < len(leaf_skills) and attempts < len(leaf_skills):
-        template = _pick_template(leaf_skills[skill_index]["id"], grade, difficulty, used_ids)
+        skill_code = leaf_skills[skill_index]["code"]
+        template = _find_template(skill_code, difficulty, used_ids)
+        if template:
+            break
+        # Try any difficulty before giving up on this skill
+        template = Template.objects.filter(
+            skill_detail__parent__code=skill_code,
+            validated=True,
+            language='en',
+        ).exclude(id__in=used_ids).order_by("?").first()
         if template:
             break
         skill_index += 1
@@ -5250,13 +5265,12 @@ def _session_assessment_question(session, student, grade, state, result):
         _create_aa_post_session_records(session, student, grade, grade_key, leaf_skills, skill_index, syllabus_percent)
         return Response({"template_id": None, "complete": True, "total_skills": len(leaf_skills), "syllabus_percent": syllabus_percent})
 
-    current_skill_id = leaf_skills[skill_index]["id"]
     used_ids = (used_ids + [template.id])[-100:]
     state.update({
         "skill_index": skill_index,
         "difficulty": difficulty,
         "used_template_ids": used_ids,
-        "current_skill_id": current_skill_id,
+        "current_skill_id": leaf_skills[skill_index]["id"],
     })
     session.session_state = state
     session.save(update_fields=["session_state"])
@@ -5389,11 +5403,18 @@ class TutoringSessionViewSet(viewsets.ViewSet):
             return Response({"error": "Not authorised"}, status=403)
 
         state = session.session_state or {}
+        from .models import BookingAdhoc
+        is_assisted = BookingAdhoc.objects.filter(
+            tutor=session.tutor,
+            student=session.student,
+            is_assisted_assessment=True,
+        ).exists()
         return Response({
             "active_template_id": session.active_template_id,
             "learn_mode": bool(state.get("learn_mode", False)),
             "learn_session_id": state.get("learn_session_id"),
             "preview": state.get("preview"),
+            "is_assisted_assessment": is_assisted,
         })
 
     @action(detail=False, methods=["post"])

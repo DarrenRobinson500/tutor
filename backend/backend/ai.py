@@ -476,6 +476,7 @@ def generate_report_narrative(
     total_assessed: int,
     strengths: list,
     focus_areas: list,
+    gender: str = "",
 ) -> dict:
     """
     Generate narrative text for the parent PDF progress report.
@@ -527,15 +528,17 @@ def generate_report_narrative(
         raw = response.choices[0].message.content.strip()
         return _json.loads(raw)
     except Exception:
-        return _fallback_narrative(student_first_name, yr, overall_level, cov_str, strengths, focus_areas)
+        return _fallback_narrative(student_first_name, yr, overall_level, cov_str, strengths, focus_areas, gender)
 
 
-def _fallback_narrative(first, yr, overall_level, cov_str, strengths, focus_areas):
+def _fallback_narrative(first, yr, overall_level, cov_str, strengths, focus_areas, gender=""):
+    g = (gender or "").strip().lower()
+    pronoun = "He" if g in ("male", "m", "boy") else "She" if g in ("female", "f", "girl") else first
     top_strength = strengths[0]['skill_description'] if strengths else None
     top_focus = focus_areas[0]['skill_description'] if focus_areas else None
     summary = (
         f"{first} has been working hard this term. "
-        f"They have been assessed across {cov_str} and are performing at a {overall_level} level overall."
+        f"{pronoun} has completed {cov_str} and is performing at a {overall_level} level overall."
     )
     if top_strength:
         summary += f" {first} is showing real strength in {top_strength}."

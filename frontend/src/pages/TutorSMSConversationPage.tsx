@@ -40,7 +40,7 @@ export function TutorSMSConversationPage() {
         <h3>Conversation with {thread.student_name}</h3>
 
         <div className="sms-thread mt-3">
-          {thread.messages.map(msg => (
+          {[...thread.messages].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(msg => (
             <div
               key={msg.id}
               className={msg.direction === "outbound" ? "sms-outbound" : "sms-inbound"}

@@ -23,7 +23,13 @@ export function PostTuitionListPage() {
     apiFetch("/api/jobs/")
       .then((r) => r.json())
       .then((data: any[]) => {
-        const pending = data.filter((j) => j.job_type === "post_tuition_review");
+        const pending = data
+          .filter((j) => j.job_type === "post_tuition_review")
+          .sort((a, b) => {
+            const dateA = a.booking_date ?? a.triggered_at ?? "";
+            const dateB = b.booking_date ?? b.triggered_at ?? "";
+            return dateB.localeCompare(dateA);
+          });
         setJobs(pending);
       })
       .catch(() => {})

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ProgressChart } from "./components/ProgressChart";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { apiFetch } from "../utils/apiFetch";
 import { dashboardPath } from "../utils/dashboardPath";
 import "./ParentHomePage.css";
@@ -446,7 +446,10 @@ export default function ParentHomePage() {
   const [launchingFor, setLaunchingFor] = useState<number | null>(null);
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
-  const [tab, setTab] = useState<"overview" | "assessments" | "details">("overview");
+  const location = useLocation();
+  const section = location.pathname.endsWith("/reports") ? "reports"
+                : location.pathname.endsWith("/details") ? "details"
+                : "overview";
   const [removingChild, setRemovingChild] = useState<Child | null>(null);
   const [assistedAssessmentChild, setAssistedAssessmentChild] = useState<Child | null>(null);
   const [devUsers, setDevUsers] = useState([
@@ -487,7 +490,7 @@ export default function ParentHomePage() {
     } catch { /* ignore */ }
   }
 
-  useEffect(() => {
+  function loadData() {
     apiFetch("/api/auth/parent_home/")
       .then((res) => {
         if (!res.ok) throw new Error("Not authorised");
@@ -510,7 +513,9 @@ export default function ParentHomePage() {
       .then((r) => r.ok ? r.json() : { payments: [] })
       .then((d) => setPendingPayments(d.payments || []))
       .catch(() => {});
-  }, []);
+  }
+
+  useEffect(() => { loadData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleLogout() {
     localStorage.removeItem("access");
@@ -631,6 +636,8 @@ export default function ParentHomePage() {
             <Link to={`/parents/${parent.id}`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Home</Link>
             {hasTutor && <Link to={`/parents/${parent.id}/bookings`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Bookings</Link>}
             {hasTutor && <Link to={`/parents/${parent.id}/payments`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Payments</Link>}
+            <Link to={`/parents/${parent.id}/reports`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Reports</Link>
+            <Link to={`/parents/${parent.id}/details`} className="ph-nav-logout" style={{ textDecoration: "none" }}>My details</Link>
             <Link to={`/parents/${parent.id}/principles`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Helping your child</Link>
             <Link to={`/parents/${parent.id}/feedback`} className="ph-nav-logout" style={{ textDecoration: "none" }}>Feedback</Link>
           </div>
@@ -663,33 +670,10 @@ export default function ParentHomePage() {
         </div>
       </header>
 
-      {/* ── Tabs ─────────────────────────────────── */}
-      <div className="ph-body" style={{ paddingBottom: 0 }}>
-        <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--sm-border-light, #E8E0D6)" }}>
-          {(["overview", "assessments", "details"] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              style={{
-                background: "none", border: "none", cursor: "pointer",
-                padding: "0.6rem 1.25rem",
-                fontFamily: "var(--font-body, Inter, sans-serif)",
-                fontSize: "0.9rem", fontWeight: tab === t ? 600 : 400,
-                color: tab === t ? "var(--sm-orange, #FF8C42)" : "var(--sm-text-muted, #8A7F74)",
-                borderBottom: tab === t ? "2px solid var(--sm-orange, #FF8C42)" : "2px solid transparent",
-                marginBottom: "-2px",
-              }}
-            >
-              {t === "overview" ? "Overview" : t === "assessments" ? "Reports" : "My details"}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* ── Body ─────────────────────────────────── */}
       <main className="ph-body">
 
-        {tab === "overview" && <>
+        {section === "overview" && <>
           {/* Pending payment banner */}
           <PendingPaymentBanner
             payments={pendingPayments}
@@ -716,7 +700,7 @@ export default function ParentHomePage() {
                   onLaunchAssessment={() => handleLaunchAssessment(child.id)}
                   onFindTutor={() => handleFindTutor(child)}
                   onRemoveTutor={() => handleRemoveTutor(child.id)}
-                  onViewReport={() => setTab("assessments")}
+                  onViewReport={() => navigate(`/parents/${parent.id}/reports`)}
                   onAssistedAssessment={() => setAssistedAssessmentChild(child)}
                 />
               ))}
@@ -736,9 +720,9 @@ export default function ParentHomePage() {
           )}
         </>}
 
-        {tab === "assessments" && <AssessmentsTab children={children} />}
+        {section === "reports" && <AssessmentsTab children={children} />}
 
-        {tab === "details" && (
+        {section === "details" && (
           <MyDetailsTab
             parent={parent}
             onSaved={(updated) => setData(d => d ? { ...d, parent: { ...d.parent, ...updated } } : d)}
@@ -761,6 +745,7 @@ export default function ParentHomePage() {
           child={assistedAssessmentChild}
           parentMobile={data?.parent.mobile ?? null}
           onClose={() => setAssistedAssessmentChild(null)}
+          onBooked={() => { setAssistedAssessmentChild(null); loadData(); }}
         />
       )}
     </div>
@@ -817,10 +802,12 @@ function AssistedAssessmentModal({
   child,
   parentMobile,
   onClose,
+  onBooked,
 }: {
   child: Child;
   parentMobile: string | null;
   onClose: () => void;
+  onBooked: () => void;
 }) {
   const [slots, setSlots] = useState<AASlot[] | null>(null);
   const [selected, setSelected] = useState<AASlot | null>(null);
@@ -967,7 +954,7 @@ function AssistedAssessmentModal({
               Booked! SMS confirmations have been sent. {selected?.tutor_name.split(" ")[0]} will be in touch to confirm the final details.
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button className="sm-btn-primary" onClick={onClose}>Close</button>
+              <button className="sm-btn-primary" onClick={onBooked}>Close</button>
             </div>
           </>
         )}

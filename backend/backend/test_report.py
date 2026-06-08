@@ -333,6 +333,11 @@ def generate_test_report(session) -> bytes:
         for r in focus_rs
     ]
 
+    try:
+        student_gender = student.student_profile.gender or ""
+    except Exception:
+        student_gender = ""
+
     narrative = generate_report_narrative(
         student_first_name=first_name,
         year_level=year_level,
@@ -341,6 +346,7 @@ def generate_test_report(session) -> bytes:
         total_assessed=assessed_count,
         strengths=strengths_data,
         focus_areas=focus_data,
+        gender=student_gender,
     )
 
     from django.utils import timezone as _tz

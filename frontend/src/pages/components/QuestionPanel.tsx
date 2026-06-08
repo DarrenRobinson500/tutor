@@ -305,6 +305,7 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
   const [showCalculator, setShowCalculator] = useState(false);
 
   const initialised = useRef(false);
+  const isAssistedAssessment = useRef(false);
   const lastAnswerRef = useRef<{ answer: string; correct: boolean } | null>(null);
   // Carries a tutor-computed preview from the LiveKit event into the activeTemplateId
   // useEffect so the student uses the identical parametrised question without re-fetching.
@@ -316,6 +317,10 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
       .then((r) => r.json())
       .then((data) => {
         console.log("[QuestionPanel] state restore:", data);
+        if (isTutor && data.is_assisted_assessment) {
+          isAssistedAssessment.current = true;
+          setMode("assessment");
+        }
         if (!isTutor && data.learn_mode && data.learn_session_id && data.active_template_id) {
           // Student missed the LiveKit event — restore learn mode from server state
           setStudentLearnMode(true);
@@ -342,11 +347,11 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
       .catch(() => {});
   }, [roomName]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-start learn mode for tutor on mount
+  // Auto-start learn mode for tutor on mount (skip if assisted assessment)
   useEffect(() => {
     if (!isTutor || initialised.current) return;
     initialised.current = true;
-    startLearnMode();
+    if (!isAssistedAssessment.current) startLearnMode();
   }, [isTutor]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load student's year skills for manual mode
