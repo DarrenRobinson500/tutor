@@ -98,6 +98,10 @@ interface SessionEvent {
   focus_areas?: FocusAreaItem[];
   // select_focus_area fields
   focus_area_id?: number;
+  // assessment progress (broadcast with set_template)
+  assess_skill_index?: number;
+  assess_total_skills?: number;
+  assess_skill?: string;
 }
 
 interface FocusAreaItem {
@@ -301,6 +305,11 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
   const [assessmentDone, setAssessmentDone] = useState(false);
   const [assessmentPct, setAssessmentPct] = useState<number | null>(null);
 
+  // ── Assessment progress (student) — received via set_template broadcast ────
+  const [studentAssessSkillIndex, setStudentAssessSkillIndex] = useState<number | null>(null);
+  const [studentAssessTotalSkills, setStudentAssessTotalSkills] = useState<number | null>(null);
+  const [studentAssessSkill, setStudentAssessSkill] = useState<string>("");
+
   // ── Calculator ────────────────────────────────────────────────────────────
   const [showCalculator, setShowCalculator] = useState(false);
 
@@ -474,6 +483,9 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
             if (event.preview && event.template_id) {
               pendingPreviewRef.current = { templateId: event.template_id, preview: event.preview };
             }
+            if (event.assess_skill_index !== undefined) setStudentAssessSkillIndex(event.assess_skill_index);
+            if (event.assess_total_skills !== undefined) setStudentAssessTotalSkills(event.assess_total_skills);
+            if (event.assess_skill) setStudentAssessSkill(event.assess_skill);
             setActiveTemplateId(event.template_id ?? null);
           }
         } else {
@@ -543,7 +555,7 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
 
   const pushTemplate = async (
     templateId: number | null,
-    opts?: { sessionId?: number; learnMode?: boolean; preview?: any }
+    opts?: { sessionId?: number; learnMode?: boolean; preview?: any; skillIndex?: number; totalSkills?: number; skill?: string }
   ) => {
     const event: SessionEvent = {
       topic: TOPIC,
@@ -552,6 +564,9 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
       session_id: opts?.sessionId,
       learn_mode: opts?.learnMode,
       preview: opts?.preview ?? null,
+      assess_skill_index: opts?.skillIndex,
+      assess_total_skills: opts?.totalSkills,
+      assess_skill: opts?.skill,
     };
     room.localParticipant.publishData(
       new TextEncoder().encode(JSON.stringify(event)),
@@ -757,7 +772,12 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
           const questionPreview = await apiFetch(`/api/templates/${data.template_id}/preview/`)
             .then((r) => r.json())
             .catch(() => null);
-          await pushTemplate(data.template_id, { preview: questionPreview });
+          await pushTemplate(data.template_id, {
+            preview: questionPreview,
+            skillIndex: data.skill_index,
+            totalSkills: data.total_skills,
+            skill: data.skill,
+          });
           return;
         }
 
@@ -882,14 +902,19 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
             </div>
           )}
 
-          {/* Assessment context */}
-          {mode === "assessment" && assessContext && !assessContext.error && !assessContext.complete && (
-            <div className="mb-2 px-1" style={{ fontSize: 12, lineHeight: 1.6 }}>
-              <span className="fw-semibold">{assessContext.skill}</span>
-              <span className="text-muted ms-2">
-                Skill {(assessContext.skill_index ?? 0) + 1}/{assessContext.total_skills}
-                {" · "}{DIFFICULTY_LABEL[assessContext.difficulty ?? ""] ?? assessContext.difficulty}
-              </span>
+          {/* Assessment progress — tutor */}
+          {mode === "assessment" && assessContext && !assessContext.error && !assessContext.complete && assessContext.total_skills && (
+            <div className="mb-2">
+              <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: 13 }}>
+                <span className="fw-semibold">{assessContext.skill}</span>
+                <span className="text-muted">Skill {(assessContext.skill_index ?? 0) + 1} of {assessContext.total_skills}</span>
+              </div>
+              <div className="progress" style={{ height: 6 }}>
+                <div
+                  className="progress-bar bg-primary"
+                  style={{ width: `${(((assessContext.skill_index ?? 0) + 1) / assessContext.total_skills) * 100}%`, transition: "width 0.4s" }}
+                />
+              </div>
             </div>
           )}
           {mode === "assessment" && assessContext?.error && (
@@ -1180,6 +1205,21 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
               ) : (
                 /* ── Student: Assessment question with answer input ── */
                 activeTemplateId != null && studentId != null ? (
+                  <>
+                  {studentAssessTotalSkills !== null && studentAssessSkillIndex !== null && (
+                    <div className="mb-3">
+                      <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: 13 }}>
+                        <span className="fw-semibold">{studentAssessSkill}</span>
+                        <span className="text-muted">Skill {studentAssessSkillIndex + 1} of {studentAssessTotalSkills}</span>
+                      </div>
+                      <div className="progress" style={{ height: 6 }}>
+                        <div
+                          className="progress-bar bg-primary"
+                          style={{ width: `${((studentAssessSkillIndex + 1) / studentAssessTotalSkills) * 100}%`, transition: "width 0.4s" }}
+                        />
+                      </div>
+                    </div>
+                  )}
                   <PreviewPanel
                     key={activeTemplateId}
                     mode="student"
@@ -1199,6 +1239,7 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
                     onImmediateAnswer={handleImmediateAnswer}
                     disableOnWrong={true}
                   />
+                  </>
                 ) : null
               )
             )}

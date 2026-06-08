@@ -745,7 +745,7 @@ export default function ParentHomePage() {
           child={assistedAssessmentChild}
           parentMobile={data?.parent.mobile ?? null}
           onClose={() => setAssistedAssessmentChild(null)}
-          onBooked={() => { setAssistedAssessmentChild(null); loadData(); }}
+          onBooked={() => loadData()}
         />
       )}
     </div>
@@ -842,6 +842,7 @@ function AssistedAssessmentModal({
       const d = await res.json();
       if (!res.ok) { setError(d.error || "Something went wrong."); return; }
       setStep("done");
+      onBooked();
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -954,7 +955,7 @@ function AssistedAssessmentModal({
               Booked! SMS confirmations have been sent. {selected?.tutor_name.split(" ")[0]} will be in touch to confirm the final details.
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button className="sm-btn-primary" onClick={onBooked}>Close</button>
+              <button className="sm-btn-primary" onClick={onClose}>Close</button>
             </div>
           </>
         )}

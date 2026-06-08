@@ -5077,18 +5077,22 @@ def _session_focus_area_question(session, student, grade, state, result):
 
 def _create_aa_post_session_records(session, student, grade, grade_key, leaf_skills, skill_index, syllabus_percent):
     """After an assisted-assessment completes: create test report records and a post-tuition review job."""
-    import threading
     from datetime import timedelta
     try:
         from .models import (
             TestSession as _TS, TestSkillResult as _TSR,
             StudentSkillCompetency as _SSC, StudentProfile as _SP,
-            TutorJob as _TJ, BookingOutcome as _BO,
+            TutorJob as _TJ, BookingOutcome as _BO, TutorStudent as _TutStu,
         )
+        from .cache import invalidate_students_cache_for_tutor as _inv_cache
 
         covered = min(skill_index, len(leaf_skills))
         _skill_ids = [s['id'] for s in leaf_skills[:covered]]
         _comp_map = {c.skill_id: c.level for c in _SSC.objects.filter(student=student, skill_id__in=_skill_ids)}
+
+        # ── Link tutor → student so the parent can book follow-up sessions ──
+        _TutStu.objects.get_or_create(tutor=session.tutor, student=student)
+        _inv_cache(session.tutor.id)
 
         # ── Test report ──
         _now = timezone.now()
@@ -5111,7 +5115,7 @@ def _create_aa_post_session_records(session, student, grade, grade_key, leaf_ski
                 questions_asked=max(1, _lvl),
                 questions_correct=max(0, _lvl - 1) if _lvl > 0 else 0,
             )
-        threading.Thread(target=_send_test_report_email, args=(_test_session,), daemon=True).start()
+        _send_test_report_email(_test_session)
 
         # ── Post-tuition review job ──
         tutor = session.tutor
