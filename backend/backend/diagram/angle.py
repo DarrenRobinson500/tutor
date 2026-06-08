@@ -23,8 +23,8 @@ SUPPORTS_VIZ_SCALE = True
 _RAY_LEN   = 12.0   # ray length at viz_scale = 1.0
 _SW        = 0.18   # stroke-width for rays
 _ARC_SW    = 0.13   # stroke-width for arcs
-_ARC_R0    = 2.8    # innermost arc radius
-_ARC_DR    = 1.05   # radial step between multiple arcs for the same angle
+_ARC_R0    = 1.4    # innermost arc radius
+_ARC_DR    = 0.52   # radial step between multiple arcs for the same angle
 _FONT_SIZE = 2.8    # label font size
 _LABEL_GAP = 2.2    # extra radial gap between outermost arc and label
 

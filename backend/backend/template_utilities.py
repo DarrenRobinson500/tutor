@@ -740,11 +740,12 @@ def generate_first_question(request):
         # This template failed all 3 render attempts — flag it and try another
         error_detail = preview.get("error", "") if preview else ""
         print(f"  flagging template {template.id} as faulty after 3 render failures")
-        _Note.objects.get_or_create(
-            template=template,
-            category='auto_error',
-            defaults={"text": f"Failed to evaluate: {error_detail[:300]}" if error_detail else "Failed to evaluate"},
-        )
+        if not _Note.objects.filter(template=template, category='auto_error').exists():
+            _Note.objects.create(
+                template=template,
+                category='auto_error',
+                text=f"Failed to evaluate: {error_detail[:300]}" if error_detail else "Failed to evaluate",
+            )
         template.validated = False
         template.save(update_fields=["validated"])
 

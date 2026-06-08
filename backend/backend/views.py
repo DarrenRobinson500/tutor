@@ -1392,11 +1392,8 @@ class QuestionViewSet(viewsets.ViewSet):
                 # Flag the original (English) template so editors can see it needs fixing
                 from .models import Note as _Note
                 note_text = f"Failed to evaluate: {error_detail[:300]}" if error_detail else "Failed to evaluate"
-                _Note.objects.get_or_create(
-                    template=next_template,
-                    category='auto_error',
-                    text=note_text,
-                )
+                if not _Note.objects.filter(template=next_template, category='auto_error').exists():
+                    _Note.objects.create(template=next_template, category='auto_error', text=note_text)
                 next_question = None
                 next_template_id = None
         elif loop_complete:
@@ -6092,7 +6089,8 @@ def _build_question_payload(session, template, skill_code: str, skill_descriptio
         from .models import Note as _Note
         # Use parent_template so the note lands on the English original, not a translation
         original = getattr(template, 'parent_template', None) or template
-        _Note.objects.get_or_create(template=original, category='auto_error', text=note_text)
+        if not _Note.objects.filter(template=original, category='auto_error').exists():
+            _Note.objects.create(template=original, category='auto_error', text=note_text)
         return None
     preview = preview_result['preview']
     preview['template_id'] = template.id
