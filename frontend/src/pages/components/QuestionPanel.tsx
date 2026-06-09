@@ -915,15 +915,15 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
                   style={{ width: `${(((assessContext.skill_index ?? 0) + 1) / assessContext.total_skills) * 100}%`, transition: "width 0.4s" }}
                 />
               </div>
+              {assessContext.difficulty && (
+                <div className="text-muted mt-1" style={{ fontSize: 11 }}>
+                  Difficulty: <span style={{ textTransform: "capitalize" }}>{assessContext.difficulty}</span>
+                </div>
+              )}
             </div>
           )}
           {mode === "assessment" && assessContext?.error && (
             <div className="text-danger mb-2" style={{ fontSize: 12 }}>{assessContext.error}</div>
-          )}
-          {mode === "assessment" && assessContext?.complete && (
-            <div className="text-success mb-2 fw-semibold" style={{ fontSize: 12 }}>
-              Assessment complete — all {assessContext.total_skills} skills covered.
-            </div>
           )}
 
           {/* Assessment: Next button + loading spinner */}
@@ -1087,16 +1087,17 @@ export function QuestionPanel({ isTutor, roomName, studentId }: QuestionPanelPro
               />
             )}
             {!actionLoading && !loadingPreview && !activeTemplateId && !(isTutor && learnComplete && completeData) && (
-              !isTutor && assessmentDone ? (
+              (assessmentDone || (isTutor && !!assessContext?.complete)) ? (
                 <div className="text-center mt-4 px-3">
                   <div style={{ fontSize: 22, marginBottom: 8 }}>🎉</div>
                   <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 6 }}>
                     Congratulations!
                   </div>
                   <div style={{ fontSize: 14, color: "var(--sm-text-secondary, #5A5047)" }}>
+                    {isTutor ? `${assessContext?.total_skills ?? ""} skills covered. ` : ""}
                     You have now completed{" "}
-                    {assessmentPct !== null
-                      ? <strong>{assessmentPct}%</strong>
+                    {(assessmentPct ?? assessContext?.syllabus_percent ?? null) !== null
+                      ? <strong>{assessmentPct ?? assessContext?.syllabus_percent}%</strong>
                       : "a great portion"
                     }{" "}
                     of the year's work. Well done!

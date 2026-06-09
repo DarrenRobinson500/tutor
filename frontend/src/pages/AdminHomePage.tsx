@@ -55,6 +55,12 @@ const TYPE_BORDER: Record<string, string> = {
   call_tutor_overdue_review: "#f5a0a0",
 };
 
+function isWithin7Days(dateStr: string): boolean {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  return new Date(dateStr) >= cutoff;
+}
+
 function Stars({ value }: { value: number }) {
   return (
     <span style={{ color: "#f59e0b", fontSize: "1.1rem", letterSpacing: 1 }}>
@@ -144,7 +150,7 @@ function PendingJobsTab() {
         setApiError(`API error ${res.status}: ${JSON.stringify(data)}`);
         return;
       }
-      setJobs(Array.isArray(data) ? data : []);
+      setJobs(Array.isArray(data) ? data.filter((j: AdminJob) => isWithin7Days(j.triggered_at)) : []);
     } catch (e: any) {
       setApiError(e.message ?? "Unknown error");
     } finally {
@@ -256,7 +262,7 @@ function FeedbackTab() {
   useEffect(() => {
     apiFetch("/api/payments/admin-feedback/")
       .then(r => r.json())
-      .then(d => { setItems(Array.isArray(d) ? d : []); })
+      .then(d => { setItems(Array.isArray(d) ? d.filter((i: FeedbackItem) => isWithin7Days(i.session_date)) : []); })
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, []);
@@ -369,10 +375,10 @@ function ActivityTab() {
     apiFetch("/api/admin/activity/")
       .then(r => r.json())
       .then(d => setData({
-        parents:       Array.isArray(d.parents)       ? d.parents       : [],
-        students:      Array.isArray(d.students)      ? d.students      : [],
-        tutors:        Array.isArray(d.tutors)         ? d.tutors        : [],
-        tutor_removals: Array.isArray(d.tutor_removals) ? d.tutor_removals : [],
+        parents:        Array.isArray(d.parents)        ? d.parents.filter((u: ActivityUser) => isWithin7Days(u.date_joined))             : [],
+        students:       Array.isArray(d.students)       ? d.students.filter((u: ActivityUser) => isWithin7Days(u.date_joined))            : [],
+        tutors:         Array.isArray(d.tutors)         ? d.tutors.filter((u: ActivityUser) => isWithin7Days(u.date_joined))              : [],
+        tutor_removals: Array.isArray(d.tutor_removals) ? d.tutor_removals.filter((r: TutorRemoval) => isWithin7Days(r.triggered_at))    : [],
       }))
       .catch(() => setData({ parents: [], students: [], tutors: [], tutor_removals: [] }))
       .finally(() => setLoading(false));
@@ -475,7 +481,7 @@ function ParentFeedbackAdminTab() {
   useEffect(() => {
     apiFetch("/api/parent-feedback/")
       .then(r => r.json())
-      .then(d => setItems(Array.isArray(d) ? d : []))
+      .then(d => setItems(Array.isArray(d) ? d.filter((i: ParentFeedbackItem) => isWithin7Days(i.created_at)) : []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, []);

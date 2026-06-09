@@ -317,7 +317,18 @@ def generate_test_report(session) -> bytes:
     tutor = student.get_tutor()
     tutor_name = tutor.get_full_name() if tutor else None
 
-    coverage_pct, assessed_count, _ = _compute_coverage(session, results)
+    # Coverage % — use the same calculation as the student home page so the
+    # figure in the report matches what the student sees.
+    grade_key = str(year_level).strip().lower().replace("year", "").strip() if year_level else None
+    coverage_pct = None
+    if grade_key:
+        try:
+            from .competency import get_student_score as _gss
+            coverage_pct = round(_gss(student, grade_key) * 100)
+        except Exception:
+            pass
+
+    assessed_count = len(results)
     overall_lvl   = _overall_level(results)
     overall_label = LEVEL_LABEL[overall_lvl]
     strengths_rs, focus_rs = _strengths_and_focus(results)
@@ -332,6 +343,26 @@ def generate_test_report(session) -> bytes:
          'level_label': LEVEL_LABEL[r.highest_difficulty_reached]}
         for r in focus_rs
     ]
+
+    # All leaf skills for the year, in syllabus order, with current competency levels.
+    # Used in the syllabus breakdown table.
+    all_year_skills = []  # list of (description, comp_level)
+    if grade_key:
+        try:
+            from .cache import get_matrix_cache, filter_matrix_by_grade
+            from .models import StudentSkillCompetency as _SSC
+            _matrix = get_matrix_cache()
+            _year_leaves = [s for s in filter_matrix_by_grade(_matrix, grade_key) if s['children_count'] == 0]
+            _skill_ids = [s['id'] for s in _year_leaves]
+            _comp_map = {c.skill_id: c.level for c in _SSC.objects.filter(
+                student=student, skill_id__in=_skill_ids
+            )}
+            all_year_skills = [
+                (s['description'], _comp_map.get(s['id'], 0))
+                for s in _year_leaves
+            ]
+        except Exception:
+            pass
 
     try:
         student_gender = student.student_profile.gender or ""
@@ -514,29 +545,26 @@ def generate_test_report(session) -> bytes:
     elements.append(Paragraph("Syllabus Breakdown", s['h2']))
     elements.append(Spacer(1, 2 * mm))
 
+    _LEVEL_TO_DIFF = {0: 'none', 1: 'easy', 2: 'medium', 3: 'hard', 4: 'hard', 5: 'hard', 6: 'hard'}
+
     tbl_data = [[
         Paragraph("Skill", s['table_hdr']),
-        Paragraph("Level Reached", s['table_hdr']),
-        Paragraph("Score", s['table_hdr']),
+        Paragraph("Level", s['table_hdr']),
     ]]
-    for r in results:
-        lvl_label = LEVEL_LABEL.get(r.highest_difficulty_reached, r.highest_difficulty_reached)
-        score = f"{r.questions_correct}/{r.questions_asked}" if r.questions_asked else "—"
-        lvl_hex = LEVEL_HEX.get(r.highest_difficulty_reached, '#95A5A6')
+    rows_source = all_year_skills or [(r.skill_description or r.skill_code, None) for r in results]
+    for skill_desc, comp_level in rows_source:
+        if comp_level is None:
+            diff_key = 'none'
+        else:
+            diff_key = _LEVEL_TO_DIFF.get(min(int(comp_level), 6), 'none')
+        lvl_label = LEVEL_LABEL.get(diff_key, 'Untested')
+        lvl_hex = LEVEL_HEX.get(diff_key, '#95A5A6')
         tbl_data.append([
-            Paragraph(r.skill_description or r.skill_code, s['table_cell']),
+            Paragraph(skill_desc, s['table_cell']),
             Paragraph(f'<font color="{lvl_hex}"><b>{lvl_label}</b></font>', s['table_cell']),
-            Paragraph(score, s['table_cell']),
-        ])
-    for code in untested_codes:
-        desc = untested_desc.get(code, code)
-        tbl_data.append([
-            Paragraph(desc, s['table_cell']),
-            Paragraph('<font color="#95A5A6"><i>Untested</i></font>', s['table_cell']),
-            Paragraph('—', s['table_cell']),
         ])
 
-    col_widths = [USABLE_W * 0.58, USABLE_W * 0.27, USABLE_W * 0.15]
+    col_widths = [USABLE_W * 0.73, USABLE_W * 0.27]
     tbl_styles = [
         ('BACKGROUND',    (0, 0), (-1, 0), BRAND),
         ('FONTSIZE',      (0, 0), (-1, -1), 8.5),

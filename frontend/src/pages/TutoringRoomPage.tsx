@@ -170,6 +170,11 @@ export function TutoringRoomPage() {
                 method: "POST",
                 body: JSON.stringify({ room_name: roomName }),
               }).catch(() => {});
+              const tutorId = roomMatch?.[1];
+              if (tutorId) {
+                navigate(`/tutors/${tutorId}/post-tuition`);
+                return;
+              }
             }
             navigate(-1);
           }}

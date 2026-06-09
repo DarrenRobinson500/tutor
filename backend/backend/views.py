@@ -5075,7 +5075,7 @@ def _session_focus_area_question(session, student, grade, state, result):
     })
 
 
-def _create_aa_post_session_records(session, student, grade, grade_key, leaf_skills, skill_index, syllabus_percent):
+def _create_aa_post_session_records(session, student, grade, grade_key, leaf_skills, skill_index, syllabus_percent, test_session_id=None):
     """After an assisted-assessment completes: create test report records and a post-tuition review job."""
     from datetime import timedelta
     try:
@@ -5162,7 +5162,7 @@ def _create_aa_post_session_records(session, student, grade, grade_key, leaf_ski
         )
 
         _expires_at = timezone.now() + timedelta(days=14)
-        _booking_ref = f"aa_session_{session.id}"
+        _booking_ref = f"aa_ts_{test_session_id}" if test_session_id else f"aa_session_{session.id}"
         _job, _created = _TJ.objects.get_or_create(
             tutor=tutor,
             student=student,
@@ -5350,7 +5350,8 @@ def _session_assessment_question(session, student, grade, state, result):
             for c in test_session.skill_codes if c in _skill_objs
         ]
         _create_aa_post_session_records(
-            session, student, grade, grade_key, leaf_skills, len(leaf_skills), syllabus_percent
+            session, student, grade, grade_key, leaf_skills, len(leaf_skills), syllabus_percent,
+            test_session_id=test_session.id,
         )
         return Response({
             "template_id": None, "complete": True,
@@ -5579,8 +5580,10 @@ class TutoringSessionViewSet(viewsets.ViewSet):
         # when the assessment completes, but covers early session end or silent failures.
         if session.session_mode == 'assessment':
             from .models import TutorJob as _TJ
-            booking_ref = f"aa_session_{session.id}"
-            if not _TJ.objects.filter(booking_ref=booking_ref).exists():
+            state = session.session_state or {}
+            _sn_ts_id = state.get("test_session_id")
+            _sn_booking_ref = f"aa_ts_{_sn_ts_id}" if _sn_ts_id else f"aa_session_{session.id}"
+            if not _TJ.objects.filter(booking_ref=_sn_booking_ref).exists():
                 try:
                     grade = session.student.student_profile.year_level
                 except Exception:
@@ -5588,10 +5591,8 @@ class TutoringSessionViewSet(viewsets.ViewSet):
                 if grade:
                     grade_str = str(grade)
                     grade_key = grade_str.strip().lower().replace("year", "").strip()
-                    state = session.session_state or {}
-                    test_session_id = state.get("test_session_id")
                     from .models import TestSession as _TS_sn
-                    ts = _TS_sn.objects.filter(id=test_session_id).first() if test_session_id else None
+                    ts = _TS_sn.objects.filter(id=_sn_ts_id).first() if _sn_ts_id else None
                     if ts:
                         _skill_objs_sn = {
                             s.code: s
@@ -5626,6 +5627,7 @@ class TutoringSessionViewSet(viewsets.ViewSet):
                     _create_aa_post_session_records(
                         session, session.student, grade, grade_key,
                         leaf_skills, skill_index, syllabus_percent,
+                        test_session_id=ts.id if ts else None,
                     )
 
         return Response({"ok": True})
