@@ -1,12 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import "./RegisterPage.css";
 import { useYears } from "../../utils/useYears";
+import { dashboardPath } from "../../utils/dashboardPath";
 
 export default function ParentRegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const refCode = searchParams.get("ref") ?? "";
+
+  // Redirect already-authenticated users to their dashboard
+  useEffect(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") ?? "{}");
+      if (user?.id) navigate(dashboardPath(), { replace: true });
+    } catch {}
+  }, []);
   const years = useYears();
 
   // Parent fields

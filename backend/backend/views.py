@@ -631,29 +631,25 @@ class AuthViewSet(viewsets.ViewSet):
         d = request.data
         child_first = (d.get("first_name") or "").strip()
         child_last = (d.get("last_name") or "").strip()
+        child_email = (d.get("child_email") or "").strip()
         child_year = (d.get("year_level") or "").strip()
         child_school = (d.get("school_name") or "").strip()
         child_mobile = (d.get("mobile") or "").strip()
         child_password = d.get("password", "")
         child_confirm = d.get("confirm_password", "")
 
-        if not all([child_first, child_last, child_year]):
-            return Response({"error": "First name, last name and year level are required."}, status=400)
+        if not all([child_first, child_last, child_email, child_year]):
+            return Response({"error": "First name, last name, email and year level are required."}, status=400)
         if not child_password:
             return Response({"error": "Please provide a password for your child."}, status=400)
         if child_password != child_confirm:
             return Response({"error": "Passwords do not match."}, status=400)
-
-        base = f"student_{user.id}_{child_first.lower()}"
-        child_username = base
-        counter = 1
-        while User.objects.filter(username=child_username).exists():
-            child_username = f"{base}_{counter}"
-            counter += 1
+        if User.objects.filter(username=child_email).exists():
+            return Response({"error": "An account with this email already exists."}, status=400)
 
         child_user = User.objects.create(
-            username=child_username,
-            email=f"{child_username}@students.subjectmatter.app",
+            username=child_email,
+            email=child_email,
             password=make_password(child_password),
             first_name=child_first,
             last_name=child_last,
@@ -671,6 +667,7 @@ class AuthViewSet(viewsets.ViewSet):
             "id": child_user.id,
             "first_name": child_user.first_name,
             "last_name": child_user.last_name,
+            "username": child_user.username,
             "year_level": child_year,
             "school_name": child_school or None,
         })

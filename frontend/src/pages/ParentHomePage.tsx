@@ -1076,7 +1076,7 @@ function ChildCard({
       {(child.syllabus_percent ?? 0) > 0 && (
         <div className="mt-3">
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Progress</div>
-          <ProgressChart studentId={child.id} yearLevel={child.year_level} />
+          <ProgressChart studentId={child.id} yearLevel={child.year_level} overallPct={child.syllabus_percent ?? undefined} />
         </div>
       )}
 
@@ -1130,6 +1130,13 @@ function ChildCard({
             View Report
           </button>
         )}
+        <Link
+          to={`/students/${child.id}`}
+          className="sm-btn-secondary"
+          style={{ display: "block", textAlign: "center", textDecoration: "none" }}
+        >
+          Go to {child.first_name}{child.first_name.endsWith("s") ? "'" : "'s"} home page
+        </Link>
       </div>
     </div>
   );
@@ -1146,6 +1153,7 @@ function AddChildForm({
   const years = useYears();
   const [firstName, setFirstName] = useState("");
   const [lastName,  setLastName]  = useState("");
+  const [childEmail, setChildEmail] = useState("");
   const [yearLevel, setYearLevel] = useState("");
   const [schoolName, setSchoolName] = useState("");
   const [mobile, setMobile]       = useState("");
@@ -1157,8 +1165,8 @@ function AddChildForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!firstName.trim() || !lastName.trim() || !yearLevel) {
-      setError("First name, last name and year level are required.");
+    if (!firstName.trim() || !lastName.trim() || !childEmail.trim() || !yearLevel) {
+      setError("First name, last name, email and year level are required.");
       return;
     }
     if (!password) {
@@ -1176,6 +1184,7 @@ function AddChildForm({
         body: JSON.stringify({
           first_name: firstName.trim(),
           last_name: lastName.trim(),
+          child_email: childEmail.trim(),
           year_level: yearLevel,
           school_name: schoolName.trim(),
           mobile: mobile.trim(),
@@ -1227,6 +1236,12 @@ function AddChildForm({
             <input type="text" className="sm-input" placeholder="Smith"
               value={lastName} onChange={(e) => setLastName(e.target.value)} required />
           </div>
+        </div>
+
+        <div className="sm-form-group">
+          <label>Email</label>
+          <input type="email" className="sm-input" placeholder="alex@example.com"
+            value={childEmail} onChange={(e) => setChildEmail(e.target.value)} required />
         </div>
 
         <div className="ph-form-row">

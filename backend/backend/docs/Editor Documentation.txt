@@ -1043,6 +1043,42 @@ it with:
     answer: "{{ a * b }}"
     format_instruction: "Enter a whole number, e.g. 42"
 
+── Answer Units ──────────────────────────────────────────────
+
+Set answer_unit on an answer (or at the question level) to display
+a unit label immediately after the student's input box. The student
+sees   [ input box ] mm   [Submit]   and knows not to type the
+unit themselves.
+
+  question:
+    text: "Find the length of the hypotenuse."
+    answer: "{{ hyp }}"
+    answer_format: decimal_2
+    answer_unit: "cm"
+
+answer_unit can be any string: "cm", "°", "m²", "km/h", etc.
+
+Superscripts are rendered automatically — use ^ to mark an
+exponent: "m^2" displays as m², "cm^3" displays as cm³.
+
+answer_unit can also be set at the question level to apply to every
+part of a multi-part question:
+
+  question:
+    text: "A rectangle has length {{ a }} cm and width {{ b }} cm."
+    answer_unit: "cm^2"
+    parts:
+      - text: "Find the area."
+        answer: "{{ a * b }}"
+        answer_format: integer
+      - text: "Find the perimeter."
+        answer: "{{ 2 * (a + b) }}"
+        answer_format: integer
+        answer_unit: "cm"     ← overrides the question-level unit for this part
+
+A part-level answer_unit always takes precedence over the question-level one.
+
+
 ── Multiple Choice ───────────────────────────────────────────
 
 Use answers: with a list of {text, correct} dicts. The text is
