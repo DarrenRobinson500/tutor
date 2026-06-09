@@ -50,7 +50,8 @@ DEBOUNCE_TYPES = set(SMS_TEMPLATES.keys())
 # When a message of type X is enqueued, cancel any pending messages of these types
 # for the same conversation (they are now superseded).
 SUPERSEDES = {
-    'confirmed':        {'updated'},
+    'confirmed':        {'updated', 'create_adhoc', 'create_weekly'},
+    'updated':          {'confirmed', 'create_adhoc', 'create_weekly'},
     'cancelled_adhoc':  {'updated', 'confirmed', 'create_adhoc', 'create_weekly'},
     'cancelled_weekly': {'updated', 'confirmed', 'create_adhoc', 'create_weekly'},
 }

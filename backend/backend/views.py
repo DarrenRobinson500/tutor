@@ -5186,73 +5186,150 @@ def _create_aa_post_session_records(session, student, grade, grade_key, leaf_ski
         traceback.print_exc()
 
 
+def _advance_aa_template_only(test_session):
+    """Find the next template for the chat assessment — same selection logic as
+    _advance_to_question_test_mode but returns the Template object only (no preview)."""
+    from .models import TestSkillResult, Skill
+
+    while test_session.current_skill_index < len(test_session.skill_codes):
+        skill_code = test_session.skill_codes[test_session.current_skill_index]
+        skill = Skill.objects.filter(code=skill_code).first()
+        skill_description = skill.description if skill else skill_code
+
+        diff_index = DIFFICULTIES.index(test_session.current_difficulty) if test_session.current_difficulty in DIFFICULTIES else 0
+        for d in DIFFICULTIES[diff_index:]:
+            template = _get_next_template(test_session, skill_code, d)
+            if template:
+                if d != test_session.current_difficulty:
+                    test_session.current_difficulty = d
+                if template.id not in test_session.used_template_ids:
+                    test_session.used_template_ids = test_session.used_template_ids + [template.id]
+                test_session.save()
+                return template
+
+        # No templates at any difficulty — skip this skill
+        TestSkillResult.objects.get_or_create(
+            session=test_session, skill_code=skill_code,
+            defaults={
+                'skill_description': skill_description,
+                'highest_difficulty_reached': 'none',
+                'questions_asked': 0,
+                'questions_correct': 0,
+            },
+        )
+        test_session.current_skill_index += 1
+        test_session.current_difficulty = 'easy'
+        test_session.save()
+
+    return None
+
+
 def _session_assessment_question(session, student, grade, state, result):
+    """Chat assessment: identical skill-ordering and progression to TestViewSet 'test' mode."""
+    from .models import TestSession as _TS, TestSkillResult as _TSR
     from django.db.models import Count as _Count, Q as _Q
-    grade_str = str(grade)
-    all_leaf_skills = (
-        Skill.objects
-        .filter(is_detail=False)
-        .annotate(non_detail_children=_Count('children', filter=_Q(children__is_detail=False)))
-        .filter(non_detail_children=0)
-        .order_by('order_index', 'id')
-    )
-    leaf_skills = [
-        {"id": s.id, "code": s.code, "description": s.description}
-        for s in all_leaf_skills
-        if _skill_matches_year(s, grade_str)
-    ]
-    if not leaf_skills:
-        return Response({"template_id": None, "error": "No skills available for this grade"})
 
-    DIFFICULTIES = ["easy", "medium", "hard"]
-    skill_index = state.get("skill_index", 0)
-    difficulty = state.get("difficulty", "easy")
-    used_ids = state.get("used_template_ids", [])
+    # ── Resolve or create the underlying TestSession ──────────────────────────
+    test_session_id = state.get("test_session_id")
+    test_session = None
+    if test_session_id:
+        test_session = _TS.objects.filter(id=test_session_id, status='active').first()
 
-    if result == "correct":
-        diff_idx = DIFFICULTIES.index(difficulty) if difficulty in DIFFICULTIES else 0
-        if diff_idx < len(DIFFICULTIES) - 1:
-            difficulty = DIFFICULTIES[diff_idx + 1]
-        else:
-            skill_index += 1
-            difficulty = "easy"
-    elif result == "wrong":
-        skill_index += 1
-        difficulty = "easy"
+    if test_session is None:
+        # Build skill codes exactly as TestViewSet.start does for mode='test'
+        grade_str = str(grade)
+        all_leaf = (
+            Skill.objects
+            .filter(is_detail=False)
+            .annotate(non_detail_children=_Count('children', filter=_Q(children__is_detail=False)))
+            .filter(non_detail_children=0)
+            .order_by('order_index', 'id')
+        )
+        skill_codes = [s.code for s in all_leaf if _skill_matches_year(s, grade_str)]
+        if not skill_codes:
+            return Response({"template_id": None, "error": "No skills available for this grade"})
 
-    def _find_template(skill_code, diff, excl_ids):
-        """Grade-free lookup matching _get_next_template used by the standalone test."""
-        qs = Template.objects.filter(
-            skill_detail__parent__code=skill_code,
-            difficulty__iexact=diff,
-            validated=True,
-            language='en',
-        ).exclude(id__in=excl_ids)
-        return qs.order_by("?").first()
+        from .models import StudentSkillCompetency as _SSC
+        comp_map = {
+            c.skill.code: c.level
+            for c in _SSC.objects.filter(
+                student=student, skill__code__in=skill_codes
+            ).select_related('skill')
+        }
+        level_of = lambda code: comp_map.get(code, 0)
+        sorted_levels = sorted(set(level_of(c) for c in skill_codes))
+        filtered = skill_codes
+        for lvl in sorted_levels:
+            filtered = [c for c in skill_codes if level_of(c) <= lvl]
+            if len(filtered) >= 5:
+                break
 
-    # Skip skills with no templates
-    attempts = 0
-    template = None
-    while skill_index < len(leaf_skills) and attempts < len(leaf_skills):
-        skill_code = leaf_skills[skill_index]["code"]
-        template = _find_template(skill_code, difficulty, used_ids)
-        if template:
-            break
-        # Try any difficulty before giving up on this skill
-        template = Template.objects.filter(
-            skill_detail__parent__code=skill_code,
-            validated=True,
-            language='en',
-        ).exclude(id__in=used_ids).order_by("?").first()
-        if template:
-            break
-        skill_index += 1
-        difficulty = "easy"
-        attempts += 1
+        _sort_skill_objs = {
+            s.code: s
+            for s in Skill.objects.filter(code__in=filtered).select_related(
+                'parent', 'parent__parent', 'parent__parent__parent',
+                'parent__parent__parent__parent'
+            )
+        }
 
-    if skill_index >= len(leaf_skills) or template is None:
-        session.session_state = state
+        def _ancestor_key(skill):
+            chain, node = [], skill
+            while node is not None:
+                chain.append(node.order_index)
+                node = node.parent
+            chain.reverse()
+            return tuple(chain)
+
+        skill_codes = sorted(
+            filtered,
+            key=lambda code: (
+                level_of(code),
+                _ancestor_key(_sort_skill_objs[code]) if code in _sort_skill_objs else (0,)
+            )
+        )
+
+        _TS.objects.filter(student=student, status='active', mode='test').update(status='abandoned')
+        test_session = _TS.objects.create(
+            student=student,
+            skill_codes=skill_codes,
+            mode='test',
+        )
+        session.session_state = {"test_session_id": test_session.id}
         session.save(update_fields=["session_state"])
+
+    # ── Apply answer for the previous question ────────────────────────────────
+    if result in ("correct", "wrong") and test_session.current_skill_index < len(test_session.skill_codes):
+        skill_code = test_session.skill_codes[test_session.current_skill_index]
+        skill = Skill.objects.filter(code=skill_code).first()
+        skill_description = skill.description if skill else skill_code
+
+        result_obj, _ = _TSR.objects.get_or_create(
+            session=test_session, skill_code=skill_code,
+            defaults={'skill_description': skill_description},
+        )
+        result_obj.questions_asked += 1
+        if result == "correct":
+            result_obj.questions_correct += 1
+            idx = DIFFICULTIES.index(test_session.current_difficulty) if test_session.current_difficulty in DIFFICULTIES else 0
+            if idx < len(DIFFICULTIES) - 1:
+                test_session.current_difficulty = DIFFICULTIES[idx + 1]
+                result_obj.highest_difficulty_reached = test_session.current_difficulty
+            else:
+                result_obj.highest_difficulty_reached = 'hard'
+                test_session.current_skill_index += 1
+                test_session.current_difficulty = 'easy'
+        else:
+            result_obj.highest_difficulty_reached = test_session.current_difficulty
+            test_session.current_skill_index += 1
+            test_session.current_difficulty = 'easy'
+        result_obj.save()
+        test_session.save()
+
+    # ── Completion helper ─────────────────────────────────────────────────────
+    def _complete():
+        test_session.status = 'completed'
+        test_session.completed_at = timezone.now()
+        test_session.save()
         from .competency import get_student_score
         from .models import WeeklyProgressSnapshot
         grade_key = str(grade).strip().lower().replace("year", "").strip()
@@ -5260,31 +5337,44 @@ def _session_assessment_question(session, student, grade, state, result):
             ratio = get_student_score(student, grade_key)
             syllabus_percent = round(ratio * 100)
             WeeklyProgressSnapshot.objects.create(
-                student=student,
-                score=round(ratio * 100, 1),
-                source='assessment',
+                student=student, score=round(ratio * 100, 1), source='assessment',
             )
         except Exception:
             syllabus_percent = None
-        _create_aa_post_session_records(session, student, grade, grade_key, leaf_skills, skill_index, syllabus_percent)
-        return Response({"template_id": None, "complete": True, "total_skills": len(leaf_skills), "syllabus_percent": syllabus_percent})
+        _skill_objs = {
+            s.code: s
+            for s in Skill.objects.filter(code__in=test_session.skill_codes).only('id', 'description')
+        }
+        leaf_skills = [
+            {"id": _skill_objs[c].id, "description": _skill_objs[c].description}
+            for c in test_session.skill_codes if c in _skill_objs
+        ]
+        _create_aa_post_session_records(
+            session, student, grade, grade_key, leaf_skills, len(leaf_skills), syllabus_percent
+        )
+        return Response({
+            "template_id": None, "complete": True,
+            "total_skills": len(test_session.skill_codes),
+            "syllabus_percent": syllabus_percent,
+        })
 
-    used_ids = (used_ids + [template.id])[-100:]
-    state.update({
-        "skill_index": skill_index,
-        "difficulty": difficulty,
-        "used_template_ids": used_ids,
-        "current_skill_id": leaf_skills[skill_index]["id"],
-    })
-    session.session_state = state
-    session.save(update_fields=["session_state"])
+    # ── Check completion ──────────────────────────────────────────────────────
+    if test_session.current_skill_index >= len(test_session.skill_codes):
+        return _complete()
 
+    # ── Fetch next template ───────────────────────────────────────────────────
+    template = _advance_aa_template_only(test_session)
+    if template is None:
+        return _complete()
+
+    skill_code = test_session.skill_codes[test_session.current_skill_index]
+    skill = Skill.objects.filter(code=skill_code).first()
     return Response({
         "template_id": template.id,
-        "skill": leaf_skills[skill_index]["description"],
-        "skill_index": skill_index,
-        "total_skills": len(leaf_skills),
-        "difficulty": difficulty,
+        "skill": skill.description if skill else skill_code,
+        "skill_index": test_session.current_skill_index,
+        "total_skills": len(test_session.skill_codes),
+        "difficulty": test_session.current_difficulty,
     })
 
 
@@ -5496,25 +5586,39 @@ class TutoringSessionViewSet(viewsets.ViewSet):
                 except Exception:
                     grade = None
                 if grade:
-                    from django.db.models import Count as _Count, Q as _Q
                     grade_str = str(grade)
-                    all_leaf = (
-                        Skill.objects
-                        .filter(is_detail=False)
-                        .annotate(non_detail_children=_Count('children', filter=_Q(children__is_detail=False)))
-                        .filter(non_detail_children=0)
-                        .order_by('order_index', 'id')
-                    )
-                    leaf_skills = [
-                        {"id": s.id, "description": s.description}
-                        for s in all_leaf
-                        if _skill_matches_year(s, grade_str)
-                    ]
+                    grade_key = grade_str.strip().lower().replace("year", "").strip()
                     state = session.session_state or {}
-                    skill_index = state.get("skill_index", 0)
+                    test_session_id = state.get("test_session_id")
+                    from .models import TestSession as _TS_sn
+                    ts = _TS_sn.objects.filter(id=test_session_id).first() if test_session_id else None
+                    if ts:
+                        _skill_objs_sn = {
+                            s.code: s
+                            for s in Skill.objects.filter(code__in=ts.skill_codes).only('id', 'description')
+                        }
+                        leaf_skills = [
+                            {"id": _skill_objs_sn[c].id, "description": _skill_objs_sn[c].description}
+                            for c in ts.skill_codes if c in _skill_objs_sn
+                        ]
+                        skill_index = ts.current_skill_index
+                    else:
+                        from django.db.models import Count as _Count, Q as _Q
+                        all_leaf = (
+                            Skill.objects
+                            .filter(is_detail=False)
+                            .annotate(non_detail_children=_Count('children', filter=_Q(children__is_detail=False)))
+                            .filter(non_detail_children=0)
+                            .order_by('order_index', 'id')
+                        )
+                        leaf_skills = [
+                            {"id": s.id, "description": s.description}
+                            for s in all_leaf
+                            if _skill_matches_year(s, grade_str)
+                        ]
+                        skill_index = 0
                     from .competency import get_student_score as _gss
                     from .models import WeeklyProgressSnapshot as _WPS
-                    grade_key = grade_str.strip().lower().replace("year", "").strip()
                     try:
                         syllabus_percent = round(_gss(session.student, grade_key) * 100)
                     except Exception:
