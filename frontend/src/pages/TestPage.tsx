@@ -673,6 +673,7 @@ export function TestPage() {
           templateId={question.template_id}
           studentId={Number(studentId)}
           preview={preview}
+          showNotes={true}
           onStudentNext={handleAnswer}
           disableOnWrong={mode !== "learning"}
           extraInputActions={

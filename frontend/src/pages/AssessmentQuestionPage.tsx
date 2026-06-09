@@ -154,6 +154,7 @@ export function AssessmentQuestionPage() {
               templateId={templateId!}
               seenTemplateIds={seenTemplateIds}
               sessionTemplateIds={sessionTemplateIds}
+              showNotes={true}
               onStudentNext={handleStudentNext}
               disableOnWrong
               extraInputActions={

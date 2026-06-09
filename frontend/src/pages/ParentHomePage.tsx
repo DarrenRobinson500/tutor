@@ -995,6 +995,7 @@ function ChildCard({
   onViewReport: () => void;
   onAssistedAssessment: () => void;
 }) {
+  const navigate = useNavigate();
   const initials = `${child.first_name[0] ?? ""}${child.last_name[0] ?? ""}`.toUpperCase();
   const hasTests = child.test_count > 0;
   const hasTutor = !!child.tutor_name;
@@ -1130,13 +1131,24 @@ function ChildCard({
             View Report
           </button>
         )}
-        <Link
-          to={`/students/${child.id}`}
+        <button
           className="sm-btn-secondary"
-          style={{ display: "block", textAlign: "center", textDecoration: "none" }}
+          style={{ display: "block", width: "100%", textAlign: "center" }}
+          onClick={async () => {
+            const res = await apiFetch("/api/auth/child_login/", {
+              method: "POST",
+              body: JSON.stringify({ child_id: child.id }),
+            });
+            const data = await res.json();
+            if (!res.ok) return;
+            localStorage.setItem("access", data.access);
+            localStorage.setItem("refresh", data.refresh);
+            localStorage.setItem("user", JSON.stringify(data.user));
+            navigate(`/students/${child.id}`);
+          }}
         >
           Go to {child.first_name}{child.first_name.endsWith("s") ? "'" : "'s"} home page
-        </Link>
+        </button>
       </div>
     </div>
   );

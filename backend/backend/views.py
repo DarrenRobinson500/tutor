@@ -672,6 +672,35 @@ class AuthViewSet(viewsets.ViewSet):
             "school_name": child_school or None,
         })
 
+    @action(detail=False, methods=["post"])
+    def child_login(self, request):
+        """Issue JWT tokens for a child, authenticated by their parent."""
+        from .models import ParentChild
+        user = request.user
+        if not user.is_authenticated or user.role != "parent":
+            return Response({"error": "Not authorised."}, status=403)
+        child_id = request.data.get("child_id")
+        if not child_id:
+            return Response({"error": "child_id required."}, status=400)
+        if not ParentChild.objects.filter(parent=user, child__id=child_id).exists():
+            return Response({"error": "Not your child."}, status=403)
+        try:
+            child = User.objects.get(id=child_id, role="student")
+        except User.DoesNotExist:
+            return Response({"error": "Student not found."}, status=404)
+        refresh = RefreshToken.for_user(child)
+        return Response({
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": {
+                "id": child.id,
+                "username": child.username,
+                "role": child.role,
+                "first_name": child.first_name,
+                "edit_syllabus": False,
+            },
+        })
+
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def parent_payments(self, request):
         from .models import Payment, ParentChild
