@@ -3771,7 +3771,10 @@ class TutorJobViewSet(viewsets.ViewSet):
         amount_paid = (amount_tutor + amount_platform + amount_distributor).quantize(decimal.Decimal('0.01'))
 
         # Assessment sessions have a flat $20 fee
-        if job.booking_ref and job.booking_ref.startswith("aa_session_"):
+        _is_aa = job.booking_ref and (
+            job.booking_ref.startswith("aa_session_") or job.booking_ref.startswith("aa_ts_")
+        )
+        if _is_aa:
             amount_paid = decimal.Decimal('20.00')
             amount_platform = decimal.Decimal('0.00')
             amount_distributor = decimal.Decimal('0.00')
@@ -3873,7 +3876,10 @@ class TutorJobViewSet(viewsets.ViewSet):
         amount_paid = (amount_tutor + amount_platform + amount_distributor).quantize(decimal.Decimal('0.01'))
 
         # Assessment sessions have a flat $20 fee
-        if job.booking_ref and job.booking_ref.startswith("aa_session_"):
+        _is_aa = job.booking_ref and (
+            job.booking_ref.startswith("aa_session_") or job.booking_ref.startswith("aa_ts_")
+        )
+        if _is_aa:
             amount_paid = decimal.Decimal('20.00')
             amount_platform = decimal.Decimal('0.00')
             amount_distributor = decimal.Decimal('0.00')

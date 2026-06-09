@@ -40,6 +40,7 @@ function Stars({ value }: { value: number }) {
 
 function RecentFeedback({ tutorId }: { tutorId: string }) {
   const [items, setItems] = useState<FeedbackItem[] | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     apiFetch(`/api/tutors/${tutorId}/feedback/`)
@@ -51,6 +52,13 @@ function RecentFeedback({ tutorId }: { tutorId: string }) {
   if (items === null) return null;
   if (items.length === 0) return null;
 
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  const recent = items.filter(i => new Date(i.session_date) >= cutoff);
+  const visible = showAll ? items : recent;
+
+  if (!showAll && visible.length === 0) return null;
+
   const avg = items.reduce((s, i) => s + i.rating, 0) / items.length;
 
   return (
@@ -60,9 +68,18 @@ function RecentFeedback({ tutorId }: { tutorId: string }) {
         <span className="text-muted" style={{ fontSize: 13 }}>
           avg <strong style={{ color: "#f59e0b" }}>{avg.toFixed(1)}</strong> from {items.length} review{items.length !== 1 ? "s" : ""}
         </span>
+        {items.length > recent.length && (
+          <button
+            className="btn btn-link btn-sm p-0 ms-1"
+            style={{ fontSize: 13 }}
+            onClick={() => setShowAll(v => !v)}
+          >
+            {showAll ? "Show recent" : `Show all (${items.length})`}
+          </button>
+        )}
       </div>
       <div className="d-flex flex-column gap-2">
-        {items.slice(0, 5).map(item => (
+        {visible.map(item => (
           <div
             key={item.id}
             className="rounded p-3"

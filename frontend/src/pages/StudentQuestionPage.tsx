@@ -204,6 +204,7 @@ export function StudentQuestionPage() {
               templateId={templateId!}
               seenTemplateIds={seenTemplateIds}
               sessionTemplateIds={sessionTemplateIds}
+              showNotes={true}
               onStudentNext={(result: StudentRecordResponse) => {
                 const newCount = questionsAnswered + 1;
 

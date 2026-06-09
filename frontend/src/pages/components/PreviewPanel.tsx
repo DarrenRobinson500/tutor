@@ -55,6 +55,8 @@ interface PreviewPanelStudentProps extends PreviewPanelBase {
   disableOnWrong?: boolean;
   /** Extra buttons rendered inline to the right of the "I don't know" button */
   extraInputActions?: React.ReactNode;
+  /** Show the add-note widget below the question (for standalone learn mode) */
+  showNotes?: boolean;
 
   // explicitly forbidden in student mode
   templateContent?: never;
@@ -114,6 +116,7 @@ export function PreviewPanel({
   ...rest
 }: PreviewPanelProps) {
   const noteTemplateId: number | undefined = (rest as any).noteTemplateId;
+  const showNotes: boolean = (rest as any).showNotes ?? false;
   const [selected, setSelected] = useState<number | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [flagged, setFlagged] = useState(false);
@@ -180,12 +183,12 @@ export function PreviewPanel({
   const inputsDisabled = isCorrect === true || (!!disableOnWrong && isCorrect === false);
 
   useEffect(() => {
-    if (mode !== "editor" || !effectiveTemplateId) { setNotes([]); return; }
+    if ((mode !== "editor" && !showNotes) || !effectiveTemplateId) { setNotes([]); return; }
     apiFetch(`/api/notes/?template=${effectiveTemplateId}`)
       .then(r => r.json())
       .then(data => setNotes(Array.isArray(data) ? data : (data.results ?? [])))
       .catch(() => {});
-  }, [effectiveTemplateId, mode]);
+  }, [effectiveTemplateId, mode, showNotes]);
 
   async function handleAddNote() {
     if (!noteText.trim() || !effectiveTemplateId) return;
@@ -1630,7 +1633,7 @@ export function PreviewPanel({
         </div>
       )}
 
-      {mode === "editor" && effectiveTemplateId && (
+      {(mode === "editor" || showNotes) && effectiveTemplateId && (
         <div style={{ marginTop: "2rem" }}>
           <div className="d-flex gap-2 align-items-center">
             <input
