@@ -11,7 +11,7 @@ def create_booking(tutor, data, booking_type, user_role):
         return Response({"ok": False, "error": "Student not found"}, status=404)
 
     confirmed = True
-    if user_role == "student": confirmed = False
+    if user_role in ("student", "parent"): confirmed = False
 
 
     if booking_type == "weekly":

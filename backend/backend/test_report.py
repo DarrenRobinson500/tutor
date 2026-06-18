@@ -528,10 +528,8 @@ def generate_test_report(session) -> bytes:
 
     # ── FOCUS AREAS ───────────────────────────────────────────────────────────
     if focus_data:
-        elements.append(Paragraph("Areas for Focus", s['h2']))
-        elements.append(Spacer(1, 2 * mm))
         focus_blurbs = narrative.get('focus_blurbs', {})
-        cards = []
+        cards = [Paragraph("Areas for Focus", s['h2']), Spacer(1, 2 * mm)]
         for r, d in zip(focus_rs, focus_data):
             blurb = focus_blurbs.get(d['skill_description'],
                                      "Focusing on this area will build confidence for upcoming topics.")

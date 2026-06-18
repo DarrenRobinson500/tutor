@@ -95,12 +95,17 @@ def _shade_color(nx: float, ny: float, nz: float) -> str:
 
 # ── Primitive builders ────────────────────────────────────────────────────────
 
-def _rect_prism_faces(w: float, h: float, d: float, ox: float, oy: float, oz: float) -> List[Face]:
-    """Axis-aligned box at offset (ox,oy,oz), dimensions w(x) × h(y) × d(z)."""
+def _rect_prism_faces(w: float, h: float, d: float, ox: float, oy: float, oz: float,
+                      include_top: bool = True,
+                      include_front: bool = True,
+                      include_right: bool = True) -> List[Face]:
+    """Axis-aligned box at offset (ox,oy,oz), dimensions w(x) × h(y) × d(z).
+    Interior faces (shared with an adjoining shape) can be suppressed to avoid
+    painter's-algorithm bleed-through at the junction."""
     x0, x1 = ox, ox + w
     y0, y1 = oy, oy + h
     z0, z1 = oz, oz + d
-    return [
+    faces = [
         Face([(x0,y1,z0),(x1,y1,z0),(x1,y1,z1),(x0,y1,z1)], _COL_TOP,   "top",    ( 0, 1, 0)),
         Face([(x0,y0,z1),(x1,y0,z1),(x1,y1,z1),(x0,y1,z1)], _COL_FRONT, "front",  ( 0, 0, 1)),
         Face([(x1,y0,z0),(x1,y0,z1),(x1,y1,z1),(x1,y1,z0)], _COL_SIDE,  "right",  ( 1, 0, 0)),
@@ -108,6 +113,13 @@ def _rect_prism_faces(w: float, h: float, d: float, ox: float, oy: float, oz: fl
         Face([(x0,y0,z0),(x1,y0,z0),(x1,y1,z0),(x0,y1,z0)], _COL_SIDE,  "back",   ( 0, 0,-1)),
         Face([(x0,y0,z0),(x0,y1,z0),(x0,y1,z1),(x0,y0,z1)], _COL_SIDE,  "left",   (-1, 0, 0)),
     ]
+    if not include_top:
+        faces = [f for f in faces if f.tag != "top"]
+    if not include_front:
+        faces = [f for f in faces if f.tag != "front"]
+    if not include_right:
+        faces = [f for f in faces if f.tag != "right"]
+    return faces
 
 
 def _half_cylinder_faces(r: float, length: float, axis: str,
@@ -567,10 +579,16 @@ def render(d: CompositeSolidDiagram, viz_scale: float = 1.0) -> str:
 
     all_faces: List[Face] = []
 
-    for spec, (ox, oy, oz) in zip(d.shapes, offsets):
+    for i, (spec, (ox, oy, oz)) in enumerate(zip(d.shapes, offsets)):
         k = spec.kind
         if k == "rect_prism":
-            all_faces += _rect_prism_faces(spec.w, spec.h, spec.d, ox, oy, oz)
+            later = d.shapes[i + 1:]
+            all_faces += _rect_prism_faces(
+                spec.w, spec.h, spec.d, ox, oy, oz,
+                include_top=not any(s.on == "top" for s in later),
+                include_front=not any(s.on == "front" for s in later),
+                include_right=not any(s.on == "right" for s in later),
+            )
         elif k == "half_cylinder":
             length = spec.length if spec.length > 0 else spec.w
             all_faces += _half_cylinder_faces(spec.r, length, spec.axis, ox, oy, oz)
@@ -607,16 +625,17 @@ def render(d: CompositeSolidDiagram, viz_scale: float = 1.0) -> str:
 
 def _add_labels(shapes: List[ShapeSpec], offsets, out: List[str], fs: float):
     """Add edge labels for rect_prism shapes."""
+    vz = fs / _FS  # = viz_scale; scale offsets so gap is consistent in screen pixels
     for spec, (ox, oy, oz) in zip(shapes, offsets):
         if spec.kind != "rect_prism":
             continue
         w, h, d_val = spec.w, spec.h, spec.d
         # Width: bottom-front edge — label sits below it (dy > 0 = downward in SVG)
         p1 = (ox, oy, oz + d_val); p2 = (ox + w, oy, oz + d_val)
-        out.append(_edge_midpoint_label(p1, p2, _fmt(w), fs, dx=0.0, dy=0.7))
+        out.append(_edge_midpoint_label(p1, p2, _fmt(w), fs, dx=0.0, dy=fs * 0.7))
         # Height: right-front edge (vertical in screen space) — label sits to the right
         p1 = (ox + w, oy, oz + d_val); p2 = (ox + w, oy + h, oz + d_val)
-        out.append(_edge_midpoint_label(p1, p2, _fmt(h), fs, dx=0.7, dy=0.0))
-        # Depth: top-right edge (front-top-right → back-top-right) — label sits above-right
-        p1 = (ox + w, oy + h, oz + d_val); p2 = (ox + w, oy + h, oz)
-        out.append(_edge_midpoint_label(p1, p2, _fmt(d_val), fs, dx=0.7, dy=-0.46))
+        out.append(_edge_midpoint_label(p1, p2, _fmt(h), fs, dx=fs * 0.7, dy=0.0))
+        # Depth: bottom-left edge (front-bottom-left → back-bottom-left) — label sits to the left
+        p1 = (ox, oy, oz + d_val); p2 = (ox, oy, oz)
+        out.append(_edge_midpoint_label(p1, p2, _fmt(d_val), fs, dx=-fs * 0.7, dy=fs * 0.46))

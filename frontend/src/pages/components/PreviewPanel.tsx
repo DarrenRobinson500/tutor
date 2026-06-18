@@ -123,6 +123,7 @@ export function PreviewPanel({
   const [startTime, setStartTime] = useState<number>(Date.now());
   const [selectedAnswer, setSelectedAnswer] = useState<any>(null);
   const [showIncorrectFeedback, setShowIncorrectFeedback] = useState(false);
+  const [didntKnow, setDidntKnow] = useState(false);
   const [backendResult, setBackendResult] = useState<any>(null);
   const [localTemplateId, setLocalTemplateId] = useState<number | null>(null);
   const [textInput, setTextInput] = useState("");
@@ -158,6 +159,7 @@ export function PreviewPanel({
     setIsCorrect(null);
     setFlagged(false);
     setShowIncorrectFeedback(false);
+    setDidntKnow(false);
     setSelectedAnswer(null);
     setBackendResult(null);
     setTextInput("");
@@ -294,6 +296,7 @@ export function PreviewPanel({
     setFlagged(true);
     setSelected(0);
     setIsCorrect(false);
+    setDidntKnow(true);
 
     const isLastStep = multiStepIndex === multiStep.steps.length - 1;
     if (isLastStep) {
@@ -344,6 +347,7 @@ export function PreviewPanel({
     setFlagged(true);
     setSelected(0);
     setIsCorrect(false);
+    setDidntKnow(true);
 
     if (mode === "student") {
       onImmediateAnswer?.("", false);
@@ -475,6 +479,10 @@ export function PreviewPanel({
       if (v.startsWith("[") && v.endsWith("]")) v = v.slice(1, -1);
       // Collapse redundant sign pairs: a + -b → a-b,  a - -b → a+b
       v = v.replace(/\+-/g, "-").replace(/--/g, "+");
+      // Strip redundant zero terms: y=2x+0 → y=2x
+      v = v.replace(/\+0(?![.\d])/g, "").replace(/-0(?![.\d])/g, "");
+      // Strip implicit-one coefficients: 1x → x, -1x → -x, +1x → +x
+      v = v.replace(/(^|[=+\-*(])1([a-z])/gi, "$1$2");
       // x^(-n) → x^-n  (sympy wraps negative exponents in parens)
       v = v.replace(/\^\((-?[\w]+)\)/gi, "^$1");
       // x^{-n} → x^-n  (LaTeX brace notation)
@@ -1450,7 +1458,7 @@ export function PreviewPanel({
           }`}
         >
           <div className="fw-bold mb-1" style={{ fontSize: 16 }}>
-            {isCorrect ? "✓ Correct!" : "✗ Incorrect"}
+            {isCorrect ? "✓ Correct!" : didntKnow ? null : "✗ Incorrect"}
           </div>
           {isCorrect && (
             <div className="text-muted" style={{ fontSize: 13 }}>Next question loading…</div>
