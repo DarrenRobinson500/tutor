@@ -4,6 +4,7 @@ import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { VideoPanel } from "./components/VideoPanel";
 import { WhiteboardPanel } from "./components/WhiteboardPanel";
+import { ChatPanel } from "./components/ChatPanel";
 import { QuestionPanel } from "./components/QuestionPanel";
 import { apiFetch } from "../utils/apiFetch";
 import { usePreferenceStore } from "../utils/pref";
@@ -22,7 +23,8 @@ export function TutoringRoomPage() {
   const pref = usePreferenceStore();
   const prefLoaded = usePreferenceStore((s) => s.loaded);
   const [showVideo, setShowVideo] = useState(true);
-  const [showWhiteboard, setShowWhiteboard] = useState(true);
+  const [showWhiteboard, setShowWhiteboard] = useState(false);
+  const [showChat, setShowChat] = useState(true);
   const [showQuestion, setShowQuestion] = useState(true);
 
   // Apply stored preferences once they have loaded from the backend
@@ -30,9 +32,11 @@ export function TutoringRoomPage() {
     if (!prefLoaded) return;
     const v = pref.get("chat_show_video");
     const w = pref.get("chat_show_whiteboard");
+    const c = pref.get("chat_show_chat");
     const q = pref.get("chat_show_question");
     if (v !== undefined) setShowVideo(v);
     if (w !== undefined) setShowWhiteboard(w);
+    if (c !== undefined) setShowChat(c);
     if (q !== undefined) setShowQuestion(q);
   }, [prefLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -131,8 +135,12 @@ export function TutoringRoomPage() {
     );
   }
 
-  const activePanels = [showVideo, showWhiteboard, showQuestion].filter(Boolean).length;
-  const colClass = activePanels === 1 ? "col-12" : activePanels === 2 ? "col-6" : "col-4";
+  const activePanels = [showVideo, showWhiteboard, showChat, showQuestion].filter(Boolean).length;
+  const colClass =
+    activePanels === 1 ? "col-12" :
+    activePanels === 2 ? "col-6" :
+    activePanels === 3 ? "col-4" :
+    "col-3";
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#1a1a1a" }}>
@@ -155,6 +163,12 @@ export function TutoringRoomPage() {
           onClick={() => setShowWhiteboard((v: boolean) => { pref.set("chat_show_whiteboard", !v); return !v; })}
         >
           Whiteboard
+        </button>
+        <button
+          className={`btn btn-sm ${showChat ? "btn-light" : "btn-outline-secondary"}`}
+          onClick={() => setShowChat((v: boolean) => { pref.set("chat_show_chat", !v); return !v; })}
+        >
+          Chat
         </button>
         <button
           className={`btn btn-sm ${showQuestion ? "btn-light" : "btn-outline-secondary"}`}
@@ -202,6 +216,11 @@ export function TutoringRoomPage() {
           {showWhiteboard && (
             <div className={colClass} style={{ height: "100%", borderRight: "1px solid #333" }}>
               <WhiteboardPanel />
+            </div>
+          )}
+          {showChat && (
+            <div className={colClass} style={{ height: "100%", borderRight: "1px solid #333" }}>
+              <ChatPanel />
             </div>
           )}
           {showQuestion && (

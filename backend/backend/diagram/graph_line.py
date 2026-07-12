@@ -19,6 +19,8 @@ class GraphLineDiagram:
     pos: Tuple[float, float] = (0.0, 0.0)
     x_label: str = ""
     y_label: str = ""
+    label_1: str = ""
+    label_2: str = ""
     show_values: bool = True
 
 
@@ -68,13 +70,16 @@ def parse(line: str) -> Optional[GraphLineDiagram]:
 
     x_label = _get_label("x_label")
     y_label = _get_label("y_label")
+    label_1 = _get_label("label_1")
+    label_2 = _get_label("label_2")
 
     sv_match = re.search(r'\bshow_values:\s*(true|false)', line)
     show_values = (sv_match.group(1) != "false") if sv_match else True
 
     return GraphLineDiagram(
         type=DIAGRAM_TYPE, points=points, points_2=points_2,
-        pos=pos, x_label=x_label, y_label=y_label, show_values=show_values,
+        pos=pos, x_label=x_label, y_label=y_label,
+        label_1=label_1, label_2=label_2, show_values=show_values,
     )
 
 
@@ -283,5 +288,23 @@ def render(d: GraphLineDiagram) -> str:
     _render_line(frags, pts,  x_fn, x_nums_map_1, y_pos, B, font_size, d.show_values, color_1)
     if pts2:
         _render_line(frags, pts2, x_fn, x_nums_map_2, y_pos, B, font_size, d.show_values, color_2)
+
+    # Line labels — placed just to the right of each line's last point
+    def _line_label(pts_list, x_nums_map, color, label):
+        if not label or not pts_list:
+            return
+        i = len(pts_list) - 1
+        lbl, v = pts_list[i]
+        xv = x_nums_map.get(i)
+        x = x_fn(xv) if xv is not None else x_fn(i)
+        y = y_pos(v)
+        frags.append(
+            f'<text x="{x + 1.5:.3f}" y="{y + font_size * 0.35:.3f}" '
+            f'font-size="{font_size}" font-family="system-ui, -apple-system, sans-serif" '
+            f'fill="{color}">{label}</text>'
+        )
+
+    _line_label(pts,  x_nums_map_1, color_1, d.label_1)
+    _line_label(pts2, x_nums_map_2, color_2, d.label_2)
 
     return "\n".join(frags)

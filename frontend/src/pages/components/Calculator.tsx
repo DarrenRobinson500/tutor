@@ -359,7 +359,7 @@ export function Calculator({ onClose }: { onClose?: () => void } = {}) {
 }
 
 export function DraggableCalculator({ onClose }: { onClose: () => void }) {
-  const [pos, setPos] = useState({ x: window.innerWidth / 2 + 1.5 * (96 / 2.54), y: 140 });
+  const [pos, setPos] = useState({ x: window.innerWidth / 2 + 1.5 * (96 / 2.54) + Math.round(1.3 * 286 * 0.82), y: 140 });
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
 
   function onDragStart(e: React.MouseEvent) {

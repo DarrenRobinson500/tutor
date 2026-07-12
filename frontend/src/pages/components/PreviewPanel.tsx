@@ -483,6 +483,24 @@ export function PreviewPanel({
       v = v.replace(/\+0(?![.\d])/g, "").replace(/-0(?![.\d])/g, "");
       // Strip implicit-one coefficients: 1x → x, -1x → -x, +1x → +x
       v = v.replace(/(^|[=+\-*(])1([a-z])/gi, "$1$2");
+      // Sort additive terms for commutativity: x+4 ≡ 4+x, y=x+4 ≡ y=4+x
+      // Skipped when ^ is present to avoid splitting x^-1 across the -
+      if (v.includes("+") && /[a-z]/.test(v) && !v.includes("^")) {
+        const sortSide = (expr: string): string => {
+          const parts: string[] = [];
+          const re = /[+\-]?[^+\-]+/g;
+          let m;
+          while ((m = re.exec(expr)) !== null) {
+            let t = m[0];
+            if (!t.startsWith("+") && !t.startsWith("-")) t = "+" + t;
+            parts.push(t);
+          }
+          if (parts.length < 2) return expr;
+          parts.sort();
+          return parts.join("").replace(/^\+/, "");
+        };
+        v = v.includes("=") ? v.split("=").map(sortSide).join("=") : sortSide(v);
+      }
       // x^(-n) → x^-n  (sympy wraps negative exponents in parens)
       v = v.replace(/\^\((-?[\w]+)\)/gi, "^$1");
       // x^{-n} → x^-n  (LaTeX brace notation)
