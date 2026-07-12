@@ -22,12 +22,19 @@ export function ChatPanel() {
         "--lk-fg5": "#6c757d",
         "--lk-border-color": "rgba(0,0,0,0.1)",
         "--lk-control-bg": "#f1f3f5",
+        // LiveKit's default theme sets color-scheme: dark, which makes the
+        // browser render native <input> text white regardless of the
+        // variables above. Force it back to light so typed text is black.
+        colorScheme: "light",
       } as React.CSSProperties}
     >
       {/* Remote message bubbles keep the blue accent background — force white text for contrast */}
       <style>{`
         .chat-panel-light [data-lk-message-origin="remote"] .lk-message-body {
           color: #fff;
+        }
+        .chat-panel-light .lk-chat-form-input {
+          color: #000;
         }
       `}</style>
       <LKChat style={{ height: "100%" }} />
