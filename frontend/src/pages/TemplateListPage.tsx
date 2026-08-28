@@ -30,6 +30,58 @@ export function TemplateListPage() {
   const [importing, setImporting] = useState(false);
   const [transferMessage, setTransferMessage] = useState("");
   const uploadRef = useRef<HTMLInputElement>(null);
+  const [offlineUploading, setOfflineUploading] = useState(false);
+  const offlineUploadRef = useRef<HTMLInputElement>(null);
+  const isTutor = user?.role === "tutor";
+
+  const handleDownloadForYear = () => {
+    if (!filterGrade || filterGrade === "__none__") {
+      setTransferMessage("Pick a year from the Grade filter above first, then download.");
+      return;
+    }
+    apiFetch(`/api/templates/export_all/?grade=${encodeURIComponent(filterGrade)}`)
+      .then(res => {
+        const disposition = res.headers.get("Content-Disposition") ?? "";
+        const match = disposition.match(/filename="([^"]+)"/);
+        const filename = match ? match[1] : `templates_year_${filterGrade}.yaml`;
+        return res.blob().then(blob => ({ blob, filename }));
+      })
+      .then(({ blob, filename }) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        setTransferMessage(`Downloaded questions for year ${filterGrade}. You can now work offline.`);
+      })
+      .catch(() => setTransferMessage("Download failed"));
+  };
+
+  const handleOfflineUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setOfflineUploading(true);
+    const form = new FormData();
+    form.append("file", file);
+    apiFetch("/api/templates/import_offline_bundle/", { method: "POST", body: form })
+      .then(res => res.json())
+      .then(async data => {
+        if (data.error) {
+          setTransferMessage(`Upload failed: ${data.error}`);
+        } else {
+          let msg = `Synced from offline file — questions created: ${data.templates_created}, ` +
+            `questions updated: ${data.templates_updated}, comments added: ${data.notes_created}` +
+            (data.errors ? `, errors: ${data.errors}` : "");
+          if (data.first_error) msg += ` — first error: ${data.first_error}`;
+          setTransferMessage(msg);
+          await load();
+        }
+      })
+      .catch(() => setTransferMessage("Upload failed"))
+      .finally(() => setOfflineUploading(false));
+  };
 
   const handleDownload = () => {
     apiFetch("/api/templates/export_all/")
@@ -137,6 +189,30 @@ export function TemplateListPage() {
             >
               Create New Template
             </button>
+            {isTutor && <>
+              <button
+                className="btn btn-outline-secondary"
+                onClick={handleDownloadForYear}
+                title="Download this year's questions so you can keep tutoring without an internet connection"
+              >
+                Download Questions Locally
+              </button>
+              <button
+                className="btn btn-outline-secondary"
+                onClick={() => offlineUploadRef.current?.click()}
+                disabled={offlineUploading}
+                title="Bring back the comments, questions and validation you added while offline"
+              >
+                {offlineUploading ? "Uploading…" : "Upload Comments, Questions & Validation"}
+              </button>
+              <input
+                ref={offlineUploadRef}
+                type="file"
+                accept=".yaml,.yml,.json"
+                className="d-none"
+                onChange={handleOfflineUpload}
+              />
+            </>}
             {canEditSyllabus && <>
               <button className="btn btn-outline-secondary" onClick={handleDownload}>
                 Download All Templates

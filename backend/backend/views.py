@@ -1763,7 +1763,10 @@ class TemplateViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def export_all(self, request):
         import yaml as _yaml
-        templates = Template.objects.select_related("skill_detail__parent").all()
+        templates = Template.objects.select_related("skill_detail__parent").prefetch_related("notes").all()
+        grade = (request.query_params.get("grade") or "").strip()
+        if grade:
+            templates = templates.filter(grade=grade)
         records = []
         for t in templates:
             parsed = {}
@@ -1773,6 +1776,7 @@ class TemplateViewSet(viewsets.ModelViewSet):
                 except Exception:
                     pass
             record = {
+                "id":               t.id,
                 "skill_detail_code": t.skill_detail.code if t.skill_detail else None,
                 "grade":            t.grade or "",
                 "difficulty":       t.difficulty or "",
@@ -1783,13 +1787,144 @@ class TemplateViewSet(viewsets.ModelViewSet):
                 "tags":             t.tags,
                 "curriculum":       t.curriculum,
                 "content":          t.content,
+                "notes": [
+                    {
+                        "id": n.id,
+                        "text": n.text,
+                        "category": n.category,
+                        "created_at": n.created_at.isoformat() if n.created_at else None,
+                    }
+                    for n in t.notes.order_by("-created_at")
+                ],
             }
             records.append(record)
         yaml_str = _yaml.dump(records, allow_unicode=True, default_flow_style=False, sort_keys=False)
         d = __import__("datetime").date.today().strftime("%Y_%m_%d")
+        suffix = f"_year_{grade}" if grade else ""
         response = HttpResponse(yaml_str, content_type="text/yaml; charset=utf-8")
-        response["Content-Disposition"] = f'attachment; filename="templates_{d}.yaml"'
+        response["Content-Disposition"] = f'attachment; filename="templates{suffix}_{d}.yaml"'
         return response
+
+    @action(detail=False, methods=["post"])
+    def import_offline_bundle(self, request):
+        """POST /api/templates/import_offline_bundle/
+
+        Merges a bundle previously produced by export_all (optionally with a
+        ?grade= filter) back into the database. Unlike import_bulk (which only
+        ever creates new templates and skips anything matching existing
+        content), this endpoint is designed for the download-while-online /
+        edit-offline / upload-when-back-online workflow:
+
+        - A record with an "id" matching an existing Template updates that
+          template in place (content, validation, status, tags, etc).
+        - A record with no "id" (or an id that no longer exists) is created
+          as a new template, attributed to the uploading tutor.
+        - Each note under a record's "notes" list that has no "id" is a new
+          comment written offline and is created against the resolved
+          template. Notes that already carry an id (i.e. existed on the
+          server at download time) are left untouched.
+        """
+        import json as _json
+        import yaml as _yaml
+
+        if not request.user or not request.user.is_authenticated or request.user.role not in ("tutor", "admin"):
+            return Response({"error": "Forbidden"}, status=403)
+
+        uploaded = request.FILES.get("file")
+        if not uploaded:
+            return Response({"error": "No file uploaded"}, status=400)
+        raw = uploaded.read().decode("utf-8")
+        name = uploaded.name or ""
+        try:
+            if name.endswith(".yaml") or name.endswith(".yml"):
+                records = _yaml.safe_load(raw)
+            else:
+                records = _json.loads(raw)
+        except Exception as e:
+            return Response({"error": f"Invalid file: {e}"}, status=400)
+
+        templates_created = templates_updated = notes_created = errors = 0
+        first_error = None
+
+        for record in records or []:
+            try:
+                content = record.get("content") or ""
+                parsed = {}
+                if content:
+                    try:
+                        parsed = yaml.safe_load(content) or {}
+                    except Exception:
+                        pass
+
+                skill_detail = None
+                skill_detail_code = record.get("skill_detail_code")
+                if skill_detail_code:
+                    skill_detail = Skill.objects.filter(code=skill_detail_code, is_detail=True).first()
+
+                fields = dict(
+                    content=content,
+                    topic=record.get("topic") or "",
+                    subtopic=record.get("subtopic") or "",
+                    grade=record.get("grade") or None,
+                    difficulty=record.get("difficulty") or "",
+                    tags=record.get("tags") or [],
+                    curriculum=record.get("curriculum") or [],
+                    validated=bool(record.get("validated", False)),
+                    status=record.get("status", "draft"),
+                )
+                if skill_detail is not None:
+                    fields["skill_detail"] = skill_detail
+
+                template = None
+                record_id = record.get("id")
+                if record_id:
+                    template = Template.objects.filter(pk=record_id).first()
+
+                if template is not None:
+                    for attr, value in fields.items():
+                        setattr(template, attr, value)
+                    template.updated_by = request.user
+                    template.save()
+                    templates_updated += 1
+                else:
+                    name_field = str(parsed.get("title") or "")
+                    template = Template.objects.create(
+                        name=name_field,
+                        created_by=request.user,
+                        **fields,
+                    )
+                    templates_created += 1
+
+                for note in record.get("notes") or []:
+                    if note.get("id"):
+                        continue  # already existed on the server at download time
+                    text = (note.get("text") or "").strip()
+                    if not text:
+                        continue
+                    Note.objects.create(
+                        author=request.user,
+                        template=template,
+                        text=text,
+                        category=note.get("category") or None,
+                    )
+                    notes_created += 1
+            except Exception as e:
+                if first_error is None:
+                    first_error = str(e)
+                errors += 1
+
+        import backend.cache as _cache
+        _cache.MATRIX_CACHE = None
+
+        result = {
+            "templates_created": templates_created,
+            "templates_updated": templates_updated,
+            "notes_created": notes_created,
+            "errors": errors,
+        }
+        if first_error:
+            result["first_error"] = first_error
+        return Response(result)
 
     @action(detail=False, methods=["post"])
     def import_bulk(self, request):
