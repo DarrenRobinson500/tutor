@@ -34,9 +34,9 @@
     "zustand": "^5.0.11"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "CI=false react-scripts build",
-    "test": "react-scripts test",
+    "start": "craco start",
+    "build": "CI=false craco build",
+    "test": "craco test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -58,8 +58,10 @@
     ]
   },
   "devDependencies": {
+    "@craco/craco": "^7.1.0",
     "@types/js-yaml": "^4.0.9",
     "@types/katex": "^0.16.8",
-    "@types/lodash.debounce": "^4.0.9"
+    "@types/lodash.debounce": "^4.0.9",
+    "monaco-editor-webpack-plugin": "^7.1.1"
   }
 }

@@ -10,6 +10,15 @@ import "bootstrap/dist/css/bootstrap.min.css";
 // ⬇️ ADD THIS LINE
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
+// Point @monaco-editor/react at the monaco-editor package already bundled by
+// webpack (via monaco-editor-webpack-plugin in craco.config.js) instead of its
+// default behaviour of fetching the editor from the jsDelivr CDN at runtime.
+// Without this, the Template Editor page never loads when offline or when the
+// CDN is unreachable — it just shows "Loading" forever.
+import { loader } from "@monaco-editor/react";
+import * as monaco from "monaco-editor";
+loader.config({ monaco });
+
 
 // Suppress benign ResizeObserver loop notifications from Monaco Editor.
 window.addEventListener("error", (e) => {
